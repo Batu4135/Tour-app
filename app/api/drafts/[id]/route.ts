@@ -28,7 +28,7 @@ const updateDraftSchema = z.object({
       })
     )
     .default([]),
-  note: z.string().optional()
+  note: z.string().nullable().optional()
 });
 
 export async function GET(_: Request, { params }: RouteContext) {

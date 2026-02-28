@@ -13,7 +13,6 @@ import {
   getPendingWriteCount,
   getPendingWrites,
   removePendingWrite,
-  syncPendingWrites,
   updatePendingWriteError
 } from "@/lib/offlineQueue";
 
@@ -55,6 +54,10 @@ type PersistOptions = {
 function isOnline(): boolean {
   if (typeof navigator === "undefined") return true;
   return navigator.onLine;
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export default function DraftEditor({ draftId }: DraftEditorProps) {
@@ -171,36 +174,82 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
     }
   }, [draftId, loadSnapshot, t, writeSnapshot]);
 
+  const flushOfflineQueue = useCallback(
+    async (options?: { onlyDraftId?: number; retries?: number }): Promise<boolean> => {
+      const retries = options?.retries ?? 2;
+      const onlyDraftId = options?.onlyDraftId;
+
+      for (let attempt = 0; attempt <= retries; attempt += 1) {
+        const entries = await getPendingWrites().catch(() => []);
+        const targets =
+          typeof onlyDraftId === "number" ? entries.filter((entry) => entry.draftId === onlyDraftId) : entries;
+
+        if (targets.length === 0) {
+          await refreshPendingState();
+          return true;
+        }
+
+        let failed = false;
+        for (const entry of targets) {
+          try {
+            const updated = await sendDraftPatch(entry.draftId, entry.payload);
+            if (entry.draftId === draftId) {
+              setDraft(updated);
+              writeSnapshot(updated);
+            }
+            await removePendingWrite(entry.id);
+          } catch (syncError) {
+            failed = true;
+            await updatePendingWriteError(
+              entry.id,
+              syncError instanceof Error ? syncError.message : "Sync fehlgeschlagen"
+            ).catch(() => undefined);
+            break;
+          }
+        }
+
+        await refreshPendingState();
+        if (!failed) {
+          continue;
+        }
+
+        if (attempt < retries) {
+          await wait(300 * (attempt + 1));
+        }
+      }
+
+      setSyncState("error");
+      return false;
+    },
+    [draftId, refreshPendingState, sendDraftPatch, writeSnapshot]
+  );
+
   const syncNow = useCallback(async () => {
     setSyncingNow(true);
     try {
-      const result = await syncPendingWrites(async (entry) => {
-        const updated = await sendDraftPatch(entry.draftId, entry.payload);
-        if (draft && updated.id === draft.id) {
-          setDraft(updated);
-          writeSnapshot(updated);
-        }
-      });
-      setPendingCount(result.pending);
-      setSyncState(result.failed > 0 ? "error" : result.pending > 0 ? "pending" : "ok");
+      const ok = await flushOfflineQueue({ retries: 2 });
+      const count = await getPendingWriteCount().catch(() => 0);
+      setPendingCount(count);
+      setSyncState(ok ? (count > 0 ? "pending" : "ok") : "error");
     } catch {
       setSyncState("error");
     } finally {
       setSyncingNow(false);
     }
-  }, [draft, sendDraftPatch, writeSnapshot]);
+  }, [flushOfflineQueue]);
 
   const persistDraft = useCallback(
     async (options?: PersistOptions): Promise<boolean> => {
       if (!draft) return false;
 
+      const normalizedNote = draft.note?.trim();
       const payload: DraftWritePayload = {
         lines: draft.lines.map((line) => ({
           productId: line.productId,
           quantity: line.quantity,
           unitPriceCents: line.unitPriceCents
         })),
-        note: draft.note?.trim() || null
+        note: normalizedNote ? normalizedNote : undefined
       };
 
       writeSnapshot(draft);
@@ -225,15 +274,15 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       if (!isOnline()) {
         setIsOffline(true);
         setStatus("error");
+        setSyncState("pending");
+        setError(t("offlinePending"));
         return false;
       }
 
       const saveSeq = ++saveSeqRef.current;
       const localVersionAtStart = localVersionRef.current;
 
-      if (!options?.force) {
-        abortRef.current?.abort();
-      }
+      abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
 
@@ -246,6 +295,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
           writeSnapshot(updated);
           setStatus("saved");
           setDirty(false);
+          setIsOffline(false);
         } else {
           setStatus("idle");
           setDirty(true);
@@ -260,7 +310,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
         if (controller.signal.aborted) return false;
 
         setStatus("error");
-        setSyncState("pending");
+        setSyncState("error");
         setError(persistError instanceof Error ? persistError.message : t("saveError"));
         if (pendingId) {
           await updatePendingWriteError(
@@ -275,6 +325,46 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
     },
     [draft, refreshPendingState, sendDraftPatch, t, writeSnapshot]
   );
+
+  const forceSave = useCallback(async (): Promise<boolean> => {
+    if (!draft) return false;
+    if (!isOnline()) {
+      setIsOffline(true);
+      setStatus("error");
+      setSyncState("pending");
+      setError(t("offlinePending"));
+      return false;
+    }
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const saved = await persistDraft({ force: true });
+      if (!saved) {
+        if (attempt < 2) {
+          await wait(250 * (attempt + 1));
+          continue;
+        }
+        return false;
+      }
+
+      const flushed = await flushOfflineQueue({ onlyDraftId: draft.id, retries: 2 });
+      if (flushed) {
+        const count = await getPendingWriteCount().catch(() => 0);
+        setPendingCount(count);
+        setStatus("saved");
+        setSyncState(count > 0 ? "pending" : "ok");
+        return true;
+      }
+
+      if (attempt < 2) {
+        await wait(300 * (attempt + 1));
+      }
+    }
+
+    setStatus("error");
+    setSyncState("error");
+    setError(t("saveError"));
+    return false;
+  }, [draft, flushOfflineQueue, persistDraft, t]);
 
   useEffect(() => {
     setIsOffline(!isOnline());
@@ -368,7 +458,11 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
 
   async function onDownloadPdf() {
     if (!draft) return;
-    await persistDraft({ force: true });
+    const saved = await forceSave();
+    if (!saved) {
+      setError(t("saveError"));
+      return;
+    }
     window.location.assign(`/api/drafts/${draft.id}/pdf`);
   }
 
@@ -449,7 +543,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
         <div className="flex gap-2">
           <button
             className="rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-sm"
-            onClick={() => void persistDraft({ force: true })}
+            onClick={() => void forceSave()}
           >
             <span className="flex items-center gap-1">
               <Save size={14} />
