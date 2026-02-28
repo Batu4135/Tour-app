@@ -1,0 +1,68 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/requireAuth";
+import { badRequest, unauthorized } from "@/lib/http";
+import { z } from "zod";
+
+type RouteContext = {
+  params: {
+    id: string;
+  };
+};
+
+const updateProductSchema = z.object({
+  name: z.string().min(2),
+  sku: z.string().min(1),
+  defaultPriceCents: z.number().int().min(0).nullable().optional(),
+  isActive: z.boolean().optional()
+});
+
+export async function PATCH(request: Request, { params }: RouteContext) {
+  const user = await requireAuth();
+  if (!user) return unauthorized();
+
+  const id = Number.parseInt(params.id, 10);
+  if (!Number.isFinite(id)) return badRequest("Ungueltige Produkt-ID.");
+
+  const parsed = updateProductSchema.safeParse(await request.json());
+  if (!parsed.success) return badRequest("Ungueltige Anfrage.");
+  const name = parsed.data.name.trim();
+  const sku = parsed.data.sku.trim();
+
+  try {
+    const product = await prisma.product.update({
+      where: { id },
+      data: {
+        name,
+        sku,
+        defaultPriceCents:
+          typeof parsed.data.defaultPriceCents === "number" && parsed.data.defaultPriceCents >= 0
+            ? Math.round(parsed.data.defaultPriceCents)
+            : null,
+        isActive: parsed.data.isActive ?? true
+      }
+    });
+
+    return NextResponse.json({ product });
+  } catch {
+    return NextResponse.json({ error: "Produkt konnte nicht aktualisiert werden." }, { status: 400 });
+  }
+}
+
+export async function DELETE(_: Request, { params }: RouteContext) {
+  const user = await requireAuth();
+  if (!user) return unauthorized();
+
+  const id = Number.parseInt(params.id, 10);
+  if (!Number.isFinite(id)) return badRequest("Ungueltige Produkt-ID.");
+
+  try {
+    await prisma.product.delete({ where: { id } });
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json(
+      { error: "Produkt kann nicht geloescht werden, da es in einem Vordruck verwendet wird." },
+      { status: 400 }
+    );
+  }
+}

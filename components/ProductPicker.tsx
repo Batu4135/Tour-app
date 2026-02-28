@@ -1,0 +1,250 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { Search, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { formatCents, parseEuroToCents } from "@/lib/formatCents";
+
+export type ProductOption = {
+  id: number;
+  sku: string;
+  name: string;
+  defaultPriceCents: number | null;
+};
+
+export type SelectedProductItem = {
+  productId: number;
+  sku: string;
+  name: string;
+  quantity: number;
+  unitPriceCents: number;
+};
+
+type ProductPickerProps = {
+  selectedItems: SelectedProductItem[];
+  onChange: (items: SelectedProductItem[]) => void;
+  priceOverrides?: Record<number, number>;
+  suggestedProducts?: ProductOption[];
+  searchMode?: "all" | "suggestedOnly";
+};
+
+export default function ProductPicker({
+  selectedItems,
+  onChange,
+  priceOverrides = {},
+  suggestedProducts = [],
+  searchMode = "all"
+}: ProductPickerProps) {
+  const t = useTranslations("productPicker");
+  const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<ProductOption[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query.trim()), 180);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  useEffect(() => {
+    const clean = debouncedQuery;
+    if (!clean) {
+      setSuggestions([]);
+      setLoading(false);
+      return;
+    }
+
+    if (searchMode === "suggestedOnly" && suggestedProducts.length > 0) {
+      const q = clean.toLowerCase();
+      const localMatches = suggestedProducts
+        .filter((product) => `${product.name} ${product.sku}`.toLowerCase().includes(q))
+        .slice(0, 20);
+      setSuggestions(localMatches);
+      return;
+    }
+
+    const controller = new AbortController();
+    const run = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(`/api/products?q=${encodeURIComponent(clean)}`, {
+          signal: controller.signal
+        });
+        const payload = (await response.json()) as { products?: ProductOption[] };
+        if (response.ok) {
+          setSuggestions(payload.products ?? []);
+        }
+      } catch {
+        if (!controller.signal.aborted) {
+          setSuggestions([]);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void run();
+    return () => controller.abort();
+  }, [debouncedQuery, searchMode, suggestedProducts]);
+
+  const totalCents = useMemo(
+    () => selectedItems.reduce((sum, item) => sum + item.quantity * item.unitPriceCents, 0),
+    [selectedItems]
+  );
+
+  function addProduct(product: ProductOption) {
+    const existing = selectedItems.find((item) => item.productId === product.id);
+    if (existing) {
+      onChange(
+        selectedItems.map((item) =>
+          item.productId === product.id ? { ...item, quantity: Math.max(1, item.quantity + 1) } : item
+        )
+      );
+    } else {
+      const price = priceOverrides[product.id] ?? product.defaultPriceCents ?? 0;
+      onChange([
+        ...selectedItems,
+        {
+          productId: product.id,
+          sku: product.sku,
+          name: product.name,
+          quantity: 1,
+          unitPriceCents: Math.max(0, price)
+        }
+      ]);
+    }
+    setQuery("");
+    setSuggestions([]);
+  }
+
+  function updateQuantity(productId: number, value: string) {
+    const parsed = Number.parseInt(value, 10);
+    const quantity = Number.isFinite(parsed) ? Math.max(1, parsed) : 1;
+    onChange(selectedItems.map((item) => (item.productId === productId ? { ...item, quantity } : item)));
+  }
+
+  function updatePrice(productId: number, value: string) {
+    const cents = Math.max(0, parseEuroToCents(value));
+    onChange(selectedItems.map((item) => (item.productId === productId ? { ...item, unitPriceCents: cents } : item)));
+  }
+
+  function removeItem(productId: number) {
+    onChange(selectedItems.filter((item) => item.productId !== productId));
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="card space-y-2">
+        <label htmlFor="product-picker-search" className="text-sm font-semibold">
+          {t("searchLabel")}
+        </label>
+        <div className="relative">
+          <Search className="search-icon" size={16} />
+          <input
+            id="product-picker-search"
+            className="search-input"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={t("searchPlaceholder")}
+            autoComplete="off"
+          />
+        </div>
+
+        {query.trim() ? (
+          <div className="max-h-56 space-y-2 overflow-auto rounded-xl border border-[#E5E5E5] bg-white p-2">
+            {loading ? <p className="px-2 py-1 text-xs text-[#4A4A4A]/60">{t("searching")}</p> : null}
+            {!loading && suggestions.length === 0 ? (
+              <p className="px-2 py-1 text-xs text-[#4A4A4A]/60">{t("noResults")}</p>
+            ) : null}
+            {suggestions.map((product) => (
+              <button
+                key={product.id}
+                type="button"
+                className="secondary-btn w-full !py-2 text-left"
+                onClick={() => addProduct(product)}
+              >
+                <p className="text-sm font-medium">{product.name}</p>
+                <p className="text-xs text-[#4A4A4A]/60">
+                  {product.sku} {product.defaultPriceCents !== null ? `- ${formatCents(product.defaultPriceCents)}` : ""}
+                </p>
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {!query.trim() && suggestedProducts.length > 0 ? (
+          <div className="rounded-xl border border-[#E5E5E5] bg-white p-2">
+            <p className="mb-1 text-xs text-[#4A4A4A]/60">{t("customerProducts")}</p>
+            <div className="max-h-56 space-y-1 overflow-auto">
+              {suggestedProducts.map((product) => (
+                <button
+                  key={`customer-suggestion-${product.id}`}
+                  type="button"
+                  className="secondary-btn w-full !py-2 text-left"
+                  onClick={() => addProduct(product)}
+                >
+                  <p className="text-sm font-medium">{product.name}</p>
+                  <p className="text-xs text-[#4A4A4A]/60">
+                    {product.sku} {product.defaultPriceCents !== null ? `- ${formatCents(product.defaultPriceCents)}` : ""}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="space-y-2">
+        {selectedItems.map((item) => {
+          const lineTotal = item.quantity * item.unitPriceCents;
+          return (
+            <div key={item.productId} className="card space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">{item.name}</p>
+                  <p className="text-xs text-[#4A4A4A]/60">{item.sku}</p>
+                </div>
+                <button type="button" className="secondary-btn !p-2" onClick={() => removeItem(item.productId)}>
+                  <Trash2 size={14} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-[84px_1fr_auto] items-end gap-2">
+                <div>
+                  <label className="mb-1 block text-xs text-[#4A4A4A]/65">{t("quantity")}</label>
+                  <input
+                    className="input !px-3 !py-2"
+                    type="number"
+                    min={1}
+                    value={item.quantity}
+                    onChange={(event) => updateQuantity(item.productId, event.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-[#4A4A4A]/65">{t("price")}</label>
+                  <input
+                    className="input !px-3 !py-2"
+                    value={(item.unitPriceCents / 100).toFixed(2).replace(".", ",")}
+                    onChange={(event) => updatePrice(item.productId, event.target.value)}
+                  />
+                </div>
+                <div className="pb-1 text-right">
+                  <p className="text-xs text-[#4A4A4A]/65">{t("lineTotal")}</p>
+                  <p className="text-sm font-semibold text-[#2F7EA1]">{formatCents(lineTotal)}</p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        {selectedItems.length === 0 ? <p className="card text-sm text-[#4A4A4A]/65">{t("empty")}</p> : null}
+      </div>
+
+      <div className="card flex items-center justify-between">
+        <p className="text-sm text-[#4A4A4A]/70">{t("subtotal")}</p>
+        <p className="text-lg font-semibold text-[#2F7EA1]">{formatCents(totalCents)}</p>
+      </div>
+    </div>
+  );
+}

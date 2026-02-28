@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/local-client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("LOCAL_DATABASE_URL")
+}
+
+model User {
+  id               Int               @id
+  pinHash          String
+  createdAt        DateTime
+  updatedAt        DateTime
+  invoiceRevisions InvoiceRevision[] @relation("RevisionAuthor")
+}
+
+model Customer {
+  id            Int             @id
+  name          String
+  address       String?
+  phone         String?
+  routeDay      String?
+  createdAt     DateTime
+  updatedAt     DateTime
+  customerPrice CustomerPrice[]
+  drafts        Draft[]
+
+  @@index([name])
+}
+
+model Product {
+  id                Int             @id
+  sku               String          @unique
+  name              String
+  defaultPriceCents Int?
+  isActive          Boolean
+  createdAt         DateTime
+  updatedAt         DateTime
+  aliases           ProductAlias[]
+  customerPrice     CustomerPrice[]
+  draftLines        DraftLine[]
+
+  @@index([name])
+  @@index([sku])
+}
+
+model ProductAlias {
+  id        Int      @id
+  productId Int
+  alias     String
+  createdAt DateTime
+  updatedAt DateTime
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, alias])
+}
+
+model CustomerPrice {
+  id         Int      @id
+  customerId Int
+  productId  Int
+  priceCents Int
+  createdAt  DateTime
+  updatedAt  DateTime
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, productId])
+}
+
+model Draft {
+  id         Int               @id
+  customerId Int
+  date       DateTime
+  note       String?
+  createdAt  DateTime
+  updatedAt  DateTime
+  customer   Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  lines      DraftLine[]
+  revisions  InvoiceRevision[]
+
+  @@index([customerId, date])
+}
+
+model DraftLine {
+  id             Int      @id
+  draftId        Int
+  productId      Int
+  quantity       Int
+  unitPriceCents Int
+  createdAt      DateTime
+  updatedAt      DateTime
+  draft          Draft    @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  product        Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([draftId])
+  @@index([productId])
+}
+
+model InvoiceRevision {
+  id          Int      @id
+  invoiceId   Int
+  payloadJson String
+  createdAt   DateTime
+  updatedAt   DateTime
+  createdBy   Int?
+  invoice     Draft    @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  author      User?    @relation("RevisionAuthor", fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([invoiceId, createdAt])
+}

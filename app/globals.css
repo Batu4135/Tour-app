@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --np-primary: #2f7ea1;
+  --np-dark: #4a4a4a;
+  --np-light: #e5e5e5;
+  --np-bg: #f8f9fa;
+  --np-white: #ffffff;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--np-bg);
+  color: var(--np-dark);
+  font-family:
+    "Manrope",
+    "Avenir Next",
+    "Segoe UI",
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.touch-target {
+  min-height: 44px;
+}
+
+.card {
+  @apply rounded-2xl border border-[#E5E5E5]/40 bg-white p-4 shadow-sm;
+}
+
+.primary-btn {
+  @apply touch-target rounded-xl bg-[#2F7EA1] px-4 py-3 font-medium text-white transition-all active:scale-95;
+}
+
+.secondary-btn {
+  @apply touch-target rounded-xl border border-[#E5E5E5] bg-white px-4 py-3 font-medium text-[#4A4A4A] transition-all active:scale-95;
+}
+
+.input {
+  @apply w-full rounded-xl border border-[#E5E5E5] bg-white px-4 py-3 text-[#4A4A4A] outline-none transition-all placeholder:text-[#4A4A4A]/50 focus:border-[#2F7EA1] focus:ring-1 focus:ring-[#2F7EA1];
+}
+
+.search-input {
+  @apply w-full rounded-xl border border-[#E5E5E5] bg-white text-[#4A4A4A] outline-none transition-all placeholder:text-[#4A4A4A]/50 focus:border-[#2F7EA1] focus:ring-1 focus:ring-[#2F7EA1];
+  min-height: 48px;
+  padding-left: 2.9rem !important;
+  padding-right: 0.9rem !important;
+  line-height: 1.25rem;
+}
+
+.search-icon {
+  @apply pointer-events-none absolute top-1/2 -translate-y-1/2 text-[#4A4A4A]/55;
+  left: 0.95rem;
+  width: 1rem;
+  height: 1rem;
+}

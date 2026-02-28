@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id               Int               @id @default(autoincrement())
+  pinHash          String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @default(now()) @updatedAt
+  invoiceRevisions InvoiceRevision[] @relation("RevisionAuthor")
+}
+
+model Customer {
+  id            Int             @id @default(autoincrement())
+  name          String
+  address       String?
+  phone         String?
+  routeDay      String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @default(now()) @updatedAt
+  customerPrice CustomerPrice[]
+  drafts        Draft[]
+
+  @@index([name])
+}
+
+model Product {
+  id                Int             @id @default(autoincrement())
+  sku               String          @unique
+  name              String
+  defaultPriceCents Int?
+  isActive          Boolean         @default(true)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @default(now()) @updatedAt
+  aliases           ProductAlias[]
+  customerPrice     CustomerPrice[]
+  draftLines        DraftLine[]
+
+  @@index([name])
+  @@index([sku])
+}
+
+model ProductAlias {
+  id        Int      @id @default(autoincrement())
+  productId Int
+  alias     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, alias])
+}
+
+model CustomerPrice {
+  id         Int      @id @default(autoincrement())
+  customerId Int
+  productId  Int
+  priceCents Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, productId])
+}
+
+model Draft {
+  id        Int               @id @default(autoincrement())
+  customerId Int
+  date      DateTime          @default(now())
+  note      String?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @default(now()) @updatedAt
+  customer  Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  lines     DraftLine[]
+  revisions InvoiceRevision[]
+
+  @@index([customerId, date])
+}
+
+model DraftLine {
+  id             Int     @id @default(autoincrement())
+  draftId        Int
+  productId      Int
+  quantity       Int
+  unitPriceCents Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
+  draft          Draft   @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  product        Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([draftId])
+  @@index([productId])
+}
+
+model InvoiceRevision {
+  id         Int      @id @default(autoincrement())
+  invoiceId  Int
+  payloadJson Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+  createdBy  Int?
+  invoice    Draft    @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  author     User?    @relation("RevisionAuthor", fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([invoiceId, createdAt])
+}
