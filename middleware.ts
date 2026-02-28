@@ -4,28 +4,13 @@ const SESSION_COOKIE_NAME = "np_session";
 const PUBLIC_PATHS = ["/login"];
 const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30;
 
-function isMissing(value: string | undefined): boolean {
-  return !value || value.trim().length === 0;
-}
-
 function isDevAuthBypassEnabled(): boolean {
   return process.env.NODE_ENV !== "production" && process.env.DISABLE_AUTH === "true";
 }
 
-function assertProductionSecrets(): void {
-  if (process.env.NODE_ENV !== "production") return;
-
-  const missing: string[] = [];
-  if (isMissing(process.env.SESSION_SECRET)) missing.push("SESSION_SECRET");
-
-  if (missing.length > 0) {
-    throw new Error(`Fehlende Pflicht-Umgebungsvariablen in Production: ${missing.join(", ")}`);
-  }
-}
-
-function getSessionSecret(): string {
-  assertProductionSecrets();
-  return process.env.SESSION_SECRET ?? "nord-pack-local-dev-secret-change-me";
+function getSessionSecret(): string | null {
+  const secret = process.env.SESSION_SECRET?.trim();
+  return secret && secret.length > 0 ? secret : null;
 }
 
 function toHex(buffer: ArrayBuffer): string {
@@ -35,25 +20,32 @@ function toHex(buffer: ArrayBuffer): string {
 }
 
 async function verifyToken(token: string): Promise<boolean> {
-  const [userIdRaw, timestampRaw, signature] = token.split(".");
-  if (!userIdRaw || !timestampRaw || !signature) return false;
+  try {
+    const [userIdRaw, timestampRaw, signature] = token.split(".");
+    if (!userIdRaw || !timestampRaw || !signature) return false;
 
-  const timestamp = Number.parseInt(timestampRaw, 10);
-  if (!Number.isFinite(timestamp)) return false;
-  if (Date.now() - timestamp > SESSION_MAX_AGE_MS) return false;
+    const timestamp = Number.parseInt(timestampRaw, 10);
+    if (!Number.isFinite(timestamp)) return false;
+    if (Date.now() - timestamp > SESSION_MAX_AGE_MS) return false;
 
-  const payload = `${userIdRaw}.${timestampRaw}`;
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(getSessionSecret()),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-  const expectedBuffer = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
-  const expected = toHex(expectedBuffer);
+    const secret = getSessionSecret();
+    if (!secret) return false;
 
-  return expected === signature;
+    const payload = `${userIdRaw}.${timestampRaw}`;
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const expectedBuffer = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
+    const expected = toHex(expectedBuffer);
+
+    return expected === signature;
+  } catch {
+    return false;
+  }
 }
 
 export async function middleware(request: NextRequest) {
