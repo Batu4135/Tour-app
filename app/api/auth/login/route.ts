@@ -4,6 +4,8 @@ import { createSessionToken, isValidPin, setSessionCookie, verifyPin } from "@/l
 import { badRequest } from "@/lib/http";
 import { consumeRateLimit, getRequestIp } from "@/lib/rateLimit";
 
+export const runtime = "nodejs";
+
 export async function POST(request: Request) {
   try {
     const ip = getRequestIp(request);
