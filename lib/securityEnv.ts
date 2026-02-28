@@ -11,7 +11,6 @@ export function assertProductionSecrets(): void {
 
   const missing: string[] = [];
   if (isMissing(process.env.SESSION_SECRET)) missing.push("SESSION_SECRET");
-  if (isMissing(process.env.NEXTAUTH_SECRET)) missing.push("NEXTAUTH_SECRET");
 
   if (missing.length > 0) {
     throw new Error(`Fehlende Pflicht-Umgebungsvariablen in Production: ${missing.join(", ")}`);
