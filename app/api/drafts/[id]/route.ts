@@ -4,6 +4,8 @@ import { requireAuth } from "@/lib/requireAuth";
 import { badRequest, notFound, unauthorized } from "@/lib/http";
 import { z } from "zod";
 
+export const runtime = "nodejs";
+
 type RouteContext = {
   params: {
     id: string;
@@ -71,6 +73,8 @@ export async function GET(_: Request, { params }: RouteContext) {
       customerId: draft.customer.id,
       customerName: draft.customer.name,
       date: draft.date.toISOString(),
+      note: draft.note ?? null,
+      updatedAt: draft.updatedAt.toISOString(),
       lines: draft.lines.map((line: any) => ({
         id: line.id,
         productId: line.productId,
@@ -165,6 +169,8 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       customerId: draft.customer.id,
       customerName: draft.customer.name,
       date: draft.date.toISOString(),
+      note: draft.note ?? null,
+      updatedAt: draft.updatedAt.toISOString(),
       lines: draft.lines.map((line: any) => ({
         id: line.id,
         productId: line.productId,

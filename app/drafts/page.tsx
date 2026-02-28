@@ -119,7 +119,7 @@ export default function DraftsPage() {
               </div>
               <div className="flex items-center gap-2">
                 <Link
-                  href={`/drafts/new?draftId=${draft.id}&customerId=${draft.customerId}`}
+                  href={`/drafts/${draft.id}`}
                   className="secondary-btn !p-2"
                   aria-label={t("editAria")}
                 >

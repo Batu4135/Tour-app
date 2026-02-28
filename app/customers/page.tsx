@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Plus, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import CustomerCard from "@/components/CustomerCard";
 
@@ -29,6 +30,7 @@ const emptyForm: NewCustomerForm = {
 
 export default function CustomersPage() {
   const t = useTranslations("customers");
+  const router = useRouter();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -75,10 +77,11 @@ export default function CustomersPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form)
       });
-      const data = await response.json();
+      const data = (await response.json()) as { customer?: { id: number }; error?: string };
       if (!response.ok) throw new Error(data.error ?? t("createError"));
+      if (!data.customer?.id) throw new Error(t("createError"));
       setForm(emptyForm);
-      await loadCustomers();
+      router.push(`/customers/${data.customer.id}?created=1`);
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : t("createError"));
     } finally {

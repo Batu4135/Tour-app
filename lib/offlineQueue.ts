@@ -6,6 +6,7 @@ export type DraftWritePayload = {
     quantity: number;
     unitPriceCents: number;
   }>;
+  note?: string | null;
 };
 
 export type PendingWrite = {
@@ -74,6 +75,30 @@ export async function enqueuePendingWrite(draftId: number, payload: DraftWritePa
     payload,
     createdAt: Date.now()
   } satisfies PendingWrite);
+  await transactionComplete(tx);
+  db.close();
+  return id;
+}
+
+export async function enqueueLatestPendingWrite(draftId: number, payload: DraftWritePayload): Promise<string> {
+  const db = await openDb();
+  const tx = db.transaction(STORE_NAME, "readwrite");
+  const store = tx.objectStore(STORE_NAME);
+  const entries = (await requestToPromise<PendingWrite[]>(store.getAll())) ?? [];
+  for (const entry of entries) {
+    if (entry.draftId === draftId) {
+      store.delete(entry.id);
+    }
+  }
+
+  const id = newId();
+  store.put({
+    id,
+    draftId,
+    payload,
+    createdAt: Date.now()
+  } satisfies PendingWrite);
+
   await transactionComplete(tx);
   db.close();
   return id;

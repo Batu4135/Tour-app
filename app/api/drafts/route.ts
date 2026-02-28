@@ -4,6 +4,8 @@ import { requireAuth } from "@/lib/requireAuth";
 import { badRequest, notFound, unauthorized } from "@/lib/http";
 import { z } from "zod";
 
+export const runtime = "nodejs";
+
 const createDraftSchema = z.object({
   customerId: z.number().int().positive()
 });
@@ -27,6 +29,8 @@ export async function GET() {
       customerId: draft.customerId,
       customerName: draft.customer.name,
       date: draft.date.toISOString(),
+      note: draft.note ?? null,
+      updatedAt: draft.updatedAt.toISOString(),
       totalCents: draft.lines.reduce((sum: number, line: any) => sum + line.quantity * line.unitPriceCents, 0)
     }))
   });
@@ -86,6 +90,8 @@ export async function POST(request: Request) {
       customerId: draft.customerId,
       customerName: customer.name,
       date: draft.date.toISOString(),
+      note: draft.note ?? null,
+      updatedAt: draft.updatedAt.toISOString(),
       lines: []
     },
     customerPriceMap,

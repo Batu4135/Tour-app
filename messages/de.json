@@ -50,7 +50,9 @@
     "empty": "Kunde wurde nicht gefunden.",
     "loadError": "Kundendaten konnten nicht geladen werden.",
     "saveError": "Aenderungen konnten nicht gespeichert werden.",
-    "confirmDelete": "Diesen Kunden wirklich loeschen?"
+    "confirmDelete": "Diesen Kunden wirklich loeschen?",
+    "createdSuccess": "Kunde erfolgreich angelegt.",
+    "productAddedSuccess": "Produkt erfolgreich hinzugefuegt."
   },
   "products": {
     "title": "Produkte",
@@ -92,7 +94,10 @@
     "save": "Speichern",
     "missingCustomer": "Bitte zuerst einen Kunden aus dem Bereich Vordruck auswaehlen.",
     "backToDrafts": "Zurueck zu Vordruck",
-    "customer": "Kunde"
+    "customer": "Kunde",
+    "noteLabel": "Notiz",
+    "notePlaceholder": "Optionale Notiz fuer den Vordruck",
+    "offlinePending": "Offline - wird gespeichert sobald Verbindung da ist"
   },
   "settings": {
     "title": "Einstellungen",

@@ -4,6 +4,8 @@ import { requireAuth } from "@/lib/requireAuth";
 import { badRequest, unauthorized } from "@/lib/http";
 import { z } from "zod";
 
+export const runtime = "nodejs";
+
 type RouteContext = {
   params: {
     id: string;
@@ -51,7 +53,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     }
   });
 
-  return NextResponse.json({ price }, { status: 201 });
+  return NextResponse.json({ ok: true, price }, { status: 201 });
 }
 
 export async function PATCH(request: Request, { params }: RouteContext) {

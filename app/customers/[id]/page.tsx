@@ -1,10 +1,11 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Search, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { centsToEuro, euroToCents } from "@/lib/money";
+import Toast from "@/components/Toast";
 
 type Product = {
   id: number;
@@ -70,6 +71,7 @@ function getProductSearchScore(product: Product, query: string): number | null {
 export default function CustomerDetailPage() {
   const t = useTranslations("customerDetail");
   const router = useRouter();
+  const searchParams = useSearchParams();
   const params = useParams<{ id: string }>();
   const customerId = Number.parseInt(params.id, 10);
 
@@ -81,6 +83,8 @@ export default function CustomerDetailPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isProductSearchFocused, setIsProductSearchFocused] = useState(false);
   const [priceInput, setPriceInput] = useState("");
+  const [toast, setToast] = useState<{ message: string; tone: "success" | "error" | "info" } | null>(null);
+  const productSearchRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     void loadDetail();
@@ -94,10 +98,7 @@ export default function CustomerDetailPage() {
 
   const productSuggestions = useMemo(() => {
     if (availableProducts.length === 0) return [];
-
-    if (!productQuery.trim()) {
-      return availableProducts.slice(0, 12);
-    }
+    if (!productQuery.trim()) return [];
 
     return availableProducts
       .map((product) => ({
@@ -109,6 +110,20 @@ export default function CustomerDetailPage() {
       .slice(0, 12)
       .map((entry) => entry.product);
   }, [availableProducts, productQuery]);
+
+  const showSuggestions = isProductSearchFocused && productQuery.trim().length >= 1;
+
+  useEffect(() => {
+    if (searchParams.get("created") !== "1") return;
+    setToast({ message: t("createdSuccess"), tone: "success" });
+    router.replace(`/customers/${customerId}`);
+  }, [customerId, router, searchParams, t]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 2400);
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   useEffect(() => {
     if (!selectedProduct) return;
@@ -172,6 +187,7 @@ export default function CustomerDetailPage() {
   async function onAddPrice(event: FormEvent) {
     event.preventDefault();
     if (!selectedProduct || !priceInput) return;
+    setError("");
     const cents = euroToCents(priceInput);
     const response = await fetch(`/api/customers/${customerId}/prices`, {
       method: "POST",
@@ -181,12 +197,17 @@ export default function CustomerDetailPage() {
         priceCents: cents
       })
     });
-    if (response.ok) {
+    const payload = (await response.json()) as { ok?: boolean; error?: string };
+    if (response.ok && payload.ok) {
       setSelectedProduct(null);
       setProductQuery("");
       setIsProductSearchFocused(false);
       setPriceInput("");
+      setToast({ message: t("productAddedSuccess"), tone: "success" });
       await loadDetail();
+      requestAnimationFrame(() => productSearchRef.current?.focus());
+    } else {
+      setToast({ message: payload.error ?? t("saveError"), tone: "error" });
     }
   }
 
@@ -223,6 +244,8 @@ export default function CustomerDetailPage() {
         <h1 className="text-2xl font-bold">{data.name}</h1>
         <p className="text-sm text-[#4A4A4A]/70">{t("subtitle")}</p>
       </header>
+
+      <Toast visible={Boolean(toast)} message={toast?.message ?? ""} tone={toast?.tone ?? "info"} />
 
       <form className="card space-y-3" onSubmit={onSaveCustomer}>
         <input
@@ -267,6 +290,7 @@ export default function CustomerDetailPage() {
             <Search className="search-icon" size={16} />
             <input
               id="customer-product-search"
+              ref={productSearchRef}
               className="search-input"
               type="search"
               value={productQuery}
@@ -291,10 +315,9 @@ export default function CustomerDetailPage() {
               spellCheck={false}
               inputMode="search"
               enterKeyHint="search"
-              autoFocus
             />
           </div>
-          {isProductSearchFocused ? (
+          {showSuggestions ? (
             <div className="max-h-56 space-y-2 overflow-auto rounded-xl border border-[#E5E5E5] bg-white p-2">
               {productSuggestions.length === 0 ? (
                 <p className="px-2 py-2 text-xs text-[#4A4A4A]/60">{t("productSearchNoResults")}</p>

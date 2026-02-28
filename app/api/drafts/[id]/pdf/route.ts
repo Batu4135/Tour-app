@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { badRequest, notFound, unauthorized } from "@/lib/http";
 
+export const runtime = "nodejs";
+
 type RouteContext = {
   params: {
     id: string;

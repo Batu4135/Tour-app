@@ -1,0 +1,469 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { CheckCircle2, FileDown, Save } from "lucide-react";
+import { useTranslations } from "next-intl";
+import ProductPicker, { ProductOption, SelectedProductItem } from "@/components/ProductPicker";
+import { formatCents } from "@/lib/formatCents";
+import SyncStatus from "@/components/SyncStatus";
+import {
+  DraftWritePayload,
+  enqueueLatestPendingWrite,
+  getPendingWriteCount,
+  getPendingWrites,
+  removePendingWrite,
+  syncPendingWrites,
+  updatePendingWriteError
+} from "@/lib/offlineQueue";
+
+type DraftLine = {
+  id: number;
+  productId: number;
+  productName: string;
+  productSku: string;
+  quantity: number;
+  unitPriceCents: number;
+};
+
+type DraftData = {
+  id: number;
+  customerId: number;
+  customerName: string;
+  date: string;
+  note: string | null;
+  updatedAt?: string;
+  lines: DraftLine[];
+};
+
+type InitResponse = {
+  draft?: DraftData;
+  customerPriceMap?: Record<number, number>;
+  customerSuggestedProducts?: ProductOption[];
+  error?: string;
+};
+
+type DraftEditorProps = {
+  draftId: number;
+};
+
+type PersistOptions = {
+  force?: boolean;
+  backgroundOnly?: boolean;
+};
+
+function isOnline(): boolean {
+  if (typeof navigator === "undefined") return true;
+  return navigator.onLine;
+}
+
+export default function DraftEditor({ draftId }: DraftEditorProps) {
+  const t = useTranslations("draftEditor");
+  const router = useRouter();
+  const [draft, setDraft] = useState<DraftData | null>(null);
+  const [customerPriceMap, setCustomerPriceMap] = useState<Record<number, number>>({});
+  const [customerSuggestedProducts, setCustomerSuggestedProducts] = useState<ProductOption[]>([]);
+  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [syncState, setSyncState] = useState<"ok" | "pending" | "error">("ok");
+  const [pendingCount, setPendingCount] = useState(0);
+  const [syncingNow, setSyncingNow] = useState(false);
+  const [error, setError] = useState("");
+  const [isOffline, setIsOffline] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const saveTimer = useRef<NodeJS.Timeout | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const saveSeqRef = useRef(0);
+  const localVersionRef = useRef(0);
+  const snapshotKey = `nord-pack:draft:${draftId}`;
+
+  const totalCents = useMemo(
+    () => (draft ? draft.lines.reduce((sum, line) => sum + line.quantity * line.unitPriceCents, 0) : 0),
+    [draft]
+  );
+
+  const writeSnapshot = useCallback(
+    (value: DraftData | null) => {
+      if (typeof window === "undefined") return;
+      if (!value) {
+        window.localStorage.removeItem(snapshotKey);
+        return;
+      }
+      window.localStorage.setItem(
+        snapshotKey,
+        JSON.stringify({
+          draft: value,
+          savedAt: Date.now()
+        })
+      );
+    },
+    [snapshotKey]
+  );
+
+  const loadSnapshot = useCallback((): DraftData | null => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = window.localStorage.getItem(snapshotKey);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as { draft?: DraftData };
+      return parsed.draft ?? null;
+    } catch {
+      return null;
+    }
+  }, [snapshotKey]);
+
+  const sendDraftPatch = useCallback(
+    async (targetDraftId: number, writePayload: DraftWritePayload, signal?: AbortSignal): Promise<DraftData> => {
+      const response = await fetch(`/api/drafts/${targetDraftId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(writePayload),
+        signal
+      });
+      const responsePayload = (await response.json()) as InitResponse;
+      if (!response.ok || !responsePayload.draft) throw new Error(responsePayload.error ?? t("saveError"));
+      return responsePayload.draft;
+    },
+    [t]
+  );
+
+  const refreshPendingState = useCallback(async () => {
+    const count = await getPendingWriteCount().catch(() => 0);
+    setPendingCount(count);
+    if (count === 0) {
+      setSyncState("ok");
+    } else if (syncState !== "error") {
+      setSyncState("pending");
+    }
+  }, [syncState]);
+
+  const hydrateDraft = useCallback(async () => {
+    setError("");
+    const snapshot = loadSnapshot();
+    if (snapshot) {
+      setDraft(snapshot);
+      setStatus("saved");
+    }
+
+    try {
+      const response = await fetch(`/api/drafts/${draftId}`);
+      const payload = (await response.json()) as InitResponse;
+      if (!response.ok || !payload.draft) throw new Error(payload.error ?? t("initError"));
+
+      setCustomerPriceMap(payload.customerPriceMap ?? {});
+      setCustomerSuggestedProducts(payload.customerSuggestedProducts ?? []);
+
+      const pendingWrites = await getPendingWrites().catch(() => []);
+      const hasPendingForDraft = pendingWrites.some((entry) => entry.draftId === draftId);
+
+      if (!snapshot || !hasPendingForDraft) {
+        setDraft(payload.draft);
+        writeSnapshot(payload.draft);
+        setStatus("saved");
+      } else {
+        setSyncState("pending");
+      }
+    } catch (loadError) {
+      if (!snapshot) {
+        setError(loadError instanceof Error ? loadError.message : t("initError"));
+      } else {
+        setSyncState("pending");
+      }
+    }
+  }, [draftId, loadSnapshot, t, writeSnapshot]);
+
+  const syncNow = useCallback(async () => {
+    setSyncingNow(true);
+    try {
+      const result = await syncPendingWrites(async (entry) => {
+        const updated = await sendDraftPatch(entry.draftId, entry.payload);
+        if (draft && updated.id === draft.id) {
+          setDraft(updated);
+          writeSnapshot(updated);
+        }
+      });
+      setPendingCount(result.pending);
+      setSyncState(result.failed > 0 ? "error" : result.pending > 0 ? "pending" : "ok");
+    } catch {
+      setSyncState("error");
+    } finally {
+      setSyncingNow(false);
+    }
+  }, [draft, sendDraftPatch, writeSnapshot]);
+
+  const persistDraft = useCallback(
+    async (options?: PersistOptions): Promise<boolean> => {
+      if (!draft) return false;
+
+      const payload: DraftWritePayload = {
+        lines: draft.lines.map((line) => ({
+          productId: line.productId,
+          quantity: line.quantity,
+          unitPriceCents: line.unitPriceCents
+        })),
+        note: draft.note?.trim() || null
+      };
+
+      writeSnapshot(draft);
+      setStatus("saving");
+      setError("");
+
+      let pendingId: string | null = null;
+      try {
+        pendingId = await enqueueLatestPendingWrite(draft.id, payload);
+        const count = await getPendingWriteCount();
+        setPendingCount(count);
+        setSyncState("pending");
+      } catch {
+        // IndexedDB kann auf iOS in Private Mode blockiert sein.
+      }
+
+      if (options?.backgroundOnly) {
+        setStatus("idle");
+        return false;
+      }
+
+      if (!isOnline()) {
+        setIsOffline(true);
+        setStatus("error");
+        return false;
+      }
+
+      const saveSeq = ++saveSeqRef.current;
+      const localVersionAtStart = localVersionRef.current;
+
+      if (!options?.force) {
+        abortRef.current?.abort();
+      }
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      try {
+        const updated = await sendDraftPatch(draft.id, payload, controller.signal);
+        if (saveSeq !== saveSeqRef.current) return true;
+
+        if (localVersionAtStart === localVersionRef.current) {
+          setDraft(updated);
+          writeSnapshot(updated);
+          setStatus("saved");
+          setDirty(false);
+        } else {
+          setStatus("idle");
+          setDirty(true);
+        }
+
+        if (pendingId) {
+          await removePendingWrite(pendingId);
+        }
+        await refreshPendingState();
+        return true;
+      } catch (persistError) {
+        if (controller.signal.aborted) return false;
+
+        setStatus("error");
+        setSyncState("pending");
+        setError(persistError instanceof Error ? persistError.message : t("saveError"));
+        if (pendingId) {
+          await updatePendingWriteError(
+            pendingId,
+            persistError instanceof Error ? persistError.message : t("saveError")
+          ).catch(() => undefined);
+        }
+        const count = await getPendingWriteCount().catch(() => 0);
+        setPendingCount(count);
+        return false;
+      }
+    },
+    [draft, refreshPendingState, sendDraftPatch, t, writeSnapshot]
+  );
+
+  useEffect(() => {
+    setIsOffline(!isOnline());
+    void hydrateDraft();
+    void refreshPendingState();
+  }, [hydrateDraft, refreshPendingState]);
+
+  useEffect(() => {
+    if (!draft || !dirty) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => void persistDraft(), 650);
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
+  }, [dirty, draft, persistDraft]);
+
+  useEffect(() => {
+    const onOnline = () => {
+      setIsOffline(false);
+      void syncNow();
+    };
+    const onOffline = () => {
+      setIsOffline(true);
+      setSyncState("pending");
+    };
+    const onPageHide = () => {
+      void persistDraft({ backgroundOnly: true });
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        void persistDraft({ backgroundOnly: true });
+      }
+    };
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        void hydrateDraft();
+        if (isOnline()) void syncNow();
+      }
+    };
+
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    window.addEventListener("pagehide", onPageHide);
+    window.addEventListener("pageshow", onPageShow);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+      window.removeEventListener("pagehide", onPageHide);
+      window.removeEventListener("pageshow", onPageShow);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [hydrateDraft, persistDraft, syncNow]);
+
+  function updateDraft(mutator: (current: DraftData) => DraftData) {
+    setDraft((prev) => {
+      if (!prev) return prev;
+      const next = mutator(prev);
+      writeSnapshot(next);
+      return next;
+    });
+    localVersionRef.current += 1;
+    setDirty(true);
+    setStatus("idle");
+  }
+
+  function onItemsChange(items: SelectedProductItem[]) {
+    updateDraft((prev) => {
+      const existingByProductId = new Map(prev.lines.map((line) => [line.productId, line]));
+      return {
+        ...prev,
+        lines: items.map((item) => {
+          const existing = existingByProductId.get(item.productId);
+          return {
+            id: existing?.id ?? -Date.now() - item.productId,
+            productId: item.productId,
+            productName: item.name,
+            productSku: item.sku,
+            quantity: item.quantity,
+            unitPriceCents: item.unitPriceCents
+          };
+        })
+      };
+    });
+  }
+
+  function onNoteChange(value: string) {
+    updateDraft((prev) => ({ ...prev, note: value }));
+  }
+
+  async function onDownloadPdf() {
+    if (!draft) return;
+    await persistDraft({ force: true });
+    window.location.assign(`/api/drafts/${draft.id}/pdf`);
+  }
+
+  if (!Number.isFinite(draftId)) {
+    return (
+      <section className="space-y-4">
+        <p className="card text-sm">{t("missingCustomer")}</p>
+        <button className="primary-btn w-full" onClick={() => router.push("/drafts")}>
+          {t("backToDrafts")}
+        </button>
+      </section>
+    );
+  }
+
+  if (!draft) return <p className="text-sm text-[#4A4A4A]/70">{t("loading")}</p>;
+
+  const selectedItems: SelectedProductItem[] = draft.lines.map((line) => ({
+    productId: line.productId,
+    sku: line.productSku ?? "",
+    name: line.productName,
+    quantity: line.quantity,
+    unitPriceCents: line.unitPriceCents
+  }));
+
+  return (
+    <section className="space-y-4 pb-[180px]">
+      <header className="card">
+        <p className="text-sm text-[#4A4A4A]/70">{t("customer")}</p>
+        <h1 className="text-xl font-bold">{draft.customerName}</h1>
+        <p className="mt-1 text-sm text-[#4A4A4A]/70">{new Date(draft.date).toLocaleDateString("de-DE")}</p>
+        <div className="mt-2 flex items-center gap-2 text-xs text-[#4A4A4A]/70">
+          <CheckCircle2 size={14} />
+          {status === "saving"
+            ? t("saving")
+            : status === "saved"
+              ? t("saved")
+              : status === "error"
+                ? isOffline
+                  ? t("offlinePending")
+                  : t("saveError")
+                : t("autoSave")}
+        </div>
+      </header>
+
+      <SyncStatus state={syncState} pendingCount={pendingCount} onSyncNow={() => void syncNow()} disabled={syncingNow} />
+
+      <ProductPicker
+        selectedItems={selectedItems}
+        onChange={onItemsChange}
+        priceOverrides={customerPriceMap}
+        suggestedProducts={customerSuggestedProducts}
+        searchMode={customerSuggestedProducts.length > 0 ? "suggestedOnly" : "all"}
+      />
+
+      <div className="card space-y-2">
+        <label htmlFor="draft-note" className="text-sm font-semibold">
+          {t("noteLabel")}
+        </label>
+        <textarea
+          id="draft-note"
+          className="input min-h-[96px] resize-y"
+          placeholder={t("notePlaceholder")}
+          value={draft.note ?? ""}
+          onChange={(event) => onNoteChange(event.target.value)}
+        />
+      </div>
+
+      {error ? <p className="text-sm">{error}</p> : null}
+
+      <div
+        className="fixed bottom-[75px] left-0 right-0 z-30 mx-auto flex w-full max-w-md items-center justify-between gap-2 rounded-t-2xl bg-[#2F7EA1] px-4 py-3 text-white shadow-lg"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)" }}
+      >
+        <div>
+          <p className="text-xs text-white/80">{t("total")}</p>
+          <p className="text-xl font-bold">{formatCents(totalCents)}</p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            className="rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-sm"
+            onClick={() => void persistDraft({ force: true })}
+          >
+            <span className="flex items-center gap-1">
+              <Save size={14} />
+              {t("save")}
+            </span>
+          </button>
+          <button className="rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-sm" onClick={onDownloadPdf}>
+            <span className="flex items-center gap-1">
+              <FileDown size={14} />
+              PDF
+            </span>
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}

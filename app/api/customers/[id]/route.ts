@@ -4,6 +4,8 @@ import { requireAuth } from "@/lib/requireAuth";
 import { badRequest, notFound, unauthorized } from "@/lib/http";
 import { z } from "zod";
 
+export const runtime = "nodejs";
+
 type RouteContext = {
   params: {
     id: string;

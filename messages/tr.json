@@ -50,7 +50,9 @@
     "empty": "Musteri bulunamadi.",
     "loadError": "Musteri bilgileri yuklenemedi.",
     "saveError": "Degisiklik kaydedilemedi.",
-    "confirmDelete": "Bu musteriyi silmek istiyor musunuz?"
+    "confirmDelete": "Bu musteriyi silmek istiyor musunuz?",
+    "createdSuccess": "Musteri basariyla eklendi.",
+    "productAddedSuccess": "Urun basariyla eklendi."
   },
   "products": {
     "title": "Urunler",
@@ -92,7 +94,10 @@
     "save": "Kaydet",
     "missingCustomer": "Lutfen once Taslak ekranindan musteri secin.",
     "backToDrafts": "Taslaklara don",
-    "customer": "Musteri"
+    "customer": "Musteri",
+    "noteLabel": "Not",
+    "notePlaceholder": "Taslak icin istege bagli not",
+    "offlinePending": "Cevrimdisi - baglanti gelince kaydedilecek"
   },
   "settings": {
     "title": "Ayarlar",
