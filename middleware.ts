@@ -1,9 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { assertProductionSecrets, isDevAuthBypassEnabled } from "@/lib/securityEnv";
 
 const SESSION_COOKIE_NAME = "np_session";
 const PUBLIC_PATHS = ["/login"];
 const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30;
+
+function isMissing(value: string | undefined): boolean {
+  return !value || value.trim().length === 0;
+}
+
+function isDevAuthBypassEnabled(): boolean {
+  return process.env.NODE_ENV !== "production" && process.env.DISABLE_AUTH === "true";
+}
+
+function assertProductionSecrets(): void {
+  if (process.env.NODE_ENV !== "production") return;
+
+  const missing: string[] = [];
+  if (isMissing(process.env.SESSION_SECRET)) missing.push("SESSION_SECRET");
+  if (isMissing(process.env.NEXTAUTH_SECRET)) missing.push("NEXTAUTH_SECRET");
+
+  if (missing.length > 0) {
+    throw new Error(`Fehlende Pflicht-Umgebungsvariablen in Production: ${missing.join(", ")}`);
+  }
+}
 
 function getSessionSecret(): string {
   assertProductionSecrets();
