@@ -15,6 +15,11 @@ export const metadata: Metadata = {
   title: "nord-pack Fahrer App",
   description: "Digitaler Rechnungs-Vordruck fuer nord-pack Fahrer",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [{ url: "/icons/icon.svg", type: "image/svg+xml" }],
+    shortcut: ["/icons/icon.svg"],
+    apple: [{ url: "/icons/apple-touch-icon.svg", type: "image/svg+xml" }]
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
