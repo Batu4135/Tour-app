@@ -37,7 +37,7 @@ export async function GET(_: Request, { params }: RouteContext) {
   if (!customer) return notFound("Kunde wurde nicht gefunden.");
 
   const products = await prisma.product.findMany({
-    select: { id: true, name: true },
+    select: { id: true, name: true, sku: true },
     orderBy: { name: "asc" }
   });
 

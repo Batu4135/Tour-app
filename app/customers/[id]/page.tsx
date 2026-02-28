@@ -2,13 +2,14 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { centsToEuro, euroToCents } from "@/lib/money";
 
 type Product = {
   id: number;
   name: string;
+  sku: string;
 };
 
 type CustomerPrice = {
@@ -28,6 +29,44 @@ type CustomerDetail = {
   products: Product[];
 };
 
+function normalizeSearchValue(value: string): string {
+  return value
+    .toLocaleLowerCase("de-DE")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
+function getProductSearchScore(product: Product, query: string): number | null {
+  const normalizedQuery = normalizeSearchValue(query);
+  if (!normalizedQuery) return 1000;
+
+  const normalizedName = normalizeSearchValue(product.name);
+  const normalizedSku = normalizeSearchValue(product.sku);
+
+  if (normalizedName === normalizedQuery || normalizedSku === normalizedQuery) return 0;
+  if (normalizedName.startsWith(normalizedQuery)) return 10;
+  if (normalizedSku.startsWith(normalizedQuery)) return 15;
+
+  const wordPrefixIndex = normalizedName
+    .split(/\s+/)
+    .findIndex((word) => word.startsWith(normalizedQuery));
+  if (wordPrefixIndex >= 0) return 20 + wordPrefixIndex;
+
+  const nameIndex = normalizedName.indexOf(normalizedQuery);
+  if (nameIndex >= 0) return 40 + nameIndex;
+
+  const skuIndex = normalizedSku.indexOf(normalizedQuery);
+  if (skuIndex >= 0) return 55 + skuIndex;
+
+  const queryParts = normalizedQuery.split(/\s+/).filter(Boolean);
+  if (queryParts.length > 1 && queryParts.every((part) => normalizedName.includes(part))) {
+    return 70 + queryParts.reduce((score, part) => score + normalizedName.indexOf(part), 0);
+  }
+
+  return null;
+}
+
 export default function CustomerDetailPage() {
   const t = useTranslations("customerDetail");
   const router = useRouter();
@@ -38,7 +77,9 @@ export default function CustomerDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
-  const [selectedProductId, setSelectedProductId] = useState("");
+  const [productQuery, setProductQuery] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isProductSearchFocused, setIsProductSearchFocused] = useState(false);
   const [priceInput, setPriceInput] = useState("");
 
   useEffect(() => {
@@ -50,6 +91,33 @@ export default function CustomerDetailPage() {
     const used = new Set(data.prices.map((price) => price.productId));
     return data.products.filter((product) => !used.has(product.id));
   }, [data]);
+
+  const productSuggestions = useMemo(() => {
+    if (availableProducts.length === 0) return [];
+
+    if (!productQuery.trim()) {
+      return availableProducts.slice(0, 12);
+    }
+
+    return availableProducts
+      .map((product) => ({
+        product,
+        score: getProductSearchScore(product, productQuery)
+      }))
+      .filter((entry): entry is { product: Product; score: number } => entry.score !== null)
+      .sort((a, b) => a.score - b.score || a.product.name.localeCompare(b.product.name, "de"))
+      .slice(0, 12)
+      .map((entry) => entry.product);
+  }, [availableProducts, productQuery]);
+
+  useEffect(() => {
+    if (!selectedProduct) return;
+    const stillAvailable = availableProducts.some((product) => product.id === selectedProduct.id);
+    if (!stillAvailable) {
+      setSelectedProduct(null);
+      setProductQuery("");
+    }
+  }, [availableProducts, selectedProduct]);
 
   async function loadDetail() {
     setLoading(true);
@@ -103,21 +171,29 @@ export default function CustomerDetailPage() {
 
   async function onAddPrice(event: FormEvent) {
     event.preventDefault();
-    if (!selectedProductId || !priceInput) return;
+    if (!selectedProduct || !priceInput) return;
     const cents = euroToCents(priceInput);
     const response = await fetch(`/api/customers/${customerId}/prices`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        productId: Number.parseInt(selectedProductId, 10),
+        productId: selectedProduct.id,
         priceCents: cents
       })
     });
     if (response.ok) {
-      setSelectedProductId("");
+      setSelectedProduct(null);
+      setProductQuery("");
+      setIsProductSearchFocused(false);
       setPriceInput("");
       await loadDetail();
     }
+  }
+
+  function onSelectProduct(product: Product) {
+    setSelectedProduct(product);
+    setProductQuery(product.name);
+    setIsProductSearchFocused(false);
   }
 
   async function onUpdatePrice(priceId: number, newPriceCents: number) {
@@ -187,18 +263,64 @@ export default function CustomerDetailPage() {
       <div className="card space-y-3">
         <h2 className="text-sm font-semibold">{t("pricesTitle")}</h2>
         <form className="grid grid-cols-1 gap-2" onSubmit={onAddPrice}>
-          <select
-            className="input"
-            value={selectedProductId}
-            onChange={(event) => setSelectedProductId(event.target.value)}
-          >
-            <option value="">{t("productSelect")}</option>
-            {availableProducts.map((product) => (
-              <option key={product.id} value={product.id}>
-                {product.name}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <Search className="search-icon" size={16} />
+            <input
+              id="customer-product-search"
+              className="search-input"
+              type="search"
+              value={productQuery}
+              onFocus={() => setIsProductSearchFocused(true)}
+              onBlur={() => {
+                setTimeout(() => setIsProductSearchFocused(false), 120);
+              }}
+              onChange={(event) => {
+                setProductQuery(event.target.value);
+                setSelectedProduct(null);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !selectedProduct && productSuggestions.length > 0) {
+                  event.preventDefault();
+                  onSelectProduct(productSuggestions[0]);
+                }
+              }}
+              placeholder={t("productSearchPlaceholder")}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              inputMode="search"
+              enterKeyHint="search"
+              autoFocus
+            />
+          </div>
+          {isProductSearchFocused ? (
+            <div className="max-h-56 space-y-2 overflow-auto rounded-xl border border-[#E5E5E5] bg-white p-2">
+              {productSuggestions.length === 0 ? (
+                <p className="px-2 py-2 text-xs text-[#4A4A4A]/60">{t("productSearchNoResults")}</p>
+              ) : (
+                productSuggestions.map((product) => (
+                  <button
+                    key={product.id}
+                    type="button"
+                    className="secondary-btn w-full !py-2 text-left"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => onSelectProduct(product)}
+                  >
+                    <p className="text-sm font-medium">{product.name}</p>
+                    <p className="text-xs text-[#4A4A4A]/60">{product.sku}</p>
+                  </button>
+                ))
+              )}
+            </div>
+          ) : null}
+          {selectedProduct ? (
+            <p className="text-xs text-[#4A4A4A]/65">
+              {t("productSelected")}: {selectedProduct.name} ({selectedProduct.sku})
+            </p>
+          ) : (
+            <p className="text-xs text-[#4A4A4A]/65">{t("productSelect")}</p>
+          )}
           <input
             className="input"
             value={priceInput}
