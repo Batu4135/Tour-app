@@ -463,7 +463,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       setError(t("saveError"));
       return;
     }
-    window.location.assign(`/api/drafts/${draft.id}/pdf`);
+    router.push(`/drafts/${draft.id}/pdf`);
   }
 
   if (!Number.isFinite(draftId)) {

@@ -99,6 +99,12 @@
     "notePlaceholder": "Taslak icin istege bagli not",
     "offlinePending": "Cevrimdisi - baglanti gelince kaydedilecek"
   },
+  "draftPdfViewer": {
+    "title": "PDF Onizleme",
+    "backToDraft": "Taslaga don",
+    "backToDrafts": "Taslaklara don",
+    "invalidDraft": "Gecersiz taslak ID."
+  },
   "settings": {
     "title": "Ayarlar",
     "subtitle": "Dil, guvenlik ve urunler",
