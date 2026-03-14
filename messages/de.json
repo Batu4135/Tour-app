@@ -99,12 +99,6 @@
     "notePlaceholder": "Optionale Notiz fuer den Vordruck",
     "offlinePending": "Offline - wird gespeichert sobald Verbindung da ist"
   },
-  "draftPdfViewer": {
-    "title": "PDF Vorschau",
-    "backToDraft": "Zurueck zum Vordruck",
-    "backToDrafts": "Zurueck zu Vordruck",
-    "invalidDraft": "Ungueltige Vordruck-ID."
-  },
   "settings": {
     "title": "Einstellungen",
     "subtitle": "Sprache, Sicherheit und Produkte",
