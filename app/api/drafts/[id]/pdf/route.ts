@@ -46,6 +46,18 @@ function drawRightText(params: {
   });
 }
 
+const A4_WIDTH = 595;
+const A4_HEIGHT = 842;
+const A6_WIDTH = 298;
+const A6_HEIGHT = 420;
+const SCALE_X = A6_WIDTH / A4_WIDTH;
+const SCALE_Y = A6_HEIGHT / A4_HEIGHT;
+const SCALE = Math.min(SCALE_X, SCALE_Y);
+
+function s(value: number): number {
+  return value * SCALE;
+}
+
 export async function GET(_: Request, { params }: RouteContext) {
   const user = await requireAuth();
   if (!user) return unauthorized();
@@ -66,40 +78,40 @@ export async function GET(_: Request, { params }: RouteContext) {
   if (!draft) return notFound("Vordruck nicht gefunden.");
 
   const pdf = await PDFDocument.create();
-  const page = pdf.addPage([595, 842]);
+  const page = pdf.addPage([A6_WIDTH, A6_HEIGHT]);
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
 
-  const pageWidth = 595;
+  const pageWidth = A6_WIDTH;
   const textColor = rgb(74 / 255, 74 / 255, 74 / 255);
   const accent = rgb(47 / 255, 126 / 255, 161 / 255);
   const soft = rgb(229 / 255, 229 / 255, 229 / 255);
   const muted = rgb(0.45, 0.45, 0.45);
 
-  const left = 56;
-  const right = 539;
-  const qtyCenter = 80;
-  const productX = 118;
-  const lineTotalRight = 528;
+  const left = s(56);
+  const right = s(539);
+  const qtyCenter = s(80);
+  const productX = s(118);
+  const lineTotalRight = s(528);
 
   page.drawRectangle({
     x: left,
-    y: 788,
-    width: 72,
-    height: 3,
+    y: s(788),
+    width: s(72),
+    height: s(3),
     color: accent
   });
   page.drawText("nord-pack", {
     x: left,
-    y: 798,
-    size: 11,
+    y: s(798),
+    size: s(11),
     font: bold,
     color: accent
   });
   page.drawText("Rechnungs-Vordruck", {
     x: left,
-    y: 768,
-    size: 9,
+    y: s(768),
+    size: s(9),
     font: regular,
     color: muted
   });
@@ -107,50 +119,50 @@ export async function GET(_: Request, { params }: RouteContext) {
     page,
     text: formatDate(draft.date),
     x: lineTotalRight,
-    y: 774,
-    size: 11,
+    y: s(774),
+    size: s(11),
     font: regular,
     color: textColor
   });
 
   const customerName = draft.customer.name.slice(0, 42);
-  const customerSize = 22;
+  const customerSize = s(22);
   const customerWidth = bold.widthOfTextAtSize(customerName, customerSize);
   page.drawText(customerName, {
     x: (pageWidth - customerWidth) / 2,
-    y: 728,
+    y: s(728),
     size: customerSize,
     font: bold,
     color: textColor
   });
 
-  const headerY = 688;
+  const headerY = s(688);
   page.drawLine({
-    start: { x: left, y: 708 },
-    end: { x: right, y: 708 },
+    start: { x: left, y: s(708) },
+    end: { x: right, y: s(708) },
     color: soft,
-    thickness: 1
+    thickness: s(1)
   });
-  page.drawText("Menge", { x: 62, y: headerY, size: 9, font: bold, color: muted });
-  page.drawText("Produkt", { x: productX, y: headerY, size: 9, font: bold, color: muted });
+  page.drawText("Menge", { x: s(62), y: headerY, size: s(9), font: bold, color: muted });
+  page.drawText("Produkt", { x: productX, y: headerY, size: s(9), font: bold, color: muted });
   drawRightText({
     page,
     text: "Summe",
     x: lineTotalRight,
     y: headerY,
-    size: 9,
+    size: s(9),
     font: bold,
     color: muted
   });
   page.drawLine({
-    start: { x: left, y: 676 },
-    end: { x: right, y: 676 },
+    start: { x: left, y: s(676) },
+    end: { x: right, y: s(676) },
     color: soft,
-    thickness: 1
+    thickness: s(1)
   });
 
-  const rowStartY = 652;
-  const rowHeight = 32;
+  const rowStartY = s(652);
+  const rowHeight = s(32);
   const maxVisibleLines = 14;
   const visibleLines = draft.lines.slice(0, maxVisibleLines);
   const subtotal = draft.lines.reduce((sum: number, line: any) => sum + line.quantity * line.unitPriceCents, 0);
@@ -158,8 +170,8 @@ export async function GET(_: Request, { params }: RouteContext) {
   if (visibleLines.length === 0) {
     page.drawText("Keine Positionen", {
       x: productX,
-      y: rowStartY - 4,
-      size: 12,
+      y: rowStartY - s(4),
+      size: s(12),
       font: regular,
       color: muted
     });
@@ -171,42 +183,42 @@ export async function GET(_: Request, { params }: RouteContext) {
     const name = line.product.name.slice(0, 32);
     const qtyText = String(line.quantity);
 
-    const badgeWidth = Math.max(24, bold.widthOfTextAtSize(qtyText, 10) + 12);
+    const badgeWidth = Math.max(s(24), bold.widthOfTextAtSize(qtyText, s(10)) + s(12));
     const badgeX = qtyCenter - badgeWidth / 2;
     page.drawRectangle({
       x: badgeX,
-      y: y - 3,
+      y: y - s(3),
       width: badgeWidth,
-      height: 16,
+      height: s(16),
       color: rgb(245 / 255, 249 / 255, 252 / 255),
       borderColor: soft,
-      borderWidth: 0.7
+      borderWidth: s(0.7)
     });
-    const qtyWidth = bold.widthOfTextAtSize(qtyText, 10);
+    const qtyWidth = bold.widthOfTextAtSize(qtyText, s(10));
     page.drawText(qtyText, {
       x: qtyCenter - qtyWidth / 2,
-      y: y + 1,
-      size: 10,
+      y: y + s(1),
+      size: s(10),
       font: bold,
       color: accent
     });
 
-    page.drawText(name, { x: productX, y, size: 12, font: regular, color: textColor });
+    page.drawText(name, { x: productX, y, size: s(12), font: regular, color: textColor });
     drawRightText({
       page,
       text: money(lineTotal),
       x: lineTotalRight,
       y,
-      size: 12,
+      size: s(12),
       font: bold,
       color: textColor
     });
 
     page.drawLine({
-      start: { x: left, y: y - 9 },
-      end: { x: right, y: y - 9 },
+      start: { x: left, y: y - s(9) },
+      end: { x: right, y: y - s(9) },
       color: soft,
-      thickness: 0.8
+      thickness: s(0.8)
     });
   });
 
@@ -214,7 +226,7 @@ export async function GET(_: Request, { params }: RouteContext) {
     page.drawText(`+${draft.lines.length - maxVisibleLines} weitere Positionen`, {
       x: productX,
       y: rowStartY - maxVisibleLines * rowHeight,
-      size: 10,
+      size: s(10),
       font: regular,
       color: muted
     });
@@ -223,52 +235,52 @@ export async function GET(_: Request, { params }: RouteContext) {
   const vat = Math.round(subtotal * 0.19);
   const total = subtotal + vat;
   const usedRows = Math.max(1, Math.min(draft.lines.length, maxVisibleLines));
-  const summaryTop = rowStartY - usedRows * rowHeight - 30;
+  const summaryTop = rowStartY - usedRows * rowHeight - s(30);
 
-  page.drawText("Zwischensumme", { x: 384, y: summaryTop, size: 10, font: regular, color: muted });
+  page.drawText("Zwischensumme", { x: s(384), y: summaryTop, size: s(10), font: regular, color: muted });
   drawRightText({
     page,
     text: money(subtotal),
     x: lineTotalRight,
     y: summaryTop,
-    size: 12,
+    size: s(12),
     font: regular,
     color: textColor
   });
-  page.drawText("MWSt 19%", { x: 384, y: summaryTop - 20, size: 10, font: regular, color: muted });
+  page.drawText("MWSt 19%", { x: s(384), y: summaryTop - s(20), size: s(10), font: regular, color: muted });
   drawRightText({
     page,
     text: money(vat),
     x: lineTotalRight,
-    y: summaryTop - 20,
-    size: 12,
+    y: summaryTop - s(20),
+    size: s(12),
     font: regular,
     color: textColor
   });
 
-  const ruleY = summaryTop - 28;
+  const ruleY = summaryTop - s(28);
   page.drawLine({
-    start: { x: 372, y: ruleY },
+    start: { x: s(372), y: ruleY },
     end: { x: lineTotalRight, y: ruleY },
-    thickness: 2,
+    thickness: s(2),
     color: accent
   });
 
-  page.drawText("Gesamt", { x: 384, y: summaryTop - 50, size: 10, font: regular, color: muted });
+  page.drawText("Gesamt", { x: s(384), y: summaryTop - s(50), size: s(10), font: regular, color: muted });
   drawRightText({
     page,
     text: money(total),
     x: lineTotalRight,
-    y: summaryTop - 56,
-    size: 25,
+    y: summaryTop - s(56),
+    size: s(25),
     font: bold,
     color: textColor
   });
 
   page.drawText(`Nr. ${draft.id}`, {
     x: left,
-    y: 42,
-    size: 9,
+    y: s(42),
+    size: s(9),
     font: regular,
     color: muted
   });
