@@ -120,9 +120,21 @@ export default function ProductPicker({
   }
 
   function updateQuantity(productId: number, value: string) {
+    if (value.trim() === "") {
+      onChange(selectedItems.map((item) => (item.productId === productId ? { ...item, quantity: 0 } : item)));
+      return;
+    }
+
     const parsed = Number.parseInt(value, 10);
-    const quantity = Number.isFinite(parsed) ? Math.max(1, parsed) : 1;
+    if (!Number.isFinite(parsed)) return;
+    const quantity = Math.max(0, parsed);
     onChange(selectedItems.map((item) => (item.productId === productId ? { ...item, quantity } : item)));
+  }
+
+  function normalizeQuantity(productId: number) {
+    const current = selectedItems.find((item) => item.productId === productId);
+    if (!current || current.quantity >= 1) return;
+    onChange(selectedItems.map((item) => (item.productId === productId ? { ...item, quantity: 1 } : item)));
   }
 
   function updatePrice(productId: number, value: string) {
@@ -219,7 +231,10 @@ export default function ProductPicker({
                     type="number"
                     min={1}
                     value={item.quantity}
+                    inputMode="numeric"
+                    onFocus={(event) => event.currentTarget.select()}
                     onChange={(event) => updateQuantity(item.productId, event.target.value)}
+                    onBlur={() => normalizeQuantity(item.productId)}
                   />
                 </div>
                 <div>

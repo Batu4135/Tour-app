@@ -458,21 +458,18 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
 
   async function onDownloadPdf() {
     if (!draft) return;
-    const pdfWindow = window.open("", "_blank", "noopener,noreferrer");
     const saved = await forceSave();
     if (!saved) {
-      pdfWindow?.close();
       setError(t("saveError"));
       return;
     }
-    const pdfUrl = `/api/drafts/${draft.id}/pdf`;
-    if (pdfWindow) {
-      pdfWindow.location.href = pdfUrl;
-      pdfWindow.focus();
-      return;
-    }
 
-    setError(t("saveError"));
+    const pdfUrl = `/api/drafts/${draft.id}/pdf`;
+
+    const pdfWindow = window.open(pdfUrl, "_blank", "noopener,noreferrer");
+    if (!pdfWindow) {
+      window.location.assign(pdfUrl);
+    }
   }
 
   if (!Number.isFinite(draftId)) {
