@@ -1,7 +1,7 @@
 {
   "nav": {
     "customers": "Musteriler",
-    "drafts": "Taslak",
+    "drafts": "Fatura",
     "settings": "Ayarlar"
   },
   "login": {
@@ -27,7 +27,10 @@
     "loading": "Musteriler yukleniyor...",
     "empty": "Musteri bulunamadi.",
     "loadError": "Musteriler yuklenemedi.",
-    "createError": "Musteri eklenemedi."
+    "createError": "Musteri eklenemedi.",
+    "routeFilterTitle": "Rota gunu",
+    "allRoutes": "Tum gunler",
+    "noRouteDay": "Rota gunu yok"
   },
   "customerDetail": {
     "subtitle": "Musteri detaylari ve fiyat listesi",
@@ -66,21 +69,21 @@
     "confirmDelete": "Urun silinsin mi?"
   },
   "drafts": {
-    "title": "Taslak",
+    "title": "Fatura",
     "subtitle": "Musteriyi secip hemen baslayin",
-    "newDraft": "Yeni taslak olustur",
+    "newDraft": "Yeni fatura olustur",
     "customerSearch": "Musteri ara",
     "noCustomers": "Musteri bulunamadi.",
-    "recent": "Son taslaklar",
-    "noDrafts": "Henuz taslak yok.",
-    "confirmDelete": "Taslak silinsin mi?",
-    "deleteError": "Taslak silinemedi.",
+    "recent": "Son faturalar",
+    "noDrafts": "Henuz fatura yok.",
+    "confirmDelete": "Fatura silinsin mi?",
+    "deleteError": "Fatura silinemedi.",
     "editAria": "Duzenle",
     "deleteAria": "Sil"
   },
   "draftEditor": {
-    "loading": "Taslak yukleniyor...",
-    "initError": "Taslak olusturulamadi.",
+    "loading": "Fatura yukleniyor...",
+    "initError": "Fatura olusturulamadi.",
     "saveError": "Kayit basarisiz.",
     "autoSave": "Otomatik kayit acik",
     "saved": "Kaydedildi",
@@ -92,12 +95,13 @@
     "noLines": "Henuz kalem yok.",
     "total": "Toplam",
     "save": "Kaydet",
-    "missingCustomer": "Lutfen once Taslak ekranindan musteri secin.",
-    "backToDrafts": "Taslaklara don",
+    "missingCustomer": "Lutfen once Fatura ekranindan musteri secin.",
+    "backToDrafts": "Faturalara don",
     "customer": "Musteri",
     "noteLabel": "Not",
-    "notePlaceholder": "Taslak icin istege bagli not",
-    "offlinePending": "Cevrimdisi - baglanti gelince kaydedilecek"
+    "notePlaceholder": "Fatura icin istege bagli not",
+    "offlinePending": "Cevrimdisi - baglanti gelince kaydedilecek",
+    "sharePrint": "Paylas/Yazdir"
   },
   "settings": {
     "title": "Ayarlar",
@@ -113,14 +117,30 @@
   },
   "productsPage": {
     "title": "Urunler",
-    "subtitle": "Hizli urun arama ve otomatik tamamlama",
+    "subtitle": "Urun ekle, fiyat guncelle ve sil",
+    "createTitle": "Yeni urun",
+    "createName": "Urun adi",
+    "createSku": "SKU",
+    "createPrice": "Varsayilan fiyat (ornek 2,49)",
+    "createAction": "Urun ekle",
+    "creating": "Urun ekleniyor...",
     "searchLabel": "Arama",
     "searchPlaceholder": "Isim veya SKU",
     "suggestions": "Oneriler",
     "noResults": "Sonuc yok",
     "loading": "Urunler yukleniyor...",
     "empty": "Urun bulunamadi.",
-    "loadError": "Urunler yuklenemedi."
+    "loadError": "Urunler yuklenemedi.",
+    "saveError": "Urun kaydedilemedi.",
+    "active": "Aktif",
+    "saveAction": "Kaydet",
+    "saving": "Kaydediliyor...",
+    "deleteAction": "Sil",
+    "deleting": "Siliniyor...",
+    "createSuccess": "Urun basariyla eklendi.",
+    "updateSuccess": "Urun basariyla kaydedildi.",
+    "deleteSuccess": "Urun basariyla silindi.",
+    "requiredFields": "Isim ve SKU zorunludur."
   },
   "productPicker": {
     "searchLabel": "Urun ara",

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, FileDown, Save } from "lucide-react";
+import { CheckCircle2, FileDown, Save, Share2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import ProductPicker, { ProductOption, SelectedProductItem } from "@/components/ProductPicker";
 import { formatCents } from "@/lib/formatCents";
@@ -466,8 +466,56 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
 
     const pdfUrl = `/api/drafts/${draft.id}/pdf`;
 
-    const pdfWindow = window.open(pdfUrl, "_blank", "noopener,noreferrer");
+    const pdfWindow = window.open(pdfUrl, "_blank");
     if (!pdfWindow) {
+      window.location.assign(pdfUrl);
+    }
+  }
+
+  async function onShareOrPrintPdf() {
+    if (!draft) return;
+    const saved = await forceSave();
+    if (!saved) {
+      setError(t("saveError"));
+      return;
+    }
+
+    const pdfUrl = `/api/drafts/${draft.id}/pdf`;
+    try {
+      const response = await fetch(pdfUrl);
+      if (!response.ok) throw new Error(t("saveError"));
+      const blob = await response.blob();
+      const file = new File([blob], `nord-pack-vordruck-${draft.id}.pdf`, { type: "application/pdf" });
+      const nav = navigator as Navigator & {
+        canShare?: (data: { files?: File[] }) => boolean;
+        share?: (data: { title?: string; text?: string; files?: File[]; url?: string }) => Promise<void>;
+      };
+
+      if (typeof nav.share === "function" && typeof nav.canShare === "function" && nav.canShare({ files: [file] })) {
+        await nav.share({
+          title: `Vordruck ${draft.id}`,
+          text: draft.customerName,
+          files: [file]
+        });
+        return;
+      }
+
+      if (typeof nav.share === "function") {
+        await nav.share({
+          title: `Vordruck ${draft.id}`,
+          text: draft.customerName,
+          url: `${window.location.origin}${pdfUrl}`
+        });
+        return;
+      }
+    } catch (shareError) {
+      if (shareError instanceof Error && shareError.name === "AbortError") {
+        return;
+      }
+    }
+
+    const popup = window.open(pdfUrl, "_blank");
+    if (!popup) {
       window.location.assign(pdfUrl);
     }
   }
@@ -547,6 +595,12 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
           <p className="text-xl font-bold">{formatCents(totalCents)}</p>
         </div>
         <div className="flex gap-2">
+          <button className="rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-sm" onClick={onShareOrPrintPdf}>
+            <span className="flex items-center gap-1">
+              <Share2 size={14} />
+              {t("sharePrint")}
+            </span>
+          </button>
           <button
             className="rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-sm"
             onClick={() => void forceSave()}

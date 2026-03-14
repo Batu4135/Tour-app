@@ -4,6 +4,8 @@ import { requireAuth } from "@/lib/requireAuth";
 import { badRequest, unauthorized } from "@/lib/http";
 import { z } from "zod";
 
+export const runtime = "nodejs";
+
 const createProductSchema = z.object({
   name: z.string().min(2),
   sku: z.string().min(1),
@@ -17,12 +19,13 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const q = url.searchParams.get("q")?.trim() ?? "";
+  const includeInactive = url.searchParams.get("includeInactive") === "1";
   const limitParam = Number.parseInt(url.searchParams.get("limit") ?? "", 10);
   const take = q ? 20 : Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 500) : 100;
 
   const products = await prisma.product.findMany({
     where: {
-      isActive: true,
+      ...(includeInactive ? {} : { isActive: true }),
       ...(q
         ? {
             OR: [

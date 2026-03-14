@@ -48,6 +48,23 @@ export default function DraftsPage() {
   }, []);
 
   const selectedResults = useMemo(() => customers.slice(0, 10), [customers]);
+  const groupedDrafts = useMemo(() => {
+    const groups = new Map<string, Draft[]>();
+    for (const draft of recentDrafts) {
+      const date = new Date(draft.date);
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+        date.getDate()
+      ).padStart(2, "0")}`;
+      const list = groups.get(key) ?? [];
+      list.push(draft);
+      groups.set(key, list);
+    }
+    return Array.from(groups.entries()).map(([key, drafts]) => ({
+      key,
+      label: new Date(`${key}T12:00:00.000Z`).toLocaleDateString("de-DE"),
+      drafts
+    }));
+  }, [recentDrafts]);
 
   async function loadCustomers() {
     const response = await fetch(`/api/customers?q=${encodeURIComponent(debounced)}`);
@@ -108,33 +125,36 @@ export default function DraftsPage() {
 
       <div className="card space-y-3">
         <p className="text-sm font-semibold">{t("recent")}</p>
-        {recentDrafts.map((draft) => (
-          <div key={draft.id} className="rounded-xl border border-[#E5E5E5] bg-white px-3 py-2">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold">{draft.customerName}</p>
-                <p className="text-xs text-[#4A4A4A]/65">
-                  {new Date(draft.date).toLocaleDateString("de-DE")} - {centsToText(draft.totalCents)}
-                </p>
+        {groupedDrafts.map((group) => (
+          <div key={group.key} className="space-y-2">
+            <p className="text-xs font-semibold text-[#4A4A4A]/70">{group.label}</p>
+            {group.drafts.map((draft) => (
+              <div key={draft.id} className="rounded-xl border border-[#E5E5E5] bg-white px-3 py-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold">{draft.customerName}</p>
+                    <p className="text-xs text-[#4A4A4A]/65">{centsToText(draft.totalCents)}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/drafts/${draft.id}`}
+                      className="secondary-btn !p-2"
+                      aria-label={t("editAria")}
+                    >
+                      <Pencil size={14} />
+                    </Link>
+                    <button
+                      type="button"
+                      className="secondary-btn !p-2"
+                      onClick={() => void deleteDraft(draft.id)}
+                      aria-label={t("deleteAria")}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Link
-                  href={`/drafts/${draft.id}`}
-                  className="secondary-btn !p-2"
-                  aria-label={t("editAria")}
-                >
-                  <Pencil size={14} />
-                </Link>
-                <button
-                  type="button"
-                  className="secondary-btn !p-2"
-                  onClick={() => void deleteDraft(draft.id)}
-                  aria-label={t("deleteAria")}
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </div>
+            ))}
           </div>
         ))}
         {recentDrafts.length === 0 ? <p className="text-sm text-[#4A4A4A]/60">{t("noDrafts")}</p> : null}

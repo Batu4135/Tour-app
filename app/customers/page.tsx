@@ -38,6 +38,7 @@ export default function CustomersPage() {
   const [error, setError] = useState("");
   const [form, setForm] = useState<NewCustomerForm>(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [selectedRouteDay, setSelectedRouteDay] = useState<string>("all");
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(query), 260);
@@ -49,6 +50,30 @@ export default function CustomersPage() {
   }, [debouncedQuery]);
 
   const canSubmit = useMemo(() => form.name.trim().length > 1, [form.name]);
+  const routeOptions = useMemo(() => {
+    const entries = new Map<string, string>();
+    for (const customer of customers) {
+      const routeDay = customer.routeDay?.trim();
+      if (!routeDay) continue;
+      const key = routeDay.toLocaleLowerCase("tr-TR");
+      if (!entries.has(key)) entries.set(key, routeDay);
+    }
+    return Array.from(entries.values()).sort((a, b) => a.localeCompare(b, "tr-TR"));
+  }, [customers]);
+  const filteredCustomers = useMemo(() => {
+    if (selectedRouteDay === "all") return customers;
+    if (selectedRouteDay === "__none__") {
+      return customers.filter((customer) => !customer.routeDay?.trim());
+    }
+    return customers.filter((customer) => (customer.routeDay?.trim() ?? "") === selectedRouteDay);
+  }, [customers, selectedRouteDay]);
+
+  useEffect(() => {
+    if (selectedRouteDay === "all" || selectedRouteDay === "__none__") return;
+    if (!routeOptions.includes(selectedRouteDay)) {
+      setSelectedRouteDay("all");
+    }
+  }, [routeOptions, selectedRouteDay]);
 
   async function loadCustomers() {
     setLoading(true);
@@ -111,6 +136,41 @@ export default function CustomersPage() {
             {t("autocompleteHint")}
           </div>
         ) : null}
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-[#4A4A4A]/70">{t("routeFilterTitle")}</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className={selectedRouteDay === "all" ? "primary-btn !w-auto !px-3 !py-2" : "secondary-btn !w-auto !px-3 !py-2"}
+              onClick={() => setSelectedRouteDay("all")}
+            >
+              {t("allRoutes")}
+            </button>
+            {routeOptions.map((routeDay) => (
+              <button
+                key={routeDay}
+                type="button"
+                className={
+                  selectedRouteDay === routeDay
+                    ? "primary-btn !w-auto !px-3 !py-2"
+                    : "secondary-btn !w-auto !px-3 !py-2"
+                }
+                onClick={() => setSelectedRouteDay(routeDay)}
+              >
+                {routeDay}
+              </button>
+            ))}
+            <button
+              type="button"
+              className={
+                selectedRouteDay === "__none__" ? "primary-btn !w-auto !px-3 !py-2" : "secondary-btn !w-auto !px-3 !py-2"
+              }
+              onClick={() => setSelectedRouteDay("__none__")}
+            >
+              {t("noRouteDay")}
+            </button>
+          </div>
+        </div>
       </div>
 
       <form className="card space-y-3" onSubmit={onCreate}>
@@ -151,8 +211,8 @@ export default function CustomersPage() {
 
       <div className="space-y-3 pb-2">
         {loading ? <p className="text-sm text-[#4A4A4A]/65">{t("loading")}</p> : null}
-        {!loading && customers.length === 0 ? <p className="text-sm text-[#4A4A4A]/65">{t("empty")}</p> : null}
-        {customers.map((customer) => (
+        {!loading && filteredCustomers.length === 0 ? <p className="text-sm text-[#4A4A4A]/65">{t("empty")}</p> : null}
+        {filteredCustomers.map((customer) => (
           <CustomerCard key={customer.id} customer={customer} />
         ))}
       </div>

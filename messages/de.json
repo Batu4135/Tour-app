@@ -27,7 +27,10 @@
     "loading": "Lade Kunden...",
     "empty": "Keine Kunden gefunden.",
     "loadError": "Kunden konnten nicht geladen werden.",
-    "createError": "Kunde konnte nicht angelegt werden."
+    "createError": "Kunde konnte nicht angelegt werden.",
+    "routeFilterTitle": "Tour-Tag",
+    "allRoutes": "Alle",
+    "noRouteDay": "Ohne Tour-Tag"
   },
   "customerDetail": {
     "subtitle": "Kundendetails und Preisliste",
@@ -97,7 +100,8 @@
     "customer": "Kunde",
     "noteLabel": "Notiz",
     "notePlaceholder": "Optionale Notiz fuer den Vordruck",
-    "offlinePending": "Offline - wird gespeichert sobald Verbindung da ist"
+    "offlinePending": "Offline - wird gespeichert sobald Verbindung da ist",
+    "sharePrint": "Teilen/Drucken"
   },
   "settings": {
     "title": "Einstellungen",
@@ -113,14 +117,30 @@
   },
   "productsPage": {
     "title": "Produkte",
-    "subtitle": "Schnelle Produktsuche mit Autocomplete",
+    "subtitle": "Produkte anlegen, Preise anpassen und loeschen",
+    "createTitle": "Neues Produkt",
+    "createName": "Produktname",
+    "createSku": "SKU",
+    "createPrice": "Standardpreis (z.B. 2,49)",
+    "createAction": "Produkt anlegen",
+    "creating": "Lege Produkt an...",
     "searchLabel": "Suche",
     "searchPlaceholder": "Name oder SKU",
     "suggestions": "Vorschlaege",
     "noResults": "Keine Treffer",
     "loading": "Lade Produkte...",
     "empty": "Keine Produkte gefunden.",
-    "loadError": "Produkte konnten nicht geladen werden."
+    "loadError": "Produkte konnten nicht geladen werden.",
+    "saveError": "Produkt konnte nicht gespeichert werden.",
+    "active": "Aktiv",
+    "saveAction": "Speichern",
+    "saving": "Speichert...",
+    "deleteAction": "Loeschen",
+    "deleting": "Loesche...",
+    "createSuccess": "Produkt erfolgreich angelegt.",
+    "updateSuccess": "Produkt erfolgreich gespeichert.",
+    "deleteSuccess": "Produkt erfolgreich geloescht.",
+    "requiredFields": "Name und SKU sind erforderlich."
   },
   "productPicker": {
     "searchLabel": "Produkt suchen",
