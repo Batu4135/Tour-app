@@ -152,6 +152,10 @@ export default function CustomerDetailPage() {
   async function onSaveCustomer(event: FormEvent) {
     event.preventDefault();
     if (!data) return;
+    if (!data.routeDay?.trim()) {
+      setError(t("routeDayRequired"));
+      return;
+    }
     setSaving(true);
     setError("");
     try {
@@ -162,7 +166,7 @@ export default function CustomerDetailPage() {
           name: data.name,
           address: data.address,
           phone: data.phone,
-          routeDay: data.routeDay
+          routeDay: data.routeDay.trim()
         })
       });
       const payload = await response.json();
@@ -271,9 +275,10 @@ export default function CustomerDetailPage() {
           value={data.routeDay ?? ""}
           onChange={(event) => setData((prev) => (prev ? { ...prev, routeDay: event.target.value } : prev))}
           placeholder={t("routeDay")}
+          required
         />
         <div className="grid grid-cols-2 gap-3">
-          <button className="primary-btn" type="submit" disabled={saving}>
+          <button className="primary-btn" type="submit" disabled={saving || !data.routeDay?.trim()}>
             {saving ? t("saving") : t("save")}
           </button>
           <button className="secondary-btn flex items-center justify-center gap-2" type="button" onClick={onDeleteCustomer}>

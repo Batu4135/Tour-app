@@ -16,7 +16,7 @@ const updateCustomerSchema = z.object({
   name: z.string().min(2),
   address: z.string().nullable().optional(),
   phone: z.string().nullable().optional(),
-  routeDay: z.string().nullable().optional()
+  routeDay: z.string().trim().min(1)
 });
 
 export async function GET(_: Request, { params }: RouteContext) {
@@ -79,7 +79,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
         name,
         address: parsed.data.address?.trim() || null,
         phone: parsed.data.phone?.trim() || null,
-        routeDay: parsed.data.routeDay?.trim() || null
+        routeDay: parsed.data.routeDay.trim()
       }
     });
 

@@ -3,6 +3,7 @@ import { Manrope } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { ReactNode } from "react";
+import AppHeader from "@/components/AppHeader";
 import BottomNav from "@/components/BottomNav";
 import "./globals.css";
 
@@ -43,7 +44,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <html lang={locale}>
       <body className={`${manrope.className} bg-[#F8F9FA] text-[#4A4A4A]`}>
         <NextIntlClientProvider messages={messages} locale={locale}>
-          <main className="mx-auto min-h-screen w-full max-w-md px-4 pb-[110px] pt-5">{children}</main>
+          <AppHeader />
+          <main className="mx-auto min-h-screen w-full max-w-md px-4 pb-[110px] pt-3">{children}</main>
           <BottomNav />
         </NextIntlClientProvider>
       </body>

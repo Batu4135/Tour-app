@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   const q = url.searchParams.get("q")?.trim() ?? "";
   const includeInactive = url.searchParams.get("includeInactive") === "1";
   const limitParam = Number.parseInt(url.searchParams.get("limit") ?? "", 10);
-  const take = q ? 20 : Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 500) : 100;
+  const take = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 500) : q ? 100 : 100;
 
   const products = await prisma.product.findMany({
     where: {

@@ -2,11 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, FileDown, Save, Share2 } from "lucide-react";
+import { CheckCircle2, Printer } from "lucide-react";
 import { useTranslations } from "next-intl";
 import ProductPicker, { ProductOption, SelectedProductItem } from "@/components/ProductPicker";
 import { formatCents } from "@/lib/formatCents";
-import SyncStatus from "@/components/SyncStatus";
 import {
   DraftWritePayload,
   enqueueLatestPendingWrite,
@@ -62,6 +61,7 @@ function wait(ms: number): Promise<void> {
 
 export default function DraftEditor({ draftId }: DraftEditorProps) {
   const t = useTranslations("draftEditor");
+  const syncT = useTranslations("syncStatus");
   const router = useRouter();
   const [draft, setDraft] = useState<DraftData | null>(null);
   const [customerPriceMap, setCustomerPriceMap] = useState<Record<number, number>>({});
@@ -456,23 +456,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
     updateDraft((prev) => ({ ...prev, note: value }));
   }
 
-  async function onDownloadPdf() {
-    if (!draft) return;
-    const saved = await forceSave();
-    if (!saved) {
-      setError(t("saveError"));
-      return;
-    }
-
-    const pdfUrl = `/api/drafts/${draft.id}/pdf`;
-
-    const pdfWindow = window.open(pdfUrl, "_blank");
-    if (!pdfWindow) {
-      window.location.assign(pdfUrl);
-    }
-  }
-
-  async function onShareOrPrintPdf() {
+  async function onPrintPdf() {
     if (!draft) return;
     const saved = await forceSave();
     if (!saved) {
@@ -493,7 +477,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
 
       if (typeof nav.share === "function" && typeof nav.canShare === "function" && nav.canShare({ files: [file] })) {
         await nav.share({
-          title: `Vordruck ${draft.id}`,
+          title: `Fatura ${draft.id}`,
           text: draft.customerName,
           files: [file]
         });
@@ -502,7 +486,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
 
       if (typeof nav.share === "function") {
         await nav.share({
-          title: `Vordruck ${draft.id}`,
+          title: `Fatura ${draft.id}`,
           text: draft.customerName,
           url: `${window.location.origin}${pdfUrl}`
         });
@@ -540,6 +524,20 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
     quantity: line.quantity,
     unitPriceCents: line.unitPriceCents
   }));
+  const syncTone =
+    syncState === "ok"
+      ? "border-[#D4F0DA] bg-[#F2FBF5] text-[#1E6F2D]"
+      : syncState === "pending"
+        ? "border-[#F1E2B8] bg-[#FFF9EA] text-[#8A6A08]"
+        : "border-[#E7C1C1] bg-[#FFF3F3] text-[#8B2C2C]";
+  const syncDot = syncState === "ok" ? "bg-[#2B8A3E]" : syncState === "pending" ? "bg-[#D48806]" : "bg-[#C92A2A]";
+  const syncLabel = syncingNow
+    ? t("saving")
+    : syncState === "ok"
+      ? syncT("ok")
+      : syncState === "pending"
+        ? syncT("pending", { count: pendingCount })
+        : syncT("error", { count: pendingCount });
 
   return (
     <section className="space-y-4 pb-[180px]">
@@ -561,14 +559,17 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
         </div>
       </header>
 
-      <SyncStatus state={syncState} pendingCount={pendingCount} onSyncNow={() => void syncNow()} disabled={syncingNow} />
+      <div className={`card flex items-center gap-2 py-2 text-sm ${syncTone}`}>
+        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${syncDot}`} />
+        <p className="font-medium">{syncLabel}</p>
+      </div>
 
       <ProductPicker
         selectedItems={selectedItems}
         onChange={onItemsChange}
         priceOverrides={customerPriceMap}
         suggestedProducts={customerSuggestedProducts}
-        searchMode={customerSuggestedProducts.length > 0 ? "suggestedOnly" : "all"}
+        searchMode="all"
       />
 
       <div className="card space-y-2">
@@ -595,25 +596,10 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
           <p className="text-xl font-bold">{formatCents(totalCents)}</p>
         </div>
         <div className="flex gap-2">
-          <button className="rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-sm" onClick={onShareOrPrintPdf}>
+          <button className="rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-sm" onClick={onPrintPdf}>
             <span className="flex items-center gap-1">
-              <Share2 size={14} />
-              {t("sharePrint")}
-            </span>
-          </button>
-          <button
-            className="rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-sm"
-            onClick={() => void forceSave()}
-          >
-            <span className="flex items-center gap-1">
-              <Save size={14} />
-              {t("save")}
-            </span>
-          </button>
-          <button className="rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-sm" onClick={onDownloadPdf}>
-            <span className="flex items-center gap-1">
-              <FileDown size={14} />
-              PDF
+              <Printer size={14} />
+              {t("printAction")}
             </span>
           </button>
         </div>

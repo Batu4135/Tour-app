@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Plus, Search } from "lucide-react";
+import { ChevronDown, Plus, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import CustomerCard from "@/components/CustomerCard";
@@ -39,6 +39,7 @@ export default function CustomersPage() {
   const [form, setForm] = useState<NewCustomerForm>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [selectedRouteDay, setSelectedRouteDay] = useState<string>("all");
+  const [createOpen, setCreateOpen] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(query), 260);
@@ -49,7 +50,10 @@ export default function CustomersPage() {
     void loadCustomers();
   }, [debouncedQuery]);
 
-  const canSubmit = useMemo(() => form.name.trim().length > 1, [form.name]);
+  const canSubmit = useMemo(
+    () => form.name.trim().length > 1 && form.routeDay.trim().length > 0,
+    [form.name, form.routeDay]
+  );
   const routeOptions = useMemo(() => {
     const entries = new Map<string, string>();
     for (const customer of customers) {
@@ -62,14 +66,11 @@ export default function CustomersPage() {
   }, [customers]);
   const filteredCustomers = useMemo(() => {
     if (selectedRouteDay === "all") return customers;
-    if (selectedRouteDay === "__none__") {
-      return customers.filter((customer) => !customer.routeDay?.trim());
-    }
     return customers.filter((customer) => (customer.routeDay?.trim() ?? "") === selectedRouteDay);
   }, [customers, selectedRouteDay]);
 
   useEffect(() => {
-    if (selectedRouteDay === "all" || selectedRouteDay === "__none__") return;
+    if (selectedRouteDay === "all") return;
     if (!routeOptions.includes(selectedRouteDay)) {
       setSelectedRouteDay("all");
     }
@@ -106,6 +107,7 @@ export default function CustomersPage() {
       if (!response.ok) throw new Error(data.error ?? t("createError"));
       if (!data.customer?.id) throw new Error(t("createError"));
       setForm(emptyForm);
+      setCreateOpen(false);
       router.push(`/customers/${data.customer.id}?created=1`);
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : t("createError"));
@@ -160,52 +162,57 @@ export default function CustomersPage() {
                 {routeDay}
               </button>
             ))}
-            <button
-              type="button"
-              className={
-                selectedRouteDay === "__none__" ? "primary-btn !w-auto !px-3 !py-2" : "secondary-btn !w-auto !px-3 !py-2"
-              }
-              onClick={() => setSelectedRouteDay("__none__")}
-            >
-              {t("noRouteDay")}
-            </button>
           </div>
         </div>
       </div>
 
-      <form className="card space-y-3" onSubmit={onCreate}>
-        <p className="flex items-center gap-2 text-sm font-semibold">
-          <Plus size={16} />
-          {t("newCustomer")}
-        </p>
-        <input
-          className="input"
-          placeholder={t("name")}
-          value={form.name}
-          onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-        />
-        <input
-          className="input"
-          placeholder={t("address")}
-          value={form.address}
-          onChange={(event) => setForm((prev) => ({ ...prev, address: event.target.value }))}
-        />
-        <input
-          className="input"
-          placeholder={t("phone")}
-          value={form.phone}
-          onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
-        />
-        <input
-          className="input"
-          placeholder={t("routeDay")}
-          value={form.routeDay}
-          onChange={(event) => setForm((prev) => ({ ...prev, routeDay: event.target.value }))}
-        />
-        <button type="submit" className="primary-btn w-full" disabled={!canSubmit || saving}>
-          {saving ? t("saving") : t("save")}
+      <div className="card space-y-3">
+        <button
+          type="button"
+          className="flex w-full items-center justify-between text-left"
+          onClick={() => setCreateOpen((prev) => !prev)}
+        >
+          <p className="flex items-center gap-2 text-sm font-semibold">
+            <Plus size={16} />
+            {t("newCustomer")}
+          </p>
+          <ChevronDown size={18} className={`transition-transform ${createOpen ? "rotate-180" : ""}`} />
         </button>
-      </form>
+        {createOpen ? (
+          <form className="space-y-3" onSubmit={onCreate}>
+            <input
+              className="input"
+              placeholder={t("name")}
+              value={form.name}
+              onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+            />
+            <input
+              className="input"
+              placeholder={t("address")}
+              value={form.address}
+              onChange={(event) => setForm((prev) => ({ ...prev, address: event.target.value }))}
+            />
+            <input
+              className="input"
+              placeholder={t("phone")}
+              value={form.phone}
+              onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
+            />
+            <input
+              className="input"
+              placeholder={t("routeDay")}
+              value={form.routeDay}
+              onChange={(event) => setForm((prev) => ({ ...prev, routeDay: event.target.value }))}
+              required
+            />
+            <button type="submit" className="primary-btn w-full" disabled={!canSubmit || saving}>
+              {saving ? t("saving") : t("save")}
+            </button>
+          </form>
+        ) : (
+          <p className="text-xs text-[#4A4A4A]/65">{t("newCustomerHint")}</p>
+        )}
+      </div>
 
       {error ? <p className="text-sm text-[#4A4A4A]">{error}</p> : null}
 

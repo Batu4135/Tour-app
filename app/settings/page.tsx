@@ -70,7 +70,7 @@ export default function SettingsPage() {
             type="button"
             onClick={() => setLocale("tr")}
           >
-            Turkce
+            Türkçe
           </button>
         </div>
       </div>

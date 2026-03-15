@@ -10,7 +10,7 @@ const createCustomerSchema = z.object({
   name: z.string().min(2),
   address: z.string().optional(),
   phone: z.string().optional(),
-  routeDay: z.string().optional()
+  routeDay: z.string().trim().min(1)
 });
 
 export async function GET(request: Request) {
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
       name,
       address: parsed.data.address?.trim() || null,
       phone: parsed.data.phone?.trim() || null,
-      routeDay: parsed.data.routeDay?.trim() || null
+      routeDay: parsed.data.routeDay.trim()
     }
   });
 

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { badRequest, notFound, unauthorized } from "@/lib/http";
@@ -101,13 +103,30 @@ export async function GET(_: Request, { params }: RouteContext) {
     height: s(3),
     color: accent
   });
-  page.drawText("nord-pack", {
-    x: left,
-    y: s(798),
-    size: s(11),
-    font: bold,
-    color: accent
-  });
+  try {
+    const logoPath = path.join(process.cwd(), "public", "brand", "nord-pack-logo.png");
+    const logoBytes = await readFile(logoPath);
+    const logoImage = await pdf.embedPng(logoBytes);
+    const maxWidth = s(100);
+    const maxHeight = s(34);
+    const scale = Math.min(maxWidth / logoImage.width, maxHeight / logoImage.height);
+    const logoWidth = logoImage.width * scale;
+    const logoHeight = logoImage.height * scale;
+    page.drawImage(logoImage, {
+      x: left,
+      y: s(790),
+      width: logoWidth,
+      height: logoHeight
+    });
+  } catch {
+    page.drawText("Nord-Pack", {
+      x: left,
+      y: s(798),
+      size: s(11),
+      font: bold,
+      color: accent
+    });
+  }
   page.drawText("Rechnungs-Vordruck", {
     x: left,
     y: s(768),
@@ -162,12 +181,22 @@ export async function GET(_: Request, { params }: RouteContext) {
   });
 
   const rowStartY = s(652);
-  const rowHeight = s(32);
-  const maxVisibleLines = 14;
-  const visibleLines = draft.lines.slice(0, maxVisibleLines);
+  const defaultRowHeight = s(32);
+  const summaryGap = s(30);
+  const minSummaryTop = s(150);
+  const lineCount = Math.max(1, draft.lines.length);
+  const availableRowHeight = Math.max(s(80), rowStartY - minSummaryTop - summaryGap);
+  const rowHeight = Math.min(defaultRowHeight, availableRowHeight / lineCount);
+  const rowDensity = rowHeight / defaultRowHeight;
+  const rowFontSize = Math.max(s(3.5), Math.min(s(12) * rowDensity, rowHeight * 0.82));
+  const qtyFontSize = Math.max(s(3), Math.min(s(10) * rowDensity, rowHeight * 0.72));
+  const qtyBadgeHeight = Math.max(s(4.5), Math.min(s(16) * rowDensity, rowHeight * 1.05));
+  const qtyBadgePaddingX = Math.max(s(4), s(12) * rowDensity);
+  const rowDividerOffset = Math.min(rowHeight * 0.72, Math.max(s(1.6), s(9) * rowDensity));
+  const nameMaxChars = rowDensity < 0.5 ? 18 : rowDensity < 0.7 ? 24 : 32;
   const subtotal = draft.lines.reduce((sum: number, line: any) => sum + line.quantity * line.unitPriceCents, 0);
 
-  if (visibleLines.length === 0) {
+  if (draft.lines.length === 0) {
     page.drawText("Keine Positionen", {
       x: productX,
       y: rowStartY - s(4),
@@ -177,88 +206,82 @@ export async function GET(_: Request, { params }: RouteContext) {
     });
   }
 
-  visibleLines.forEach((line: any, index: number) => {
+  draft.lines.forEach((line: any, index: number) => {
     const y = rowStartY - index * rowHeight;
     const lineTotal = line.quantity * line.unitPriceCents;
-    const name = line.product.name.slice(0, 32);
+    const name = line.product.name.slice(0, nameMaxChars);
     const qtyText = String(line.quantity);
 
-    const badgeWidth = Math.max(s(24), bold.widthOfTextAtSize(qtyText, s(10)) + s(12));
+    const badgeWidth = Math.max(s(18), bold.widthOfTextAtSize(qtyText, qtyFontSize) + qtyBadgePaddingX);
     const badgeX = qtyCenter - badgeWidth / 2;
     page.drawRectangle({
       x: badgeX,
-      y: y - s(3),
+      y: y - s(2) * rowDensity,
       width: badgeWidth,
-      height: s(16),
+      height: qtyBadgeHeight,
       color: rgb(245 / 255, 249 / 255, 252 / 255),
       borderColor: soft,
       borderWidth: s(0.7)
     });
-    const qtyWidth = bold.widthOfTextAtSize(qtyText, s(10));
+    const qtyWidth = bold.widthOfTextAtSize(qtyText, qtyFontSize);
     page.drawText(qtyText, {
       x: qtyCenter - qtyWidth / 2,
-      y: y + s(1),
-      size: s(10),
+      y: y + s(0.5) * rowDensity,
+      size: qtyFontSize,
       font: bold,
       color: accent
     });
 
-    page.drawText(name, { x: productX, y, size: s(12), font: regular, color: textColor });
+    page.drawText(name, { x: productX, y, size: rowFontSize, font: regular, color: textColor });
     drawRightText({
       page,
       text: money(lineTotal),
       x: lineTotalRight,
       y,
-      size: s(12),
+      size: rowFontSize,
       font: bold,
       color: textColor
     });
 
     page.drawLine({
-      start: { x: left, y: y - s(9) },
-      end: { x: right, y: y - s(9) },
+      start: { x: left, y: y - rowDividerOffset },
+      end: { x: right, y: y - rowDividerOffset },
       color: soft,
-      thickness: s(0.8)
+      thickness: Math.max(s(0.45), s(0.8) * rowDensity)
     });
   });
 
-  if (draft.lines.length > maxVisibleLines) {
-    page.drawText(`+${draft.lines.length - maxVisibleLines} weitere Positionen`, {
-      x: productX,
-      y: rowStartY - maxVisibleLines * rowHeight,
-      size: s(10),
-      font: regular,
-      color: muted
-    });
-  }
-
   const vat = Math.round(subtotal * 0.19);
   const total = subtotal + vat;
-  const usedRows = Math.max(1, Math.min(draft.lines.length, maxVisibleLines));
-  const summaryTop = rowStartY - usedRows * rowHeight - s(30);
+  const usedRows = Math.max(1, draft.lines.length);
+  const summaryTop = rowStartY - usedRows * rowHeight - summaryGap;
+  const summaryScale = Math.max(0.7, Math.min(1, rowDensity + 0.12));
+  const summaryLabelSize = s(10) * summaryScale;
+  const summaryValueSize = s(12) * summaryScale;
+  const summaryTotalSize = s(25) * summaryScale;
 
-  page.drawText("Zwischensumme", { x: s(384), y: summaryTop, size: s(10), font: regular, color: muted });
+  page.drawText("Zwischensumme", { x: s(384), y: summaryTop, size: summaryLabelSize, font: regular, color: muted });
   drawRightText({
     page,
     text: money(subtotal),
     x: lineTotalRight,
     y: summaryTop,
-    size: s(12),
+    size: summaryValueSize,
     font: regular,
     color: textColor
   });
-  page.drawText("MWSt 19%", { x: s(384), y: summaryTop - s(20), size: s(10), font: regular, color: muted });
+  page.drawText("MWSt 19%", { x: s(384), y: summaryTop - s(20) * summaryScale, size: summaryLabelSize, font: regular, color: muted });
   drawRightText({
     page,
     text: money(vat),
     x: lineTotalRight,
-    y: summaryTop - s(20),
-    size: s(12),
+    y: summaryTop - s(20) * summaryScale,
+    size: summaryValueSize,
     font: regular,
     color: textColor
   });
 
-  const ruleY = summaryTop - s(28);
+  const ruleY = summaryTop - s(28) * summaryScale;
   page.drawLine({
     start: { x: s(372), y: ruleY },
     end: { x: lineTotalRight, y: ruleY },
@@ -266,13 +289,13 @@ export async function GET(_: Request, { params }: RouteContext) {
     color: accent
   });
 
-  page.drawText("Gesamt", { x: s(384), y: summaryTop - s(50), size: s(10), font: regular, color: muted });
+  page.drawText("Gesamt", { x: s(384), y: summaryTop - s(50) * summaryScale, size: summaryLabelSize, font: regular, color: muted });
   drawRightText({
     page,
     text: money(total),
     x: lineTotalRight,
-    y: summaryTop - s(56),
-    size: s(25),
+    y: summaryTop - s(56) * summaryScale,
+    size: summaryTotalSize,
     font: bold,
     color: textColor
   });

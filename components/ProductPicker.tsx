@@ -28,6 +28,10 @@ type ProductPickerProps = {
   searchMode?: "all" | "suggestedOnly";
 };
 
+function priceText(cents: number): string {
+  return (cents / 100).toFixed(2).replace(".", ",");
+}
+
 export default function ProductPicker({
   selectedItems,
   onChange,
@@ -40,11 +44,22 @@ export default function ProductPicker({
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [suggestions, setSuggestions] = useState<ProductOption[]>([]);
   const [loading, setLoading] = useState(false);
+  const [priceInputs, setPriceInputs] = useState<Record<number, string>>({});
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(query.trim()), 180);
     return () => clearTimeout(timer);
   }, [query]);
+
+  useEffect(() => {
+    setPriceInputs((prev) => {
+      const next: Record<number, string> = {};
+      for (const item of selectedItems) {
+        next[item.productId] = prev[item.productId] ?? priceText(item.unitPriceCents);
+      }
+      return next;
+    });
+  }, [selectedItems]);
 
   useEffect(() => {
     const clean = debouncedQuery;
@@ -58,16 +73,18 @@ export default function ProductPicker({
       const q = clean.toLowerCase();
       const localMatches = suggestedProducts
         .filter((product) => `${product.name} ${product.sku}`.toLowerCase().includes(q))
-        .slice(0, 20);
-      setSuggestions(localMatches);
-      return;
+        .slice(0, 30);
+      if (localMatches.length > 0) {
+        setSuggestions(localMatches);
+        return;
+      }
     }
 
     const controller = new AbortController();
     const run = async () => {
       setLoading(true);
       try {
-        const response = await fetch(`/api/products?q=${encodeURIComponent(clean)}`, {
+        const response = await fetch(`/api/products?q=${encodeURIComponent(clean)}&includeInactive=1&limit=100`, {
           signal: controller.signal
         });
         const payload = (await response.json()) as { products?: ProductOption[] };
@@ -137,9 +154,23 @@ export default function ProductPicker({
     onChange(selectedItems.map((item) => (item.productId === productId ? { ...item, quantity: 1 } : item)));
   }
 
-  function updatePrice(productId: number, value: string) {
-    const cents = Math.max(0, parseEuroToCents(value));
-    onChange(selectedItems.map((item) => (item.productId === productId ? { ...item, unitPriceCents: cents } : item)));
+  function updateUnitPrice(productId: number, cents: number) {
+    onChange(
+      selectedItems.map((item) => (item.productId === productId ? { ...item, unitPriceCents: Math.max(0, cents) } : item))
+    );
+  }
+
+  function onPriceInputChange(productId: number, value: string) {
+    setPriceInputs((prev) => ({ ...prev, [productId]: value }));
+    if (value.trim() === "") return;
+    updateUnitPrice(productId, parseEuroToCents(value));
+  }
+
+  function commitPrice(productId: number) {
+    const raw = priceInputs[productId] ?? "";
+    const cents = raw.trim() === "" ? 0 : parseEuroToCents(raw);
+    updateUnitPrice(productId, cents);
+    setPriceInputs((prev) => ({ ...prev, [productId]: priceText(cents) }));
   }
 
   function removeItem(productId: number) {
@@ -161,6 +192,9 @@ export default function ProductPicker({
             onChange={(event) => setQuery(event.target.value)}
             placeholder={t("searchPlaceholder")}
             autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck={false}
           />
         </div>
 
@@ -241,8 +275,11 @@ export default function ProductPicker({
                   <label className="mb-1 block text-xs text-[#4A4A4A]/65">{t("price")}</label>
                   <input
                     className="input !px-3 !py-2"
-                    value={(item.unitPriceCents / 100).toFixed(2).replace(".", ",")}
-                    onChange={(event) => updatePrice(item.productId, event.target.value)}
+                    value={priceInputs[item.productId] ?? priceText(item.unitPriceCents)}
+                    inputMode="decimal"
+                    onFocus={(event) => event.currentTarget.select()}
+                    onChange={(event) => onPriceInputChange(item.productId, event.target.value)}
+                    onBlur={() => commitPrice(item.productId)}
                   />
                 </div>
                 <div className="pb-1 text-right">
