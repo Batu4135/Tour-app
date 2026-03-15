@@ -61,7 +61,6 @@ function wait(ms: number): Promise<void> {
 
 export default function DraftEditor({ draftId }: DraftEditorProps) {
   const t = useTranslations("draftEditor");
-  const syncT = useTranslations("syncStatus");
   const router = useRouter();
   const [draft, setDraft] = useState<DraftData | null>(null);
   const [customerPriceMap, setCustomerPriceMap] = useState<Record<number, number>>({});
@@ -530,14 +529,15 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       : syncState === "pending"
         ? "border-[#F1E2B8] bg-[#FFF9EA] text-[#8A6A08]"
         : "border-[#E7C1C1] bg-[#FFF3F3] text-[#8B2C2C]";
-  const syncDot = syncState === "ok" ? "bg-[#2B8A3E]" : syncState === "pending" ? "bg-[#D48806]" : "bg-[#C92A2A]";
-  const syncLabel = syncingNow
-    ? t("saving")
+  const syncLabel = syncingNow || syncState === "pending"
+    ? t("syncing")
     : syncState === "ok"
-      ? syncT("ok")
-      : syncState === "pending"
-        ? syncT("pending", { count: pendingCount })
-        : syncT("error", { count: pendingCount });
+      ? t("synced")
+      : t("syncError");
+  const syncBarColor =
+    syncState === "ok" ? "bg-[#2B8A3E]" : syncState === "pending" ? "bg-[#D48806]" : "bg-[#C92A2A]";
+  const syncBarWidth = syncState === "ok" ? "w-full" : syncState === "error" ? "w-2/5" : "w-3/4";
+  const syncBarAnimated = syncingNow || syncState === "pending";
 
   return (
     <section className="space-y-4 pb-[180px]">
@@ -559,9 +559,14 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
         </div>
       </header>
 
-      <div className={`card flex items-center gap-2 py-2 text-sm ${syncTone}`}>
-        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${syncDot}`} />
-        <p className="font-medium">{syncLabel}</p>
+      <div className={`card space-y-2 py-2 text-sm ${syncTone}`}>
+        <div className="h-2 w-full overflow-hidden rounded-full bg-black/10">
+          <div className={`h-full rounded-full ${syncBarColor} ${syncBarWidth} ${syncBarAnimated ? "animate-pulse" : ""}`} />
+        </div>
+        <p className="font-medium">
+          {syncLabel}
+          {syncState !== "ok" ? ` (${pendingCount})` : ""}
+        </p>
       </div>
 
       <ProductPicker

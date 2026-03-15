@@ -96,40 +96,44 @@ export async function GET(_: Request, { params }: RouteContext) {
   const productX = s(118);
   const lineTotalRight = s(528);
 
-  page.drawRectangle({
-    x: left,
-    y: s(788),
-    width: s(72),
-    height: s(3),
-    color: accent
-  });
+  const logoBottomY = s(744);
+  let logoDrawn = false;
   try {
     const logoPath = path.join(process.cwd(), "public", "brand", "nord-pack-logo.png");
     const logoBytes = await readFile(logoPath);
     const logoImage = await pdf.embedPng(logoBytes);
-    const maxWidth = s(100);
-    const maxHeight = s(34);
+    const maxWidth = s(180);
+    const maxHeight = s(58);
     const scale = Math.min(maxWidth / logoImage.width, maxHeight / logoImage.height);
     const logoWidth = logoImage.width * scale;
     const logoHeight = logoImage.height * scale;
     page.drawImage(logoImage, {
-      x: left,
-      y: s(790),
+      x: (pageWidth - logoWidth) / 2,
+      y: logoBottomY,
       width: logoWidth,
       height: logoHeight
     });
+    logoDrawn = true;
   } catch {
-    page.drawText("Nord-Pack", {
-      x: left,
-      y: s(798),
-      size: s(11),
+    logoDrawn = false;
+  }
+
+  if (!logoDrawn) {
+    const fallback = "Nord-Pack";
+    const fallbackSize = s(18);
+    const fallbackWidth = bold.widthOfTextAtSize(fallback, fallbackSize);
+    page.drawText(fallback, {
+      x: (pageWidth - fallbackWidth) / 2,
+      y: s(764),
+      size: fallbackSize,
       font: bold,
       color: accent
     });
   }
+
   page.drawText("Rechnungs-Vordruck", {
-    x: left,
-    y: s(768),
+    x: (pageWidth - regular.widthOfTextAtSize("Rechnungs-Vordruck", s(9))) / 2,
+    y: s(732),
     size: s(9),
     font: regular,
     color: muted
@@ -149,16 +153,16 @@ export async function GET(_: Request, { params }: RouteContext) {
   const customerWidth = bold.widthOfTextAtSize(customerName, customerSize);
   page.drawText(customerName, {
     x: (pageWidth - customerWidth) / 2,
-    y: s(728),
+    y: s(704),
     size: customerSize,
     font: bold,
     color: textColor
   });
 
-  const headerY = s(688);
+  const headerY = s(666);
   page.drawLine({
-    start: { x: left, y: s(708) },
-    end: { x: right, y: s(708) },
+    start: { x: left, y: s(686) },
+    end: { x: right, y: s(686) },
     color: soft,
     thickness: s(1)
   });
@@ -174,13 +178,13 @@ export async function GET(_: Request, { params }: RouteContext) {
     color: muted
   });
   page.drawLine({
-    start: { x: left, y: s(676) },
-    end: { x: right, y: s(676) },
+    start: { x: left, y: s(654) },
+    end: { x: right, y: s(654) },
     color: soft,
     thickness: s(1)
   });
 
-  const rowStartY = s(652);
+  const rowStartY = s(630);
   const defaultRowHeight = s(32);
   const summaryGap = s(30);
   const minSummaryTop = s(150);

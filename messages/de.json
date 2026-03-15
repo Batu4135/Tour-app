@@ -103,7 +103,10 @@
     "noteLabel": "Notiz",
     "notePlaceholder": "Optionale Notiz fuer den Vordruck",
     "offlinePending": "Offline - wird gespeichert sobald Verbindung da ist",
-    "printAction": "Drucken"
+    "printAction": "Drucken",
+    "syncing": "Synchronisierung laeuft...",
+    "synced": "Synchronisiert",
+    "syncError": "Synchronisierung fehlgeschlagen"
   },
   "settings": {
     "title": "Einstellungen",

@@ -102,7 +102,10 @@
     "noteLabel": "Not",
     "notePlaceholder": "Fatura için isteğe bağlı not",
     "offlinePending": "Çevrimdışı - bağlantı gelince kaydedilecek",
-    "printAction": "Yazdır"
+    "printAction": "Yazdır",
+    "syncing": "Senkronizasyon yükleniyor...",
+    "synced": "Senkronize edildi",
+    "syncError": "Senkronizasyon başarısız"
   },
   "settings": {
     "title": "Ayarlar",
