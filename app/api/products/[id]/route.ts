@@ -16,6 +16,7 @@ const updateProductSchema = z.object({
   name: z.string().min(2),
   sku: z.string().min(1),
   defaultPriceCents: z.number().int().min(0).nullable().optional(),
+  licenseFeeCents: z.number().int().min(0).optional(),
   isActive: z.boolean().optional()
 });
 
@@ -41,6 +42,10 @@ export async function PATCH(request: Request, { params }: RouteContext) {
           typeof parsed.data.defaultPriceCents === "number" && parsed.data.defaultPriceCents >= 0
             ? Math.round(parsed.data.defaultPriceCents)
             : null,
+        licenseFeeCents:
+          typeof parsed.data.licenseFeeCents === "number" && parsed.data.licenseFeeCents >= 0
+            ? Math.round(parsed.data.licenseFeeCents)
+            : 0,
         isActive: parsed.data.isActive ?? true
       }
     });

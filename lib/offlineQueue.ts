@@ -6,6 +6,7 @@ export type DraftWritePayload = {
     quantity: number;
     unitPriceCents: number;
   }>;
+  includeLicenseFee?: boolean;
   note?: string | null;
 };
 

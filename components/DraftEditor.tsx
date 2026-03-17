@@ -30,6 +30,7 @@ type DraftData = {
   customerName: string;
   date: string;
   note: string | null;
+  includeLicenseFee?: boolean;
   updatedAt?: string;
   lines: DraftLine[];
 };
@@ -37,6 +38,7 @@ type DraftData = {
 type InitResponse = {
   draft?: DraftData;
   customerPriceMap?: Record<number, number>;
+  productLicenseFeeMap?: Record<number, number>;
   customerSuggestedProducts?: ProductOption[];
   error?: string;
 };
@@ -64,6 +66,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
   const router = useRouter();
   const [draft, setDraft] = useState<DraftData | null>(null);
   const [customerPriceMap, setCustomerPriceMap] = useState<Record<number, number>>({});
+  const [productLicenseFeeMap, setProductLicenseFeeMap] = useState<Record<number, number>>({});
   const [customerSuggestedProducts, setCustomerSuggestedProducts] = useState<ProductOption[]>([]);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [syncState, setSyncState] = useState<"ok" | "pending" | "error">("ok");
@@ -78,9 +81,23 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
   const localVersionRef = useRef(0);
   const snapshotKey = `nord-pack:draft:${draftId}`;
 
+  const licenseTotalCents = useMemo(
+    () =>
+      draft
+        ? draft.lines.reduce((sum, line) => sum + line.quantity * (productLicenseFeeMap[line.productId] ?? 0), 0)
+        : 0,
+    [draft, productLicenseFeeMap]
+  );
+
   const totalCents = useMemo(
-    () => (draft ? draft.lines.reduce((sum, line) => sum + line.quantity * line.unitPriceCents, 0) : 0),
-    [draft]
+    () =>
+      draft
+        ? draft.lines.reduce((sum, line) => {
+            const licenseFee = draft.includeLicenseFee ? (productLicenseFeeMap[line.productId] ?? 0) : 0;
+            return sum + line.quantity * (line.unitPriceCents + licenseFee);
+          }, 0)
+        : 0,
+    [draft, productLicenseFeeMap]
   );
 
   const writeSnapshot = useCallback(
@@ -107,7 +124,8 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       const raw = window.localStorage.getItem(snapshotKey);
       if (!raw) return null;
       const parsed = JSON.parse(raw) as { draft?: DraftData };
-      return parsed.draft ?? null;
+      if (!parsed.draft) return null;
+      return { ...parsed.draft, includeLicenseFee: Boolean(parsed.draft.includeLicenseFee) };
     } catch {
       return null;
     }
@@ -152,14 +170,16 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       if (!response.ok || !payload.draft) throw new Error(payload.error ?? t("initError"));
 
       setCustomerPriceMap(payload.customerPriceMap ?? {});
+      setProductLicenseFeeMap(payload.productLicenseFeeMap ?? {});
       setCustomerSuggestedProducts(payload.customerSuggestedProducts ?? []);
 
       const pendingWrites = await getPendingWrites().catch(() => []);
       const hasPendingForDraft = pendingWrites.some((entry) => entry.draftId === draftId);
 
       if (!snapshot || !hasPendingForDraft) {
-        setDraft(payload.draft);
-        writeSnapshot(payload.draft);
+        const normalizedDraft = { ...payload.draft, includeLicenseFee: Boolean(payload.draft.includeLicenseFee) };
+        setDraft(normalizedDraft);
+        writeSnapshot(normalizedDraft);
         setStatus("saved");
       } else {
         setSyncState("pending");
@@ -193,8 +213,9 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
           try {
             const updated = await sendDraftPatch(entry.draftId, entry.payload);
             if (entry.draftId === draftId) {
-              setDraft(updated);
-              writeSnapshot(updated);
+              const normalizedDraft = { ...updated, includeLicenseFee: Boolean(updated.includeLicenseFee) };
+              setDraft(normalizedDraft);
+              writeSnapshot(normalizedDraft);
             }
             await removePendingWrite(entry.id);
           } catch (syncError) {
@@ -248,6 +269,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
           quantity: line.quantity,
           unitPriceCents: line.unitPriceCents
         })),
+        includeLicenseFee: Boolean(draft.includeLicenseFee),
         note: normalizedNote ? normalizedNote : undefined
       };
 
@@ -288,10 +310,11 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       try {
         const updated = await sendDraftPatch(draft.id, payload, controller.signal);
         if (saveSeq !== saveSeqRef.current) return true;
+        const normalizedDraft = { ...updated, includeLicenseFee: Boolean(updated.includeLicenseFee) };
 
         if (localVersionAtStart === localVersionRef.current) {
-          setDraft(updated);
-          writeSnapshot(updated);
+          setDraft(normalizedDraft);
+          writeSnapshot(normalizedDraft);
           setStatus("saved");
           setDirty(false);
           setIsOffline(false);
@@ -432,6 +455,16 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
   }
 
   function onItemsChange(items: SelectedProductItem[]) {
+    setProductLicenseFeeMap((prev) => {
+      const next = { ...prev };
+      for (const item of items) {
+        if (typeof item.licenseFeeCents === "number" && Number.isFinite(item.licenseFeeCents)) {
+          next[item.productId] = Math.max(0, Math.round(item.licenseFeeCents));
+        }
+      }
+      return next;
+    });
+
     updateDraft((prev) => {
       const existingByProductId = new Map(prev.lines.map((line) => [line.productId, line]));
       return {
@@ -453,6 +486,10 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
 
   function onNoteChange(value: string) {
     updateDraft((prev) => ({ ...prev, note: value }));
+  }
+
+  function onIncludeLicenseFeeChange(next: boolean) {
+    updateDraft((prev) => ({ ...prev, includeLicenseFee: next }));
   }
 
   async function onPrintPdf() {
@@ -521,7 +558,8 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
     sku: line.productSku ?? "",
     name: line.productName,
     quantity: line.quantity,
-    unitPriceCents: line.unitPriceCents
+    unitPriceCents: line.unitPriceCents,
+    licenseFeeCents: productLicenseFeeMap[line.productId] ?? 0
   }));
   const syncTone =
     syncState === "ok"
@@ -573,9 +611,33 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
         selectedItems={selectedItems}
         onChange={onItemsChange}
         priceOverrides={customerPriceMap}
+        licenseFeeMap={productLicenseFeeMap}
+        includeLicenseFee={Boolean(draft.includeLicenseFee)}
         suggestedProducts={customerSuggestedProducts}
         searchMode="all"
       />
+
+      <div className="card space-y-2">
+        <p className="text-sm font-semibold">{t("licenseTitle")}</p>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="radio"
+            name="license-fee-mode"
+            checked={Boolean(draft.includeLicenseFee)}
+            onChange={() => onIncludeLicenseFeeChange(true)}
+          />
+          <span>{t("withLicense", { vat: formatCents(Math.round(licenseTotalCents * 0.19)) })}</span>
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="radio"
+            name="license-fee-mode"
+            checked={!draft.includeLicenseFee}
+            onChange={() => onIncludeLicenseFeeChange(false)}
+          />
+          <span>{t("withoutLicense")}</span>
+        </label>
+      </div>
 
       <div className="card space-y-2">
         <label htmlFor="draft-note" className="text-sm font-semibold">

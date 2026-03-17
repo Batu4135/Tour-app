@@ -104,6 +104,9 @@
     "notePlaceholder": "Optionale Notiz fuer den Vordruck",
     "offlinePending": "Offline - wird gespeichert sobald Verbindung da ist",
     "printAction": "Drucken",
+    "licenseTitle": "Lizenzgebuehr",
+    "withLicense": "Inkl. Lizenzierung DE5090270384234 (zzgl. MwSt.: {vat})",
+    "withoutLicense": "Ohne Lizenzierung",
     "syncing": "Synchronisierung laeuft...",
     "synced": "Synchronisiert",
     "syncError": "Synchronisierung fehlgeschlagen"
@@ -127,6 +130,8 @@
     "createName": "Produktname",
     "createSku": "SKU",
     "createPrice": "Standardpreis (z.B. 2,49)",
+    "createLicenseFee": "Lizenzgebuehr (z.B. 0,99)",
+    "licenseFeeLabel": "Lizenz",
     "createAction": "Produkt anlegen",
     "creating": "Lege Produkt an...",
     "searchLabel": "Suche",
@@ -156,6 +161,8 @@
     "quantity": "Menge",
     "price": "Preis",
     "lineTotal": "Summe",
+    "licenseIncluded": "+ Lizenz {amount}",
+    "licenseOptional": "Lizenz optional",
     "empty": "Noch keine Positionen vorhanden.",
     "subtotal": "Zwischensumme"
   },

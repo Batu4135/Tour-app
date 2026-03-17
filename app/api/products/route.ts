@@ -10,6 +10,7 @@ const createProductSchema = z.object({
   name: z.string().min(2),
   sku: z.string().min(1),
   defaultPriceCents: z.number().int().min(0).optional(),
+  licenseFeeCents: z.number().int().min(0).optional(),
   isActive: z.boolean().optional()
 });
 
@@ -42,6 +43,7 @@ export async function GET(request: Request) {
       sku: true,
       name: true,
       defaultPriceCents: true,
+      licenseFeeCents: true,
       isActive: true
     }
   });
@@ -66,6 +68,10 @@ export async function POST(request: Request) {
         defaultPriceCents:
           typeof parsed.data.defaultPriceCents === "number" && parsed.data.defaultPriceCents >= 0
             ? Math.round(parsed.data.defaultPriceCents)
+            : 0,
+        licenseFeeCents:
+          typeof parsed.data.licenseFeeCents === "number" && parsed.data.licenseFeeCents >= 0
+            ? Math.round(parsed.data.licenseFeeCents)
             : 0,
         isActive: parsed.data.isActive ?? true
       }

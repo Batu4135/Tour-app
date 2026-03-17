@@ -15,6 +15,10 @@ type ParsedRow = {
   defaultPriceCents: number;
 };
 
+function normalizeSku(value: string): string {
+  return value.trim();
+}
+
 function detectDelimiter(headerLine: string): string {
   const candidates = [",", ";", "\t"];
   let best = ",";
@@ -141,6 +145,35 @@ async function resolveCsvPath(): Promise<string> {
   }
 }
 
+async function loadLicenseFeesBySku(): Promise<Map<string, number>> {
+  const licensePath = path.join(process.cwd(), "data", "license-fees.csv");
+  try {
+    const raw = await fs.readFile(licensePath, "utf8");
+    const lines = raw
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+    if (lines.length < 2) return new Map();
+
+    const header = lines[0].split(",").map((cell) => cell.trim().toLowerCase());
+    const skuIndex = header.findIndex((cell) => cell === "sku");
+    const feeIndex = header.findIndex((cell) => cell === "licensefeecents");
+    if (skuIndex < 0 || feeIndex < 0) return new Map();
+
+    const map = new Map<string, number>();
+    for (let i = 1; i < lines.length; i += 1) {
+      const cells = lines[i].split(",").map((cell) => cell.trim());
+      const sku = normalizeSku(cells[skuIndex] ?? "");
+      const fee = Number.parseInt(cells[feeIndex] ?? "", 10);
+      if (!sku || !Number.isFinite(fee) || fee < 0) continue;
+      map.set(sku, fee);
+    }
+    return map;
+  } catch {
+    return new Map();
+  }
+}
+
 function parseRows(lines: string[], delimiter: string, indexes: HeaderIndexes): {
   validRows: ParsedRow[];
   invalidRows: Array<{ lineNumber: number; reason: string; raw: string }>;
@@ -209,9 +242,10 @@ async function main() {
     lastBySku.set(row.sku, row);
   }
   const uniqueRows = [...lastBySku.values()];
+  const licenseFeesBySku = await loadLicenseFeesBySku();
 
   const existing = await prisma.product.findMany({
-    where: { sku: { in: uniqueRows.map((row) => row.sku) } },
+    where: { sku: { in: uniqueRows.map((row) => normalizeSku(row.sku)) } },
     select: { sku: true }
   });
   const existingSet = new Set(existing.map((item) => item.sku));
@@ -220,18 +254,21 @@ async function main() {
   let updated = 0;
 
   for (const row of uniqueRows) {
-    const existed = existingSet.has(row.sku);
+    const normalizedSku = normalizeSku(row.sku);
+    const existed = existingSet.has(normalizedSku);
     await prisma.product.upsert({
-      where: { sku: row.sku },
+      where: { sku: normalizedSku },
       create: {
         name: row.name,
-        sku: row.sku,
+        sku: normalizedSku,
         defaultPriceCents: row.defaultPriceCents,
+        licenseFeeCents: licenseFeesBySku.get(normalizedSku) ?? 0,
         isActive: true
       },
       update: {
         name: row.name,
         defaultPriceCents: row.defaultPriceCents,
+        licenseFeeCents: licenseFeesBySku.get(normalizedSku) ?? 0,
         isActive: true
       }
     });

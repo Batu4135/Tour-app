@@ -48,6 +48,7 @@ async function ensureLocalSchema() {
       "sku" TEXT NOT NULL,
       "name" TEXT NOT NULL,
       "defaultPriceCents" INTEGER,
+      "licenseFeeCents" INTEGER NOT NULL DEFAULT 0,
       "isActive" BOOLEAN NOT NULL,
       "createdAt" DATETIME NOT NULL,
       "updatedAt" DATETIME NOT NULL
@@ -91,6 +92,7 @@ async function ensureLocalSchema() {
       "customerId" INTEGER NOT NULL,
       "date" DATETIME NOT NULL,
       "note" TEXT,
+      "includeLicenseFee" BOOLEAN NOT NULL DEFAULT false,
       "createdAt" DATETIME NOT NULL,
       "updatedAt" DATETIME NOT NULL,
       FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE CASCADE ON UPDATE CASCADE
@@ -185,6 +187,7 @@ async function main() {
           sku: item.sku,
           name: item.name,
           defaultPriceCents: item.defaultPriceCents,
+          licenseFeeCents: item.licenseFeeCents ?? 0,
           isActive: item.isActive,
           createdAt: item.createdAt ?? new Date(0),
           updatedAt: item.updatedAt ?? item.createdAt ?? new Date(0)
@@ -224,6 +227,7 @@ async function main() {
           customerId: item.customerId,
           date: item.date,
           note: item.note,
+          includeLicenseFee: item.includeLicenseFee ?? false,
           createdAt: item.createdAt ?? item.date ?? new Date(0),
           updatedAt: item.updatedAt ?? item.createdAt ?? item.date ?? new Date(0)
         }))

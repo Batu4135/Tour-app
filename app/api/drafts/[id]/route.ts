@@ -28,7 +28,8 @@ const updateDraftSchema = z.object({
       })
     )
     .default([]),
-  note: z.string().nullable().optional()
+  note: z.string().nullable().optional(),
+  includeLicenseFee: z.boolean().optional()
 });
 
 export async function GET(_: Request, { params }: RouteContext) {
@@ -53,6 +54,7 @@ export async function GET(_: Request, { params }: RouteContext) {
                   name: true,
                   sku: true,
                   defaultPriceCents: true,
+                  licenseFeeCents: true,
                   isActive: true
                 }
               }
@@ -61,11 +63,17 @@ export async function GET(_: Request, { params }: RouteContext) {
         }
       },
       lines: {
-        include: { product: { select: { name: true, sku: true } } }
+        include: { product: { select: { name: true, sku: true, licenseFeeCents: true } } }
       }
     }
   });
   if (!draft) return notFound("Vordruck nicht gefunden.");
+  const productLicenseFeeMap = Object.fromEntries(
+    draft.lines.map((line: any) => [line.productId, line.product?.licenseFeeCents ?? 0])
+  ) as Record<number, number>;
+  for (const price of draft.customer.customerPrice) {
+    productLicenseFeeMap[price.productId] = price.product?.licenseFeeCents ?? 0;
+  }
 
   return NextResponse.json({
     draft: {
@@ -74,6 +82,7 @@ export async function GET(_: Request, { params }: RouteContext) {
       customerName: draft.customer.name,
       date: draft.date.toISOString(),
       note: draft.note ?? null,
+      includeLicenseFee: draft.includeLicenseFee ?? false,
       updatedAt: draft.updatedAt.toISOString(),
       lines: draft.lines.map((line: any) => ({
         id: line.id,
@@ -87,13 +96,15 @@ export async function GET(_: Request, { params }: RouteContext) {
     customerPriceMap: Object.fromEntries(
       draft.customer.customerPrice.map((price: any) => [price.productId, price.priceCents])
     ) as Record<number, number>,
+    productLicenseFeeMap,
     customerSuggestedProducts: draft.customer.customerPrice
       .filter((price: any) => price.product?.isActive)
       .map((price: any) => ({
         id: price.product.id,
         sku: price.product.sku,
         name: price.product.name,
-        defaultPriceCents: price.product.defaultPriceCents
+        defaultPriceCents: price.product.defaultPriceCents,
+        licenseFeeCents: price.product.licenseFeeCents ?? 0
       }))
       .sort((a: any, b: any) => a.name.localeCompare(b.name, "de-DE"))
   });
@@ -125,7 +136,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 
   const existing = await prisma.draft.findUnique({
     where: { id },
-    select: { id: true }
+    select: { id: true, includeLicenseFee: true }
   });
   if (!existing) return notFound("Vordruck nicht gefunden.");
 
@@ -133,7 +144,8 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     await tx.draft.update({
       where: { id },
       data: {
-        note: body.note?.trim() || null
+        note: body.note?.trim() || null,
+        includeLicenseFee: body.includeLicenseFee ?? existing.includeLicenseFee
       }
     });
     await tx.invoiceRevision.create({
@@ -141,7 +153,8 @@ export async function PATCH(request: Request, { params }: RouteContext) {
         invoiceId: id,
         payloadJson: {
           lines: sanitized,
-          note: body.note?.trim() || null
+          note: body.note?.trim() || null,
+          includeLicenseFee: body.includeLicenseFee ?? existing.includeLicenseFee
         },
         createdBy: user.id
       }
@@ -170,6 +183,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       customerName: draft.customer.name,
       date: draft.date.toISOString(),
       note: draft.note ?? null,
+      includeLicenseFee: draft.includeLicenseFee ?? false,
       updatedAt: draft.updatedAt.toISOString(),
       lines: draft.lines.map((line: any) => ({
         id: line.id,

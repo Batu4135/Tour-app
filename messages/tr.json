@@ -103,6 +103,9 @@
     "notePlaceholder": "Fatura için isteğe bağlı not",
     "offlinePending": "Çevrimdışı - bağlantı gelince kaydedilecek",
     "printAction": "Yazdır",
+    "licenseTitle": "Lisans ücreti",
+    "withLicense": "Lisans dahil DE5090270384234 (KDV hariç: {vat})",
+    "withoutLicense": "Lisanssız",
     "syncing": "Senkronizasyon yükleniyor...",
     "synced": "Senkronize edildi",
     "syncError": "Senkronizasyon başarısız"
@@ -126,6 +129,8 @@
     "createName": "Ürün adı",
     "createSku": "SKU",
     "createPrice": "Varsayılan fiyat (örnek 2,49)",
+    "createLicenseFee": "Lisans ücreti (örnek 0,99)",
+    "licenseFeeLabel": "Lisans",
     "createAction": "Ürün ekle",
     "creating": "Ürün ekleniyor...",
     "searchLabel": "Arama",
@@ -155,6 +160,8 @@
     "quantity": "Adet",
     "price": "Fiyat",
     "lineTotal": "Toplam",
+    "licenseIncluded": "+ Lisans {amount}",
+    "licenseOptional": "Lisans opsiyonel",
     "empty": "Henüz kalem yok.",
     "subtotal": "Ara toplam"
   },

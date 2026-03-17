@@ -19,7 +19,7 @@ export async function GET() {
     orderBy: { date: "desc" },
     include: {
       customer: { select: { name: true } },
-      lines: { select: { quantity: true, unitPriceCents: true } }
+      lines: { select: { quantity: true, unitPriceCents: true, product: { select: { licenseFeeCents: true } } } }
     }
   });
 
@@ -30,8 +30,14 @@ export async function GET() {
       customerName: draft.customer.name,
       date: draft.date.toISOString(),
       note: draft.note ?? null,
+      includeLicenseFee: draft.includeLicenseFee ?? false,
       updatedAt: draft.updatedAt.toISOString(),
-      totalCents: draft.lines.reduce((sum: number, line: any) => sum + line.quantity * line.unitPriceCents, 0)
+      totalCents: draft.lines.reduce(
+        (sum: number, line: any) =>
+          sum +
+          line.quantity * (line.unitPriceCents + (draft.includeLicenseFee ? (line.product?.licenseFeeCents ?? 0) : 0)),
+        0
+      )
     }))
   });
 }
@@ -49,7 +55,9 @@ export async function POST(request: Request) {
       include: {
         customerPrice: {
           include: {
-            product: { select: { id: true, name: true, sku: true, defaultPriceCents: true, isActive: true } }
+            product: {
+              select: { id: true, name: true, sku: true, defaultPriceCents: true, licenseFeeCents: true, isActive: true }
+            }
           },
           orderBy: { productId: "asc" }
         }
@@ -76,7 +84,8 @@ export async function POST(request: Request) {
       id: price.product.id,
       sku: price.product.sku,
       name: price.product.name,
-      defaultPriceCents: price.product.defaultPriceCents
+      defaultPriceCents: price.product.defaultPriceCents,
+      licenseFeeCents: price.product.licenseFeeCents ?? 0
     }))
     .sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, "de-DE"));
 
@@ -91,10 +100,14 @@ export async function POST(request: Request) {
       customerName: customer.name,
       date: draft.date.toISOString(),
       note: draft.note ?? null,
+      includeLicenseFee: draft.includeLicenseFee ?? false,
       updatedAt: draft.updatedAt.toISOString(),
       lines: []
     },
     customerPriceMap,
+    productLicenseFeeMap: Object.fromEntries(
+      customer.customerPrice.map((price: any) => [price.productId, price.product?.licenseFeeCents ?? 0])
+    ) as Record<number, number>,
     customerSuggestedProducts
   });
 }

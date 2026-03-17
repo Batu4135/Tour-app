@@ -138,6 +138,14 @@ export async function GET(_: Request, { params }: RouteContext) {
     font: regular,
     color: muted
   });
+  const licenseModeText = draft.includeLicenseFee ? "Inkl. Lizenzierung" : "Ohne Lizenzierung";
+  page.drawText(licenseModeText, {
+    x: (pageWidth - regular.widthOfTextAtSize(licenseModeText, s(8))) / 2,
+    y: s(720),
+    size: s(8),
+    font: regular,
+    color: muted
+  });
   drawRightText({
     page,
     text: formatDate(draft.date),
@@ -198,7 +206,10 @@ export async function GET(_: Request, { params }: RouteContext) {
   const qtyBadgePaddingX = Math.max(s(4), s(12) * rowDensity);
   const rowDividerOffset = Math.min(rowHeight * 0.72, Math.max(s(1.6), s(9) * rowDensity));
   const nameMaxChars = rowDensity < 0.5 ? 18 : rowDensity < 0.7 ? 24 : 32;
-  const subtotal = draft.lines.reduce((sum: number, line: any) => sum + line.quantity * line.unitPriceCents, 0);
+  const subtotal = draft.lines.reduce((sum: number, line: any) => {
+    const licenseFee = draft.includeLicenseFee ? (line.product?.licenseFeeCents ?? 0) : 0;
+    return sum + line.quantity * (line.unitPriceCents + licenseFee);
+  }, 0);
 
   if (draft.lines.length === 0) {
     page.drawText("Keine Positionen", {
@@ -212,7 +223,8 @@ export async function GET(_: Request, { params }: RouteContext) {
 
   draft.lines.forEach((line: any, index: number) => {
     const y = rowStartY - index * rowHeight;
-    const lineTotal = line.quantity * line.unitPriceCents;
+    const lineLicenseFee = draft.includeLicenseFee ? (line.product?.licenseFeeCents ?? 0) : 0;
+    const lineTotal = line.quantity * (line.unitPriceCents + lineLicenseFee);
     const name = line.product.name.slice(0, nameMaxChars);
     const qtyText = String(line.quantity);
 

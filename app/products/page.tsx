@@ -10,6 +10,7 @@ type Product = {
   sku: string;
   name: string;
   defaultPriceCents: number | null;
+  licenseFeeCents: number;
   isActive: boolean;
 };
 
@@ -17,6 +18,7 @@ type EditFields = {
   name: string;
   sku: string;
   defaultPrice: string;
+  licenseFee: string;
   isActive: boolean;
 };
 
@@ -35,6 +37,7 @@ function toEditFields(product: Product): EditFields {
     name: product.name,
     sku: product.sku,
     defaultPrice: toPriceInput(product.defaultPriceCents),
+    licenseFee: toPriceInput(product.licenseFeeCents),
     isActive: product.isActive
   };
 }
@@ -54,7 +57,8 @@ export default function ProductsPage() {
   const [createForm, setCreateForm] = useState({
     name: "",
     sku: "",
-    defaultPrice: ""
+    defaultPrice: "",
+    licenseFee: ""
   });
 
   useEffect(() => {
@@ -127,13 +131,15 @@ export default function ProductsPage() {
           sku: createForm.sku.trim(),
           defaultPriceCents:
             createForm.defaultPrice.trim().length > 0 ? parseEuroToCents(createForm.defaultPrice) : undefined,
+          licenseFeeCents:
+            createForm.licenseFee.trim().length > 0 ? parseEuroToCents(createForm.licenseFee) : undefined,
           isActive: true
         })
       });
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(payload.error ?? t("saveError"));
 
-      setCreateForm({ name: "", sku: "", defaultPrice: "" });
+      setCreateForm({ name: "", sku: "", defaultPrice: "", licenseFee: "" });
       setFlash({ type: "success", text: t("createSuccess") });
       await loadProducts();
     } catch (createError) {
@@ -164,6 +170,7 @@ export default function ProductsPage() {
           name: edit.name.trim(),
           sku: edit.sku.trim(),
           defaultPriceCents: edit.defaultPrice.trim().length > 0 ? parseEuroToCents(edit.defaultPrice) : null,
+          licenseFeeCents: edit.licenseFee.trim().length > 0 ? parseEuroToCents(edit.licenseFee) : 0,
           isActive: edit.isActive
         })
       });
@@ -231,6 +238,13 @@ export default function ProductsPage() {
           placeholder={t("createPrice")}
           value={createForm.defaultPrice}
           onChange={(event) => setCreateForm((prev) => ({ ...prev, defaultPrice: event.target.value }))}
+          inputMode="decimal"
+        />
+        <input
+          className="input"
+          placeholder={t("createLicenseFee")}
+          value={createForm.licenseFee}
+          onChange={(event) => setCreateForm((prev) => ({ ...prev, licenseFee: event.target.value }))}
           inputMode="decimal"
         />
         <button
@@ -315,6 +329,13 @@ export default function ProductsPage() {
                   placeholder={t("createPrice")}
                   inputMode="decimal"
                 />
+                <input
+                  className="input !py-2"
+                  value={edit.licenseFee}
+                  onChange={(event) => setEditField(product.id, "licenseFee", event.target.value)}
+                  placeholder={t("createLicenseFee")}
+                  inputMode="decimal"
+                />
               </div>
 
               <label className="inline-flex items-center gap-2 text-sm text-[#4A4A4A]/80">
@@ -328,7 +349,8 @@ export default function ProductsPage() {
 
               <div className="flex items-center justify-between gap-2">
                 <p className="text-xs text-[#4A4A4A]/65">
-                  {edit.defaultPrice.trim() ? formatCents(parseEuroToCents(edit.defaultPrice)) : "-"}
+                  {edit.defaultPrice.trim() ? formatCents(parseEuroToCents(edit.defaultPrice)) : "-"} /{" "}
+                  {t("licenseFeeLabel")}: {edit.licenseFee.trim() ? formatCents(parseEuroToCents(edit.licenseFee)) : "-"}
                 </p>
                 <div className="flex items-center gap-2">
                   <button

@@ -1,0 +1,5 @@
+ALTER TABLE "Product"
+ADD COLUMN "licenseFeeCents" INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE "Draft"
+ADD COLUMN "includeLicenseFee" BOOLEAN NOT NULL DEFAULT false;

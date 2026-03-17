@@ -10,6 +10,7 @@ export type ProductOption = {
   sku: string;
   name: string;
   defaultPriceCents: number | null;
+  licenseFeeCents?: number;
 };
 
 export type SelectedProductItem = {
@@ -18,12 +19,15 @@ export type SelectedProductItem = {
   name: string;
   quantity: number;
   unitPriceCents: number;
+  licenseFeeCents?: number;
 };
 
 type ProductPickerProps = {
   selectedItems: SelectedProductItem[];
   onChange: (items: SelectedProductItem[]) => void;
   priceOverrides?: Record<number, number>;
+  licenseFeeMap?: Record<number, number>;
+  includeLicenseFee?: boolean;
   suggestedProducts?: ProductOption[];
   searchMode?: "all" | "suggestedOnly";
 };
@@ -36,6 +40,8 @@ export default function ProductPicker({
   selectedItems,
   onChange,
   priceOverrides = {},
+  licenseFeeMap = {},
+  includeLicenseFee = false,
   suggestedProducts = [],
   searchMode = "all"
 }: ProductPickerProps) {
@@ -107,8 +113,12 @@ export default function ProductPicker({
   }, [debouncedQuery, searchMode, suggestedProducts]);
 
   const totalCents = useMemo(
-    () => selectedItems.reduce((sum, item) => sum + item.quantity * item.unitPriceCents, 0),
-    [selectedItems]
+    () =>
+      selectedItems.reduce((sum, item) => {
+        const licenseFee = includeLicenseFee ? (item.licenseFeeCents ?? licenseFeeMap[item.productId] ?? 0) : 0;
+        return sum + item.quantity * (item.unitPriceCents + licenseFee);
+      }, 0),
+    [includeLicenseFee, licenseFeeMap, selectedItems]
   );
 
   function addProduct(product: ProductOption) {
@@ -128,7 +138,8 @@ export default function ProductPicker({
           sku: product.sku,
           name: product.name,
           quantity: 1,
-          unitPriceCents: Math.max(0, price)
+          unitPriceCents: Math.max(0, price),
+          licenseFeeCents: product.licenseFeeCents ?? licenseFeeMap[product.id] ?? 0
         }
       ]);
     }
@@ -244,7 +255,8 @@ export default function ProductPicker({
 
       <div className="space-y-2">
         {selectedItems.map((item) => {
-          const lineTotal = item.quantity * item.unitPriceCents;
+          const licenseFee = includeLicenseFee ? (item.licenseFeeCents ?? licenseFeeMap[item.productId] ?? 0) : 0;
+          const lineTotal = item.quantity * (item.unitPriceCents + licenseFee);
           return (
             <div key={item.productId} className="card space-y-2">
               <div className="flex items-start justify-between gap-3">
@@ -285,6 +297,11 @@ export default function ProductPicker({
                 <div className="pb-1 text-right">
                   <p className="text-xs text-[#4A4A4A]/65">{t("lineTotal")}</p>
                   <p className="text-sm font-semibold text-[#2F7EA1]">{formatCents(lineTotal)}</p>
+                  {licenseFee > 0 ? (
+                    <p className="text-[11px] text-[#4A4A4A]/60">
+                      {includeLicenseFee ? t("licenseIncluded", { amount: formatCents(licenseFee) }) : t("licenseOptional")}
+                    </p>
+                  ) : null}
                 </div>
               </div>
             </div>
