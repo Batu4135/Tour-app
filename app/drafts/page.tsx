@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -60,8 +60,8 @@ export default function DraftsPage() {
   const [debounced, setDebounced] = useState("");
   const [error, setError] = useState("");
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
-  const [showTodayReview, setShowTodayReview] = useState(false);
-  const [closingTour, setClosingTour] = useState(false);
+  const [showOverviewByGroup, setShowOverviewByGroup] = useState<Record<string, boolean>>({});
+  const [closingGroupKey, setClosingGroupKey] = useState<string | null>(null);
   const [tourError, setTourError] = useState("");
   const [tourSuccess, setTourSuccess] = useState("");
 
@@ -89,6 +89,7 @@ export default function DraftsPage() {
       list.push(draft);
       groups.set(key, list);
     }
+
     return Array.from(groups.entries()).map(([key, drafts]) => {
       const isClosed = drafts.length > 0 && drafts.every((draft) => Boolean(draft.tourClosedAt));
       return {
@@ -115,8 +116,6 @@ export default function DraftsPage() {
       return next;
     });
   }, [groupedDrafts]);
-
-  const todayGroup = useMemo(() => groupedDrafts.find((group) => group.isToday) ?? null, [groupedDrafts]);
 
   async function loadCustomers() {
     const response = await fetch(`/api/customers?q=${encodeURIComponent(debounced)}`);
@@ -146,10 +145,10 @@ export default function DraftsPage() {
     setOpenGroups((previous) => ({ ...previous, [key]: !previous[key] }));
   }
 
-  async function closeTodayTour() {
-    if (!todayGroup || todayGroup.drafts.length === 0 || todayGroup.isClosed) return;
+  async function closeTour(group: DraftGroup) {
+    if (!group.isToday || group.drafts.length === 0 || group.isClosed) return;
 
-    setClosingTour(true);
+    setClosingGroupKey(group.key);
     setTourError("");
     setTourSuccess("");
     try {
@@ -157,7 +156,7 @@ export default function DraftsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          draftIds: todayGroup.drafts.map((draft) => draft.id)
+          draftIds: group.drafts.map((draft) => draft.id)
         })
       });
       const payload = (await response.json()) as { error?: string };
@@ -165,12 +164,13 @@ export default function DraftsPage() {
         throw new Error(payload.error ?? t("tourCloseError"));
       }
       setTourSuccess(t("tourClosed"));
-      setOpenGroups((previous) => ({ ...previous, [todayGroup.key]: false }));
+      setOpenGroups((previous) => ({ ...previous, [group.key]: false }));
+      setShowOverviewByGroup((previous) => ({ ...previous, [group.key]: false }));
       await loadRecentDrafts();
     } catch (closeError) {
       setTourError(closeError instanceof Error ? closeError.message : t("tourCloseError"));
     } finally {
-      setClosingTour(false);
+      setClosingGroupKey(null);
     }
   }
 
@@ -210,52 +210,6 @@ export default function DraftsPage() {
       <div className="card space-y-3">
         <p className="text-sm font-semibold">{t("recent")}</p>
 
-        {todayGroup ? (
-          <div className="rounded-xl border border-[#DDE6EF] bg-[#F8FBFF] p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-semibold">{t("todayActionsTitle")}</p>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className="secondary-btn !px-3 !py-1.5 text-xs"
-                  onClick={() => setShowTodayReview((prev) => !prev)}
-                >
-                  {showTodayReview ? t("hideOverview") : t("showOverview")}
-                </button>
-                <button
-                  type="button"
-                  className="primary-btn !w-auto !px-3 !py-1.5 text-xs"
-                  disabled={closingTour || todayGroup.isClosed}
-                  onClick={() => void closeTodayTour()}
-                >
-                  {todayGroup.isClosed ? t("tourClosed") : closingTour ? t("tourClosing") : t("tourClose")}
-                </button>
-              </div>
-            </div>
-            <p className="mt-2 text-xs text-[#4A4A4A]/70">
-              {t("cashTotal")}: {centsToText(todayGroup.cashTotalCents)} • {t("bankCount")}: {todayGroup.bankCount} •{" "}
-              {t("debitCount")}: {todayGroup.debitCount}
-            </p>
-            {tourSuccess ? <p className="mt-2 text-xs text-[#1E6F2D]">{tourSuccess}</p> : null}
-            {tourError ? <p className="mt-2 text-xs text-[#8B2C2C]">{tourError}</p> : null}
-
-            {showTodayReview ? (
-              <div className="mt-3 grid gap-2 md:grid-cols-2">
-                {todayGroup.drafts.map((draft) => (
-                  <div key={draft.id} className="rounded-xl border border-[#DDE6EF] bg-white p-3">
-                    <p className="text-sm font-semibold">{draft.customerName}</p>
-                    <p className="text-xs text-[#4A4A4A]/65">{centsToText(draft.totalCents)}</p>
-                    <p className="mt-1 text-xs text-[#4A4A4A]/65">{paymentLabel(draft.paymentMethod, t)}</p>
-                    <Link href={`/drafts/${draft.id}`} className="mt-2 inline-block text-xs text-[#2F7EA1]">
-                      {t("openDraft")}
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-
         {groupedDrafts.map((group) => (
           <div
             key={group.key}
@@ -266,18 +220,64 @@ export default function DraftsPage() {
                 <p className="text-xs font-semibold text-[#4A4A4A]/70">{group.label}</p>
                 {group.isClosed ? <p className="text-xs text-[#1E6F2D]">{t("tourClosedBadge")}</p> : null}
               </div>
-              <button
-                type="button"
-                className="secondary-btn !px-2 !py-1"
-                onClick={() => toggleGroup(group.key)}
-                aria-label={openGroups[group.key] ? t("collapseGroup") : t("expandGroup")}
-              >
-                {openGroups[group.key] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-              </button>
+              <div className="flex items-center gap-2">
+                {group.isToday && !group.isClosed ? (
+                  <button
+                    type="button"
+                    className="rounded-lg bg-[#2B8A3E] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                    disabled={closingGroupKey === group.key || group.drafts.length === 0}
+                    onClick={() => void closeTour(group)}
+                  >
+                    {closingGroupKey === group.key ? t("tourClosing") : t("tourClose")}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="secondary-btn !px-2 !py-1"
+                  onClick={() => toggleGroup(group.key)}
+                  aria-label={openGroups[group.key] ? t("collapseGroup") : t("expandGroup")}
+                >
+                  {openGroups[group.key] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                </button>
+              </div>
             </div>
 
             {openGroups[group.key] ? (
               <div className="mt-3 space-y-2">
+                {group.isClosed ? (
+                  <div className="rounded-xl border border-[#DDE6EF] bg-white p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        className="secondary-btn !px-3 !py-1.5 text-xs"
+                        onClick={() =>
+                          setShowOverviewByGroup((previous) => ({
+                            ...previous,
+                            [group.key]: !previous[group.key]
+                          }))
+                        }
+                      >
+                        {showOverviewByGroup[group.key] ? t("hideOverview") : t("showOverview")}
+                      </button>
+                      <a
+                        href={`/api/drafts/day-report?ids=${encodeURIComponent(group.drafts.map((draft) => draft.id).join(","))}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="secondary-btn !px-3 !py-1.5 text-xs"
+                      >
+                        {t("dailyPdf")}
+                      </a>
+                    </div>
+
+                    {showOverviewByGroup[group.key] ? (
+                      <p className="mt-2 text-xs text-[#4A4A4A]/70">
+                        {t("cashTotal")}: {centsToText(group.cashTotalCents)} | {t("bankCount")}: {group.bankCount} |{" "}
+                        {t("debitCount")}: {group.debitCount}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+
                 {group.drafts.map((draft) => (
                   <div key={draft.id} className="rounded-xl border border-[#E5E5E5] bg-white px-3 py-2">
                     <div className="flex items-start justify-between gap-3">
@@ -308,6 +308,8 @@ export default function DraftsPage() {
         ))}
 
         {recentDrafts.length === 0 ? <p className="text-sm text-[#4A4A4A]/60">{t("noDrafts")}</p> : null}
+        {tourSuccess ? <p className="text-sm text-[#1E6F2D]">{tourSuccess}</p> : null}
+        {tourError ? <p className="text-sm text-[#8B2C2C]">{tourError}</p> : null}
         {error ? <p className="text-sm text-[#4A4A4A]">{error}</p> : null}
       </div>
     </section>

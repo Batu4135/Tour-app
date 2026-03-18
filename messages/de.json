@@ -92,6 +92,7 @@
     "cashTotal": "Barsumme",
     "bankCount": "Bank",
     "debitCount": "Lastschrift",
+    "dailyPdf": "Tages-PDF",
     "openDraft": "Vordruck oeffnen",
     "tourClosedBadge": "Abgeschlossen",
     "collapseGroup": "Tag einklappen",
