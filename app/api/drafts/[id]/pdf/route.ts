@@ -185,6 +185,12 @@ export async function GET(_: Request, { params }: RouteContext) {
   const qtyBadgePaddingX = Math.max(s(4), s(12) * rowDensity);
   const rowDividerOffset = Math.min(rowHeight * 0.72, Math.max(s(1.6), s(9) * rowDensity));
   const nameMaxChars = rowDensity > 1.2 ? 42 : rowDensity > 0.9 ? 36 : rowDensity > 0.7 ? 30 : 24;
+  const noteRaw = (draft.note ?? "").trim();
+  const noteLines =
+    noteRaw.length > 0
+      ? [noteRaw.slice(0, 66), noteRaw.length > 66 ? noteRaw.slice(66, 132) : ""].filter((value) => value.length > 0)
+      : [];
+  const noteBlockHeight = noteLines.length > 0 ? s(16 + noteLines.length * 8) : 0;
   const subtotal = draft.lines.reduce((sum: number, line: any) => {
     const licenseFee = draft.includeLicenseFee ? (line.product?.licenseFeeCents ?? 0) : 0;
     return sum + line.quantity * (line.unitPriceCents + licenseFee);
@@ -228,6 +234,16 @@ export async function GET(_: Request, { params }: RouteContext) {
     });
 
     page.drawText(name, { x: productX, y, size: rowFontSize, font: regular, color: textColor });
+    if (draft.includeLicenseFee && lineLicenseFee > 0) {
+      const small = Math.max(s(5), rowFontSize * 0.62);
+      page.drawText(`Lizenz ${money(lineLicenseFee)} / Stk`, {
+        x: productX,
+        y: y - small * 1.2,
+        size: small,
+        font: regular,
+        color: muted
+      });
+    }
     drawRightText({
       page,
       text: money(lineTotal),
@@ -249,11 +265,31 @@ export async function GET(_: Request, { params }: RouteContext) {
   const vat = Math.round(subtotal * 0.19);
   const total = subtotal + vat;
   const usedRows = Math.max(1, draft.lines.length);
-  const summaryTop = rowStartY - usedRows * rowHeight - summaryGap;
+  const summaryTop = rowStartY - usedRows * rowHeight - summaryGap - noteBlockHeight;
   const summaryScale = Math.max(0.85, Math.min(1.08, rowDensity + 0.08));
   const summaryLabelSize = s(10) * summaryScale;
   const summaryValueSize = s(12) * summaryScale;
   const summaryTotalSize = s(25) * summaryScale;
+
+  if (noteLines.length > 0) {
+    const noteLabelY = summaryTop + noteBlockHeight - s(9);
+    page.drawText("Notiz:", {
+      x: s(64),
+      y: noteLabelY,
+      size: s(8),
+      font: bold,
+      color: muted
+    });
+    noteLines.forEach((line, index) => {
+      page.drawText(line, {
+        x: s(104),
+        y: noteLabelY - index * s(8.5),
+        size: s(8),
+        font: regular,
+        color: textColor
+      });
+    });
+  }
 
   page.drawText("Zwischensumme", { x: s(384), y: summaryTop, size: summaryLabelSize, font: regular, color: muted });
   drawRightText({
@@ -293,14 +329,6 @@ export async function GET(_: Request, { params }: RouteContext) {
     size: summaryTotalSize,
     font: bold,
     color: textColor
-  });
-
-  page.drawText(`Nr. ${draft.id}`, {
-    x: left,
-    y: s(42),
-    size: s(9),
-    font: regular,
-    color: muted
   });
 
   const bytes = await pdf.save();

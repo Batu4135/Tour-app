@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Printer } from "lucide-react";
+import { Banknote, CheckCircle2, CreditCard, Landmark, Loader2, Printer } from "lucide-react";
 import { useTranslations } from "next-intl";
 import ProductPicker, { ProductOption, SelectedProductItem } from "@/components/ProductPicker";
 import { formatCents } from "@/lib/formatCents";
@@ -72,8 +72,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
   const [customerSuggestedProducts, setCustomerSuggestedProducts] = useState<ProductOption[]>([]);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [syncState, setSyncState] = useState<"ok" | "pending" | "error">("ok");
-  const [pendingCount, setPendingCount] = useState(0);
-  const [syncingNow, setSyncingNow] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
   const [error, setError] = useState("");
   const [isOffline, setIsOffline] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -154,7 +153,6 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
 
   const refreshPendingState = useCallback(async () => {
     const count = await getPendingWriteCount().catch(() => 0);
-    setPendingCount(count);
     if (count === 0) {
       setSyncState("ok");
     } else if (syncState !== "error") {
@@ -259,16 +257,12 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
   );
 
   const syncNow = useCallback(async () => {
-    setSyncingNow(true);
     try {
       const ok = await flushOfflineQueue({ retries: 2 });
       const count = await getPendingWriteCount().catch(() => 0);
-      setPendingCount(count);
       setSyncState(ok ? (count > 0 ? "pending" : "ok") : "error");
     } catch {
       setSyncState("error");
-    } finally {
-      setSyncingNow(false);
     }
   }, [flushOfflineQueue]);
 
@@ -295,8 +289,6 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       let pendingId: string | null = null;
       try {
         pendingId = await enqueueLatestPendingWrite(draft.id, payload);
-        const count = await getPendingWriteCount();
-        setPendingCount(count);
         setSyncState("pending");
       } catch {
         // IndexedDB kann auf iOS in Private Mode blockiert sein.
@@ -359,8 +351,6 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
             persistError instanceof Error ? persistError.message : t("saveError")
           ).catch(() => undefined);
         }
-        const count = await getPendingWriteCount().catch(() => 0);
-        setPendingCount(count);
         return false;
       }
     },
@@ -390,7 +380,6 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       const flushed = await flushOfflineQueue({ onlyDraftId: draft.id, retries: 2 });
       if (flushed) {
         const count = await getPendingWriteCount().catch(() => 0);
-        setPendingCount(count);
         setStatus("saved");
         setSyncState(count > 0 ? "pending" : "ok");
         return true;
@@ -517,9 +506,12 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
 
   async function onPrintPdf() {
     if (!draft) return;
+    if (isPrinting) return;
+    setIsPrinting(true);
     const saved = await forceSave();
     if (!saved) {
       setError(t("saveError"));
+      setIsPrinting(false);
       return;
     }
 
@@ -540,6 +532,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
           text: draft.customerName,
           files: [file]
         });
+        setIsPrinting(false);
         return;
       }
 
@@ -549,10 +542,12 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
           text: draft.customerName,
           url: `${window.location.origin}${pdfUrl}`
         });
+        setIsPrinting(false);
         return;
       }
     } catch (shareError) {
       if (shareError instanceof Error && shareError.name === "AbortError") {
+        setIsPrinting(false);
         return;
       }
     }
@@ -561,6 +556,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
     if (!popup) {
       window.location.assign(pdfUrl);
     }
+    setTimeout(() => setIsPrinting(false), 900);
   }
 
   if (!Number.isFinite(draftId)) {
@@ -584,22 +580,6 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
     unitPriceCents: line.unitPriceCents,
     licenseFeeCents: productLicenseFeeMap[line.productId] ?? 0
   }));
-  const syncTone =
-    syncState === "ok"
-      ? "border-[#D4F0DA] bg-[#F2FBF5] text-[#1E6F2D]"
-      : syncState === "pending"
-        ? "border-[#F1E2B8] bg-[#FFF9EA] text-[#8A6A08]"
-        : "border-[#E7C1C1] bg-[#FFF3F3] text-[#8B2C2C]";
-  const syncLabel = syncingNow || syncState === "pending"
-    ? t("syncing")
-    : syncState === "ok"
-      ? t("synced")
-      : t("syncError");
-  const syncBarColor =
-    syncState === "ok" ? "bg-[#2B8A3E]" : syncState === "pending" ? "bg-[#D48806]" : "bg-[#C92A2A]";
-  const syncBarWidth = syncState === "ok" ? "w-full" : syncState === "error" ? "w-2/5" : "w-3/4";
-  const syncBarAnimated = syncingNow || syncState === "pending";
-
   return (
     <section className="space-y-4 pb-[180px]">
       <header className="card">
@@ -619,16 +599,6 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
                 : t("autoSave")}
         </div>
       </header>
-
-      <div className={`card space-y-2 py-2 text-sm ${syncTone}`}>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-black/10">
-          <div className={`h-full rounded-full ${syncBarColor} ${syncBarWidth} ${syncBarAnimated ? "animate-pulse" : ""}`} />
-        </div>
-        <p className="font-medium">
-          {syncLabel}
-          {syncState !== "ok" ? ` (${pendingCount})` : ""}
-        </p>
-      </div>
 
       <ProductPicker
         selectedItems={selectedItems}
@@ -650,6 +620,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
               checked={(draft.paymentMethod ?? "CASH") === "CASH"}
               onChange={() => onPaymentMethodChange("CASH")}
             />
+            <Banknote size={14} />
             <span>{t("paymentCash")}</span>
           </label>
           <label className="inline-flex items-center gap-2 rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm">
@@ -659,6 +630,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
               checked={(draft.paymentMethod ?? "CASH") === "BANK"}
               onChange={() => onPaymentMethodChange("BANK")}
             />
+            <Landmark size={14} />
             <span>{t("paymentBank")}</span>
           </label>
           <label className="inline-flex items-center gap-2 rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm">
@@ -668,6 +640,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
               checked={(draft.paymentMethod ?? "CASH") === "DIRECT_DEBIT"}
               onChange={() => onPaymentMethodChange("DIRECT_DEBIT")}
             />
+            <CreditCard size={14} />
             <span>{t("paymentDebit")}</span>
           </label>
         </div>
@@ -693,9 +666,6 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
           />
           <span>{t("withoutLicense")}</span>
         </label>
-        <p className="text-xs text-[#4A4A4A]/65">
-          {t("licenseNetTotal", { amount: formatCents(licenseTotalCents) })}
-        </p>
       </div>
 
       <div className="card space-y-2">
@@ -722,10 +692,14 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
           <p className="text-xl font-bold">{formatCents(totalCents)}</p>
         </div>
         <div className="flex gap-2">
-          <button className="rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-sm" onClick={onPrintPdf}>
+          <button
+            className="rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-sm disabled:opacity-70"
+            onClick={onPrintPdf}
+            disabled={isPrinting}
+          >
             <span className="flex items-center gap-1">
-              <Printer size={14} />
-              {t("printAction")}
+              {isPrinting ? <Loader2 size={14} className="animate-spin" /> : <Printer size={14} />}
+              {isPrinting ? t("printing") : t("printAction")}
             </span>
           </button>
         </div>

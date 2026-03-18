@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
@@ -101,7 +101,7 @@ export async function GET(request: Request) {
     const vat = Math.round(subtotal * 0.19);
     const total = subtotal + vat;
 
-    const estimatedHeight = 88 + draft.lines.length * 16;
+    const estimatedHeight = 96 + draft.lines.length * (draft.includeLicenseFee ? 22 : 16);
     ensureSpace(estimatedHeight);
 
     page.drawRectangle({
@@ -118,7 +118,7 @@ export async function GET(request: Request) {
       font: bold,
       color: rgb(0.2, 0.2, 0.2)
     });
-    page.drawText(`${new Date(draft.date).toLocaleDateString("de-DE")}  ·  ${paymentLabel(draft.paymentMethod)}`, {
+    page.drawText(`${new Date(draft.date).toLocaleDateString("de-DE")}  |  ${paymentLabel(draft.paymentMethod)}`, {
       x: left + 10,
       y: y - 12,
       size: 9,
@@ -145,7 +145,7 @@ export async function GET(request: Request) {
       y -= 18;
     } else {
       for (const line of draft.lines) {
-        ensureSpace(20);
+        ensureSpace(draft.includeLicenseFee ? 24 : 18);
         const lineLicenseFee = draft.includeLicenseFee ? line.product.licenseFeeCents ?? 0 : 0;
         const lineTotal = line.quantity * (line.unitPriceCents + lineLicenseFee);
         const lineText = `${line.quantity} x ${line.product.name}`;
@@ -164,7 +164,19 @@ export async function GET(request: Request) {
           font: regular,
           color: rgb(0.22, 0.22, 0.22)
         });
-        y -= 16;
+
+        if (draft.includeLicenseFee && lineLicenseFee > 0) {
+          page.drawText(`Lizenz ${formatMoney(lineLicenseFee)} / Stk | Netto ${formatMoney(lineLicenseFee * line.quantity)} EUR`, {
+            x: left + 18,
+            y: y - 10,
+            size: 8,
+            font: regular,
+            color: rgb(0.45, 0.45, 0.45)
+          });
+          y -= 22;
+        } else {
+          y -= 16;
+        }
       }
     }
 
