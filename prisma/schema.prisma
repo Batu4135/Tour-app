@@ -77,6 +77,8 @@ model Draft {
   date      DateTime          @default(now())
   note      String?
   includeLicenseFee Boolean   @default(false)
+  paymentMethod PaymentMethod @default(CASH)
+  tourClosedAt DateTime?
   createdAt DateTime          @default(now())
   updatedAt DateTime          @default(now()) @updatedAt
   customer  Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -112,4 +114,10 @@ model InvoiceRevision {
   author     User?    @relation("RevisionAuthor", fields: [createdBy], references: [id], onDelete: SetNull)
 
   @@index([invoiceId, createdAt])
+}
+
+enum PaymentMethod {
+  CASH
+  BANK
+  DIRECT_DEBIT
 }

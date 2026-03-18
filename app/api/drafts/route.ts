@@ -15,7 +15,7 @@ export async function GET() {
   if (!user) return unauthorized();
 
   const drafts = await prisma.draft.findMany({
-    take: 20,
+    take: 120,
     orderBy: { date: "desc" },
     include: {
       customer: { select: { name: true } },
@@ -31,6 +31,8 @@ export async function GET() {
       date: draft.date.toISOString(),
       note: draft.note ?? null,
       includeLicenseFee: draft.includeLicenseFee ?? false,
+      paymentMethod: draft.paymentMethod,
+      tourClosedAt: draft.tourClosedAt ? draft.tourClosedAt.toISOString() : null,
       updatedAt: draft.updatedAt.toISOString(),
       totalCents: draft.lines.reduce(
         (sum: number, line: any) =>
@@ -68,7 +70,8 @@ export async function POST(request: Request) {
 
     const draft = await tx.draft.create({
       data: {
-        customerId: customer.id
+        customerId: customer.id,
+        paymentMethod: "CASH"
       }
     });
 
@@ -101,6 +104,8 @@ export async function POST(request: Request) {
       date: draft.date.toISOString(),
       note: draft.note ?? null,
       includeLicenseFee: draft.includeLicenseFee ?? false,
+      paymentMethod: draft.paymentMethod,
+      tourClosedAt: draft.tourClosedAt ? draft.tourClosedAt.toISOString() : null,
       updatedAt: draft.updatedAt.toISOString(),
       lines: []
     },

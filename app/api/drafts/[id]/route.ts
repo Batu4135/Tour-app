@@ -29,7 +29,8 @@ const updateDraftSchema = z.object({
     )
     .default([]),
   note: z.string().nullable().optional(),
-  includeLicenseFee: z.boolean().optional()
+  includeLicenseFee: z.boolean().optional(),
+  paymentMethod: z.enum(["CASH", "BANK", "DIRECT_DEBIT"]).optional()
 });
 
 export async function GET(_: Request, { params }: RouteContext) {
@@ -83,6 +84,8 @@ export async function GET(_: Request, { params }: RouteContext) {
       date: draft.date.toISOString(),
       note: draft.note ?? null,
       includeLicenseFee: draft.includeLicenseFee ?? false,
+      paymentMethod: draft.paymentMethod,
+      tourClosedAt: draft.tourClosedAt ? draft.tourClosedAt.toISOString() : null,
       updatedAt: draft.updatedAt.toISOString(),
       lines: draft.lines.map((line: any) => ({
         id: line.id,
@@ -136,7 +139,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 
   const existing = await prisma.draft.findUnique({
     where: { id },
-    select: { id: true, includeLicenseFee: true }
+    select: { id: true, includeLicenseFee: true, paymentMethod: true }
   });
   if (!existing) return notFound("Vordruck nicht gefunden.");
 
@@ -145,7 +148,8 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       where: { id },
       data: {
         note: body.note?.trim() || null,
-        includeLicenseFee: body.includeLicenseFee ?? existing.includeLicenseFee
+        includeLicenseFee: body.includeLicenseFee ?? existing.includeLicenseFee,
+        paymentMethod: body.paymentMethod ?? existing.paymentMethod
       }
     });
     await tx.invoiceRevision.create({
@@ -154,7 +158,8 @@ export async function PATCH(request: Request, { params }: RouteContext) {
         payloadJson: {
           lines: sanitized,
           note: body.note?.trim() || null,
-          includeLicenseFee: body.includeLicenseFee ?? existing.includeLicenseFee
+          includeLicenseFee: body.includeLicenseFee ?? existing.includeLicenseFee,
+          paymentMethod: body.paymentMethod ?? existing.paymentMethod
         },
         createdBy: user.id
       }
@@ -184,6 +189,8 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       date: draft.date.toISOString(),
       note: draft.note ?? null,
       includeLicenseFee: draft.includeLicenseFee ?? false,
+      paymentMethod: draft.paymentMethod,
+      tourClosedAt: draft.tourClosedAt ? draft.tourClosedAt.toISOString() : null,
       updatedAt: draft.updatedAt.toISOString(),
       lines: draft.lines.map((line: any) => ({
         id: line.id,

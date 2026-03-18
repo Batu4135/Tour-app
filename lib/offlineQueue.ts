@@ -7,6 +7,7 @@ export type DraftWritePayload = {
     unitPriceCents: number;
   }>;
   includeLicenseFee?: boolean;
+  paymentMethod?: "CASH" | "BANK" | "DIRECT_DEBIT";
   note?: string | null;
 };
 

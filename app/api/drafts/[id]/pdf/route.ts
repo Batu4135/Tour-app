@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { badRequest, notFound, unauthorized } from "@/lib/http";
@@ -60,6 +58,12 @@ function s(value: number): number {
   return value * SCALE;
 }
 
+function paymentMethodText(value: string): string {
+  if (value === "BANK") return "Bank";
+  if (value === "DIRECT_DEBIT") return "Lastschrift";
+  return "Bar";
+}
+
 export async function GET(_: Request, { params }: RouteContext) {
   const user = await requireAuth();
   if (!user) return unauthorized();
@@ -96,52 +100,17 @@ export async function GET(_: Request, { params }: RouteContext) {
   const productX = s(118);
   const lineTotalRight = s(528);
 
-  const logoBottomY = s(744);
-  let logoDrawn = false;
-  try {
-    const logoPath = path.join(process.cwd(), "public", "brand", "nord-pack-logo.png");
-    const logoBytes = await readFile(logoPath);
-    const logoImage = await pdf.embedPng(logoBytes);
-    const maxWidth = s(180);
-    const maxHeight = s(58);
-    const scale = Math.min(maxWidth / logoImage.width, maxHeight / logoImage.height);
-    const logoWidth = logoImage.width * scale;
-    const logoHeight = logoImage.height * scale;
-    page.drawImage(logoImage, {
-      x: (pageWidth - logoWidth) / 2,
-      y: logoBottomY,
-      width: logoWidth,
-      height: logoHeight
-    });
-    logoDrawn = true;
-  } catch {
-    logoDrawn = false;
-  }
-
-  if (!logoDrawn) {
-    const fallback = "Nord-Pack";
-    const fallbackSize = s(18);
-    const fallbackWidth = bold.widthOfTextAtSize(fallback, fallbackSize);
-    page.drawText(fallback, {
-      x: (pageWidth - fallbackWidth) / 2,
-      y: s(764),
-      size: fallbackSize,
-      font: bold,
-      color: accent
-    });
-  }
-
-  page.drawText("Rechnungs-Vordruck", {
-    x: (pageWidth - regular.widthOfTextAtSize("Rechnungs-Vordruck", s(9))) / 2,
-    y: s(732),
-    size: s(9),
+  page.drawText("Vordruck", {
+    x: (pageWidth - regular.widthOfTextAtSize("Vordruck", s(10))) / 2,
+    y: s(752),
+    size: s(10),
     font: regular,
     color: muted
   });
   const licenseModeText = draft.includeLicenseFee ? "Inkl. Lizenzierung" : "Ohne Lizenzierung";
   page.drawText(licenseModeText, {
     x: (pageWidth - regular.widthOfTextAtSize(licenseModeText, s(8))) / 2,
-    y: s(720),
+    y: s(740),
     size: s(8),
     font: regular,
     color: muted
@@ -150,10 +119,19 @@ export async function GET(_: Request, { params }: RouteContext) {
     page,
     text: formatDate(draft.date),
     x: lineTotalRight,
-    y: s(774),
+    y: s(772),
     size: s(11),
     font: regular,
     color: textColor
+  });
+  drawRightText({
+    page,
+    text: `Zahlart: ${paymentMethodText(draft.paymentMethod)}`,
+    x: lineTotalRight,
+    y: s(758),
+    size: s(8.5),
+    font: regular,
+    color: muted
   });
 
   const customerName = draft.customer.name.slice(0, 42);
@@ -161,16 +139,16 @@ export async function GET(_: Request, { params }: RouteContext) {
   const customerWidth = bold.widthOfTextAtSize(customerName, customerSize);
   page.drawText(customerName, {
     x: (pageWidth - customerWidth) / 2,
-    y: s(704),
+    y: s(714),
     size: customerSize,
     font: bold,
     color: textColor
   });
 
-  const headerY = s(666);
+  const headerY = s(676);
   page.drawLine({
-    start: { x: left, y: s(686) },
-    end: { x: right, y: s(686) },
+    start: { x: left, y: s(696) },
+    end: { x: right, y: s(696) },
     color: soft,
     thickness: s(1)
   });
@@ -186,26 +164,27 @@ export async function GET(_: Request, { params }: RouteContext) {
     color: muted
   });
   page.drawLine({
-    start: { x: left, y: s(654) },
-    end: { x: right, y: s(654) },
+    start: { x: left, y: s(664) },
+    end: { x: right, y: s(664) },
     color: soft,
     thickness: s(1)
   });
 
-  const rowStartY = s(630);
+  const rowStartY = s(640);
   const defaultRowHeight = s(32);
-  const summaryGap = s(30);
-  const minSummaryTop = s(150);
+  const summaryGap = s(24);
+  const minSummaryTop = s(158);
   const lineCount = Math.max(1, draft.lines.length);
   const availableRowHeight = Math.max(s(80), rowStartY - minSummaryTop - summaryGap);
-  const rowHeight = Math.min(defaultRowHeight, availableRowHeight / lineCount);
+  const idealRowHeight = availableRowHeight / lineCount;
+  const rowHeight = Math.max(s(21), Math.min(s(46), idealRowHeight));
   const rowDensity = rowHeight / defaultRowHeight;
-  const rowFontSize = Math.max(s(3.5), Math.min(s(12) * rowDensity, rowHeight * 0.82));
-  const qtyFontSize = Math.max(s(3), Math.min(s(10) * rowDensity, rowHeight * 0.72));
+  const rowFontSize = Math.max(s(6), Math.min(s(12.5), rowHeight * 0.5));
+  const qtyFontSize = Math.max(s(5), Math.min(s(10.5), rowHeight * 0.42));
   const qtyBadgeHeight = Math.max(s(4.5), Math.min(s(16) * rowDensity, rowHeight * 1.05));
   const qtyBadgePaddingX = Math.max(s(4), s(12) * rowDensity);
   const rowDividerOffset = Math.min(rowHeight * 0.72, Math.max(s(1.6), s(9) * rowDensity));
-  const nameMaxChars = rowDensity < 0.5 ? 18 : rowDensity < 0.7 ? 24 : 32;
+  const nameMaxChars = rowDensity > 1.2 ? 42 : rowDensity > 0.9 ? 36 : rowDensity > 0.7 ? 30 : 24;
   const subtotal = draft.lines.reduce((sum: number, line: any) => {
     const licenseFee = draft.includeLicenseFee ? (line.product?.licenseFeeCents ?? 0) : 0;
     return sum + line.quantity * (line.unitPriceCents + licenseFee);
@@ -271,7 +250,7 @@ export async function GET(_: Request, { params }: RouteContext) {
   const total = subtotal + vat;
   const usedRows = Math.max(1, draft.lines.length);
   const summaryTop = rowStartY - usedRows * rowHeight - summaryGap;
-  const summaryScale = Math.max(0.7, Math.min(1, rowDensity + 0.12));
+  const summaryScale = Math.max(0.85, Math.min(1.08, rowDensity + 0.08));
   const summaryLabelSize = s(10) * summaryScale;
   const summaryValueSize = s(12) * summaryScale;
   const summaryTotalSize = s(25) * summaryScale;
@@ -330,7 +309,7 @@ export async function GET(_: Request, { params }: RouteContext) {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="nord-pack-vordruck-${id}.pdf"`
+      "Content-Disposition": `attachment; filename="vordruck-${id}.pdf"`
     }
   });
 }

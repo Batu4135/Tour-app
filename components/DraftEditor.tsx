@@ -31,6 +31,8 @@ type DraftData = {
   date: string;
   note: string | null;
   includeLicenseFee?: boolean;
+  paymentMethod?: "CASH" | "BANK" | "DIRECT_DEBIT";
+  tourClosedAt?: string | null;
   updatedAt?: string;
   lines: DraftLine[];
 };
@@ -125,7 +127,11 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       if (!raw) return null;
       const parsed = JSON.parse(raw) as { draft?: DraftData };
       if (!parsed.draft) return null;
-      return { ...parsed.draft, includeLicenseFee: Boolean(parsed.draft.includeLicenseFee) };
+      return {
+        ...parsed.draft,
+        includeLicenseFee: Boolean(parsed.draft.includeLicenseFee),
+        paymentMethod: parsed.draft.paymentMethod ?? "CASH"
+      };
     } catch {
       return null;
     }
@@ -177,7 +183,11 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       const hasPendingForDraft = pendingWrites.some((entry) => entry.draftId === draftId);
 
       if (!snapshot || !hasPendingForDraft) {
-        const normalizedDraft = { ...payload.draft, includeLicenseFee: Boolean(payload.draft.includeLicenseFee) };
+        const normalizedDraft = {
+          ...payload.draft,
+          includeLicenseFee: Boolean(payload.draft.includeLicenseFee),
+          paymentMethod: payload.draft.paymentMethod ?? "CASH"
+        };
         setDraft(normalizedDraft);
         writeSnapshot(normalizedDraft);
         setStatus("saved");
@@ -213,7 +223,11 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
           try {
             const updated = await sendDraftPatch(entry.draftId, entry.payload);
             if (entry.draftId === draftId) {
-              const normalizedDraft = { ...updated, includeLicenseFee: Boolean(updated.includeLicenseFee) };
+              const normalizedDraft = {
+                ...updated,
+                includeLicenseFee: Boolean(updated.includeLicenseFee),
+                paymentMethod: updated.paymentMethod ?? "CASH"
+              };
               setDraft(normalizedDraft);
               writeSnapshot(normalizedDraft);
             }
@@ -270,6 +284,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
           unitPriceCents: line.unitPriceCents
         })),
         includeLicenseFee: Boolean(draft.includeLicenseFee),
+        paymentMethod: draft.paymentMethod ?? "CASH",
         note: normalizedNote ? normalizedNote : undefined
       };
 
@@ -310,7 +325,11 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       try {
         const updated = await sendDraftPatch(draft.id, payload, controller.signal);
         if (saveSeq !== saveSeqRef.current) return true;
-        const normalizedDraft = { ...updated, includeLicenseFee: Boolean(updated.includeLicenseFee) };
+        const normalizedDraft = {
+          ...updated,
+          includeLicenseFee: Boolean(updated.includeLicenseFee),
+          paymentMethod: updated.paymentMethod ?? "CASH"
+        };
 
         if (localVersionAtStart === localVersionRef.current) {
           setDraft(normalizedDraft);
@@ -492,6 +511,10 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
     updateDraft((prev) => ({ ...prev, includeLicenseFee: next }));
   }
 
+  function onPaymentMethodChange(next: "CASH" | "BANK" | "DIRECT_DEBIT") {
+    updateDraft((prev) => ({ ...prev, paymentMethod: next }));
+  }
+
   async function onPrintPdf() {
     if (!draft) return;
     const saved = await forceSave();
@@ -505,7 +528,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       const response = await fetch(pdfUrl);
       if (!response.ok) throw new Error(t("saveError"));
       const blob = await response.blob();
-      const file = new File([blob], `nord-pack-vordruck-${draft.id}.pdf`, { type: "application/pdf" });
+      const file = new File([blob], `vordruck-${draft.id}.pdf`, { type: "application/pdf" });
       const nav = navigator as Navigator & {
         canShare?: (data: { files?: File[] }) => boolean;
         share?: (data: { title?: string; text?: string; files?: File[]; url?: string }) => Promise<void>;
@@ -616,6 +639,39 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
         suggestedProducts={customerSuggestedProducts}
         searchMode="all"
       />
+
+      <div className="card space-y-2">
+        <p className="text-sm font-semibold">{t("paymentTitle")}</p>
+        <div className="flex flex-wrap gap-2">
+          <label className="inline-flex items-center gap-2 rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm">
+            <input
+              type="radio"
+              name="payment-method"
+              checked={(draft.paymentMethod ?? "CASH") === "CASH"}
+              onChange={() => onPaymentMethodChange("CASH")}
+            />
+            <span>{t("paymentCash")}</span>
+          </label>
+          <label className="inline-flex items-center gap-2 rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm">
+            <input
+              type="radio"
+              name="payment-method"
+              checked={(draft.paymentMethod ?? "CASH") === "BANK"}
+              onChange={() => onPaymentMethodChange("BANK")}
+            />
+            <span>{t("paymentBank")}</span>
+          </label>
+          <label className="inline-flex items-center gap-2 rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm">
+            <input
+              type="radio"
+              name="payment-method"
+              checked={(draft.paymentMethod ?? "CASH") === "DIRECT_DEBIT"}
+              onChange={() => onPaymentMethodChange("DIRECT_DEBIT")}
+            />
+            <span>{t("paymentDebit")}</span>
+          </label>
+        </div>
+      </div>
 
       <div className="card space-y-2">
         <p className="text-sm font-semibold">{t("licenseTitle")}</p>

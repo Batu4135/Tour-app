@@ -93,11 +93,15 @@ async function ensureLocalSchema() {
       "date" DATETIME NOT NULL,
       "note" TEXT,
       "includeLicenseFee" BOOLEAN NOT NULL DEFAULT false,
+      "paymentMethod" TEXT NOT NULL DEFAULT 'CASH',
+      "tourClosedAt" DATETIME,
       "createdAt" DATETIME NOT NULL,
       "updatedAt" DATETIME NOT NULL,
       FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE CASCADE ON UPDATE CASCADE
     );
   `);
+  await local.$executeRawUnsafe(`ALTER TABLE "Draft" ADD COLUMN "paymentMethod" TEXT NOT NULL DEFAULT 'CASH';`).catch(() => undefined);
+  await local.$executeRawUnsafe(`ALTER TABLE "Draft" ADD COLUMN "tourClosedAt" DATETIME;`).catch(() => undefined);
 
   await local.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS "DraftLine" (
@@ -228,6 +232,8 @@ async function main() {
           date: item.date,
           note: item.note,
           includeLicenseFee: item.includeLicenseFee ?? false,
+          paymentMethod: item.paymentMethod ?? "CASH",
+          tourClosedAt: item.tourClosedAt ?? null,
           createdAt: item.createdAt ?? item.date ?? new Date(0),
           updatedAt: item.updatedAt ?? item.createdAt ?? item.date ?? new Date(0)
         }))
