@@ -182,7 +182,8 @@
     "quantity": "Adet",
     "price": "Fiyat",
     "lineTotal": "Toplam",
-    "licenseIncluded": "+ Lisans {amount}",
+    "licenseIncluded": "+ Lisans {amount} / Adet",
+    "licenseNetTotal": "Lisans net toplam: {amount}",
     "licenseOptional": "Lisans opsiyonel",
     "empty": "Henüz kalem yok.",
     "subtotal": "Ara toplam"

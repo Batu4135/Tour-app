@@ -183,7 +183,8 @@
     "quantity": "Menge",
     "price": "Preis",
     "lineTotal": "Summe",
-    "licenseIncluded": "+ Lizenz {amount}",
+    "licenseIncluded": "+ Lizenz {amount} / Stk",
+    "licenseNetTotal": "Lizenz netto gesamt: {amount}",
     "licenseOptional": "Lizenz optional",
     "empty": "Noch keine Positionen vorhanden.",
     "subtotal": "Zwischensumme"

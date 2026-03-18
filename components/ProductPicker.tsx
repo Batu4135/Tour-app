@@ -298,9 +298,16 @@ export default function ProductPicker({
                   <p className="text-xs text-[#4A4A4A]/65">{t("lineTotal")}</p>
                   <p className="text-sm font-semibold text-[#2F7EA1]">{formatCents(lineTotal)}</p>
                   {licenseFee > 0 ? (
-                    <p className="text-[11px] text-[#4A4A4A]/60">
-                      {includeLicenseFee ? t("licenseIncluded", { amount: formatCents(licenseFee) }) : t("licenseOptional")}
-                    </p>
+                    <div className="space-y-0.5 text-[11px] text-[#4A4A4A]/60">
+                      <p>
+                        {includeLicenseFee
+                          ? t("licenseIncluded", { amount: formatCents(licenseFee) })
+                          : t("licenseOptional")}
+                      </p>
+                      {includeLicenseFee && item.quantity > 1 ? (
+                        <p>{t("licenseNetTotal", { amount: formatCents(item.quantity * licenseFee) })}</p>
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
               </div>

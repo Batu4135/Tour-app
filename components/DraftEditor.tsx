@@ -693,6 +693,9 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
           />
           <span>{t("withoutLicense")}</span>
         </label>
+        <p className="text-xs text-[#4A4A4A]/65">
+          {t("licenseNetTotal", { amount: formatCents(licenseTotalCents) })}
+        </p>
       </div>
 
       <div className="card space-y-2">
