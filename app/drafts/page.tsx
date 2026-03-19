@@ -341,43 +341,13 @@ export default function DraftsPage() {
   }
 
   return (
-    <section className="space-y-4">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-sm text-[#4A4A4A]/70">{t("subtitle")}</p>
-      </header>
-
-      <div className="card space-y-3">
-        <p className="text-sm font-semibold">{t("newDraft")}</p>
-        <div className="relative">
-          <Search className="search-icon" size={16} />
-          <input
-            className="search-input"
-            placeholder={t("customerSearch")}
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </div>
-        <div className="space-y-2">
-          {selectedResults.map((customer) => (
-            <Link
-              key={customer.id}
-              href={`/drafts/new?customerId=${customer.id}`}
-              className="secondary-btn flex w-full items-center justify-between text-left"
-            >
-              <span className="truncate text-sm font-medium">{customer.name}</span>
-              <span className="ml-3 truncate text-xs text-[#4A4A4A]/60">{customer.address ?? ""}</span>
-            </Link>
-          ))}
-          {selectedResults.length === 0 ? <p className="text-sm text-[#4A4A4A]/60">{t("noCustomers")}</p> : null}
-        </div>
-      </div>
-
-      <div className="card space-y-3">
-        <p className="text-sm font-semibold">{t("recent")}</p>
-
-        {selectionMode ? (
-          <div className="rounded-2xl bg-[#111827] p-3 text-white">
+    <section className={`space-y-4 ${selectionMode ? "pt-40" : ""}`}>
+      {selectionMode ? (
+        <div
+          className="fixed inset-x-0 top-0 z-50 px-4 pb-3"
+          style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
+        >
+          <div className="mx-auto max-w-2xl rounded-2xl bg-[#111827] p-3 text-white shadow-2xl">
             <div className="flex items-center justify-between gap-2">
               <button
                 type="button"
@@ -419,7 +389,42 @@ export default function DraftsPage() {
               </button>
             </div>
           </div>
-        ) : null}
+        </div>
+      ) : null}
+
+      <header className="space-y-1">
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
+        <p className="text-sm text-[#4A4A4A]/70">{t("subtitle")}</p>
+      </header>
+
+      <div className="card space-y-3">
+        <p className="text-sm font-semibold">{t("newDraft")}</p>
+        <div className="relative">
+          <Search className="search-icon" size={16} />
+          <input
+            className="search-input"
+            placeholder={t("customerSearch")}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          {selectedResults.map((customer) => (
+            <Link
+              key={customer.id}
+              href={`/drafts/new?customerId=${customer.id}`}
+              className="secondary-btn flex w-full items-center justify-between text-left"
+            >
+              <span className="truncate text-sm font-medium">{customer.name}</span>
+              <span className="ml-3 truncate text-xs text-[#4A4A4A]/60">{customer.address ?? ""}</span>
+            </Link>
+          ))}
+          {selectedResults.length === 0 ? <p className="text-sm text-[#4A4A4A]/60">{t("noCustomers")}</p> : null}
+        </div>
+      </div>
+
+      <div className="card space-y-3">
+        <p className="text-sm font-semibold">{t("recent")}</p>
 
         {groupedDrafts.map((group) => {
           const selectedInMode = Boolean(selectedClosedGroups[group.key]);
