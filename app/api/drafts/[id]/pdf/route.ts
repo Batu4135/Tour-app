@@ -337,7 +337,7 @@ export async function GET(_: Request, { params }: RouteContext) {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="vordruck-${id}.pdf"`
+      "Content-Disposition": `inline; filename="vordruck-${id}.pdf"`
     }
   });
 }

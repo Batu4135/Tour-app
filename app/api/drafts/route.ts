@@ -18,7 +18,7 @@ export async function GET() {
     take: 120,
     orderBy: { date: "desc" },
     include: {
-      customer: { select: { name: true } },
+      customer: { select: { name: true, routeDay: true } },
       lines: { select: { quantity: true, unitPriceCents: true, product: { select: { licenseFeeCents: true } } } }
     }
   });
@@ -28,6 +28,7 @@ export async function GET() {
       id: draft.id,
       customerId: draft.customerId,
       customerName: draft.customer.name,
+      customerRouteDay: draft.customer.routeDay ?? null,
       date: draft.date.toISOString(),
       note: draft.note ?? null,
       includeLicenseFee: draft.includeLicenseFee ?? false,

@@ -188,7 +188,7 @@ export async function GET(request: Request) {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename=\"tour-uebersicht.pdf\"`
+      "Content-Disposition": `inline; filename=\"tour-uebersicht.pdf\"`
     }
   });
 }
