@@ -246,7 +246,7 @@ export default function DraftsPage() {
   }
 
   function startLongPressSelection(group: DraftGroup) {
-    if (!group.isClosed || selectionMode) return;
+    if (!group.isClosed || selectionMode || openGroups[group.key]) return;
     clearLongPressTimer();
     longPressTimerRef.current = setTimeout(() => {
       setSelectionMode(true);
@@ -341,7 +341,7 @@ export default function DraftsPage() {
   }
 
   return (
-    <section className={`space-y-4 ${selectionMode ? "pt-40" : ""}`}>
+    <section className="space-y-4">
       {selectionMode ? (
         <div
           className="fixed inset-x-0 top-0 z-50 px-4 pb-3"
@@ -434,6 +434,7 @@ export default function DraftsPage() {
               className={`rounded-xl border p-3 ${group.isClosed ? "border-[#B8E3C4] bg-[#ECFAF0]" : "border-[#E5E5E5] bg-white"}`}
               style={group.isClosed ? { WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" } : undefined}
               onTouchStart={() => startLongPressSelection(group)}
+              onTouchMove={stopLongPressSelection}
               onTouchEnd={stopLongPressSelection}
               onTouchCancel={stopLongPressSelection}
               onMouseDown={() => startLongPressSelection(group)}
@@ -478,6 +479,8 @@ export default function DraftsPage() {
                         event.stopPropagation();
                         void deleteClosedTour(group);
                       }}
+                      onMouseDown={(event) => event.stopPropagation()}
+                      onTouchStart={(event) => event.stopPropagation()}
                       disabled={deletingGroupKey === group.key}
                     >
                       {deletingGroupKey === group.key ? t("deletingClosedTour") : t("deleteClosedTour")}
@@ -492,6 +495,8 @@ export default function DraftsPage() {
                         event.stopPropagation();
                         void closeTour(group);
                       }}
+                      onMouseDown={(event) => event.stopPropagation()}
+                      onTouchStart={(event) => event.stopPropagation()}
                     >
                       {closingGroupKey === group.key ? t("tourClosing") : t("tourClose")}
                     </button>
@@ -504,6 +509,8 @@ export default function DraftsPage() {
                         event.stopPropagation();
                         toggleGroup(group.key);
                       }}
+                      onMouseDown={(event) => event.stopPropagation()}
+                      onTouchStart={(event) => event.stopPropagation()}
                       aria-label={openGroups[group.key] ? t("collapseGroup") : t("expandGroup")}
                     >
                       {openGroups[group.key] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
