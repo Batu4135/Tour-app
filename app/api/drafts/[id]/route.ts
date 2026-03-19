@@ -56,6 +56,8 @@ export async function GET(_: Request, { params }: RouteContext) {
                   sku: true,
                   defaultPriceCents: true,
                   licenseFeeCents: true,
+                  licenseMaterial: true,
+                  licenseWeightGrams: true,
                   isActive: true
                 }
               }
@@ -64,7 +66,11 @@ export async function GET(_: Request, { params }: RouteContext) {
         }
       },
       lines: {
-        include: { product: { select: { name: true, sku: true, licenseFeeCents: true } } }
+        include: {
+          product: {
+            select: { name: true, sku: true, licenseFeeCents: true, licenseMaterial: true, licenseWeightGrams: true }
+          }
+        }
       }
     }
   });
@@ -72,8 +78,16 @@ export async function GET(_: Request, { params }: RouteContext) {
   const productLicenseFeeMap = Object.fromEntries(
     draft.lines.map((line: any) => [line.productId, line.product?.licenseFeeCents ?? 0])
   ) as Record<number, number>;
+  const productLicenseMaterialMap = Object.fromEntries(
+    draft.lines.map((line: any) => [line.productId, line.product?.licenseMaterial ?? null])
+  ) as Record<number, "LP" | "LK" | "LA" | "LV" | null>;
+  const productLicenseWeightMap = Object.fromEntries(
+    draft.lines.map((line: any) => [line.productId, line.product?.licenseWeightGrams ?? 0])
+  ) as Record<number, number>;
   for (const price of draft.customer.customerPrice) {
     productLicenseFeeMap[price.productId] = price.product?.licenseFeeCents ?? 0;
+    productLicenseMaterialMap[price.productId] = price.product?.licenseMaterial ?? null;
+    productLicenseWeightMap[price.productId] = price.product?.licenseWeightGrams ?? 0;
   }
 
   return NextResponse.json({
@@ -100,6 +114,8 @@ export async function GET(_: Request, { params }: RouteContext) {
       draft.customer.customerPrice.map((price: any) => [price.productId, price.priceCents])
     ) as Record<number, number>,
     productLicenseFeeMap,
+    productLicenseMaterialMap,
+    productLicenseWeightMap,
     customerSuggestedProducts: draft.customer.customerPrice
       .filter((price: any) => price.product?.isActive)
       .map((price: any) => ({
@@ -107,7 +123,9 @@ export async function GET(_: Request, { params }: RouteContext) {
         sku: price.product.sku,
         name: price.product.name,
         defaultPriceCents: price.product.defaultPriceCents,
-        licenseFeeCents: price.product.licenseFeeCents ?? 0
+        licenseFeeCents: price.product.licenseFeeCents ?? 0,
+        licenseMaterial: price.product.licenseMaterial ?? null,
+        licenseWeightGrams: price.product.licenseWeightGrams ?? 0
       }))
       .sort((a: any, b: any) => a.name.localeCompare(b.name, "de-DE"))
   });

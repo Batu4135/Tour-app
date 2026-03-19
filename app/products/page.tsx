@@ -11,6 +11,8 @@ type Product = {
   name: string;
   defaultPriceCents: number | null;
   licenseFeeCents: number;
+  licenseMaterial: "LP" | "LK" | "LA" | "LV" | null;
+  licenseWeightGrams: number;
   isActive: boolean;
 };
 
@@ -19,6 +21,8 @@ type EditFields = {
   sku: string;
   defaultPrice: string;
   licenseFee: string;
+  licenseMaterial: "" | "LP" | "LK" | "LA" | "LV";
+  licenseWeightKg: string;
   isActive: boolean;
 };
 
@@ -38,8 +42,24 @@ function toEditFields(product: Product): EditFields {
     sku: product.sku,
     defaultPrice: toPriceInput(product.defaultPriceCents),
     licenseFee: toPriceInput(product.licenseFeeCents),
+    licenseMaterial: product.licenseMaterial ?? "",
+    licenseWeightKg: toWeightInput(product.licenseWeightGrams),
     isActive: product.isActive
   };
+}
+
+function toWeightInput(value: number | null | undefined): string {
+  const grams = typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0;
+  if (grams <= 0) return "";
+  return new Intl.NumberFormat("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 3 }).format(grams / 1000);
+}
+
+function parseWeightKgToGrams(raw: string): number {
+  const cleaned = raw.trim().replace(/\s/g, "").replace(",", ".").replace(/[^\d.-]/g, "");
+  if (!cleaned) return 0;
+  const parsed = Number.parseFloat(cleaned);
+  if (!Number.isFinite(parsed) || parsed < 0) return 0;
+  return Math.max(0, Math.round(parsed * 1000));
 }
 
 export default function ProductsPage() {
@@ -58,7 +78,9 @@ export default function ProductsPage() {
     name: "",
     sku: "",
     defaultPrice: "",
-    licenseFee: ""
+    licenseFee: "",
+    licenseMaterial: "" as "" | "LP" | "LK" | "LA" | "LV",
+    licenseWeightKg: ""
   });
 
   useEffect(() => {
@@ -133,13 +155,22 @@ export default function ProductsPage() {
             createForm.defaultPrice.trim().length > 0 ? parseEuroToCents(createForm.defaultPrice) : undefined,
           licenseFeeCents:
             createForm.licenseFee.trim().length > 0 ? parseEuroToCents(createForm.licenseFee) : undefined,
+          licenseMaterial: createForm.licenseMaterial || null,
+          licenseWeightGrams: parseWeightKgToGrams(createForm.licenseWeightKg),
           isActive: true
         })
       });
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(payload.error ?? t("saveError"));
 
-      setCreateForm({ name: "", sku: "", defaultPrice: "", licenseFee: "" });
+      setCreateForm({
+        name: "",
+        sku: "",
+        defaultPrice: "",
+        licenseFee: "",
+        licenseMaterial: "",
+        licenseWeightKg: ""
+      });
       setFlash({ type: "success", text: t("createSuccess") });
       await loadProducts();
     } catch (createError) {
@@ -171,6 +202,8 @@ export default function ProductsPage() {
           sku: edit.sku.trim(),
           defaultPriceCents: edit.defaultPrice.trim().length > 0 ? parseEuroToCents(edit.defaultPrice) : null,
           licenseFeeCents: edit.licenseFee.trim().length > 0 ? parseEuroToCents(edit.licenseFee) : 0,
+          licenseMaterial: edit.licenseMaterial || null,
+          licenseWeightGrams: parseWeightKgToGrams(edit.licenseWeightKg),
           isActive: edit.isActive
         })
       });
@@ -245,6 +278,29 @@ export default function ProductsPage() {
           placeholder={t("createLicenseFee")}
           value={createForm.licenseFee}
           onChange={(event) => setCreateForm((prev) => ({ ...prev, licenseFee: event.target.value }))}
+          inputMode="decimal"
+        />
+        <select
+          className="input"
+          value={createForm.licenseMaterial}
+          onChange={(event) =>
+            setCreateForm((prev) => ({
+              ...prev,
+              licenseMaterial: event.target.value as "" | "LP" | "LK" | "LA" | "LV"
+            }))
+          }
+        >
+          <option value="">{t("createLicenseType")}</option>
+          <option value="LP">LP (Papier)</option>
+          <option value="LK">LK (Kunststoff)</option>
+          <option value="LA">LA (Aluminium)</option>
+          <option value="LV">LV (Verbund)</option>
+        </select>
+        <input
+          className="input"
+          placeholder={t("createLicenseWeight")}
+          value={createForm.licenseWeightKg}
+          onChange={(event) => setCreateForm((prev) => ({ ...prev, licenseWeightKg: event.target.value }))}
           inputMode="decimal"
         />
         <button
@@ -336,6 +392,26 @@ export default function ProductsPage() {
                   placeholder={t("createLicenseFee")}
                   inputMode="decimal"
                 />
+                <select
+                  className="input !py-2"
+                  value={edit.licenseMaterial}
+                  onChange={(event) =>
+                    setEditField(product.id, "licenseMaterial", event.target.value as "" | "LP" | "LK" | "LA" | "LV")
+                  }
+                >
+                  <option value="">{t("createLicenseType")}</option>
+                  <option value="LP">LP (Papier)</option>
+                  <option value="LK">LK (Kunststoff)</option>
+                  <option value="LA">LA (Aluminium)</option>
+                  <option value="LV">LV (Verbund)</option>
+                </select>
+                <input
+                  className="input !py-2"
+                  value={edit.licenseWeightKg}
+                  onChange={(event) => setEditField(product.id, "licenseWeightKg", event.target.value)}
+                  placeholder={t("createLicenseWeight")}
+                  inputMode="decimal"
+                />
               </div>
 
               <label className="inline-flex items-center gap-2 text-sm text-[#4A4A4A]/80">
@@ -350,7 +426,8 @@ export default function ProductsPage() {
               <div className="flex items-center justify-between gap-2">
                 <p className="text-xs text-[#4A4A4A]/65">
                   {edit.defaultPrice.trim() ? formatCents(parseEuroToCents(edit.defaultPrice)) : "-"} /{" "}
-                  {t("licenseFeeLabel")}: {edit.licenseFee.trim() ? formatCents(parseEuroToCents(edit.licenseFee)) : "-"}
+                  {t("licenseFeeLabel")}: {edit.licenseFee.trim() ? formatCents(parseEuroToCents(edit.licenseFee)) : "-"} /{" "}
+                  {edit.licenseMaterial || "-"} / {toWeightInput(parseWeightKgToGrams(edit.licenseWeightKg)) || "-"}
                 </p>
                 <div className="flex items-center gap-2">
                   <button

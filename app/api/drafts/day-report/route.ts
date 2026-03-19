@@ -3,6 +3,7 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { badRequest, unauthorized } from "@/lib/http";
+import { formatKgFromGrams, normalizeLicenseMaterial, normalizeLicenseWeightGrams } from "@/lib/license";
 
 export const runtime = "nodejs";
 
@@ -43,7 +44,7 @@ export async function GET(request: Request) {
       customer: { select: { name: true } },
       lines: {
         include: {
-          product: { select: { name: true, licenseFeeCents: true } }
+          product: { select: { name: true, licenseFeeCents: true, licenseMaterial: true, licenseWeightGrams: true } }
         },
         orderBy: { id: "asc" }
       }
@@ -166,7 +167,10 @@ export async function GET(request: Request) {
         });
 
         if (draft.includeLicenseFee && lineLicenseFee > 0) {
-          page.drawText(`Lizenz ${formatMoney(lineLicenseFee)} / Stk | Netto ${formatMoney(lineLicenseFee * line.quantity)} EUR`, {
+          const material = normalizeLicenseMaterial(line.product.licenseMaterial);
+          const weightGrams = normalizeLicenseWeightGrams(line.product.licenseWeightGrams ?? 0);
+          const materialText = material ? `${material} ${weightGrams > 0 ? `${formatKgFromGrams(weightGrams)} kg` : ""}`.trim() : "Lizenz";
+          page.drawText(`${materialText} | Lizenz ${formatMoney(lineLicenseFee)} / Stk | Netto ${formatMoney(lineLicenseFee * line.quantity)} EUR`, {
             x: left + 18,
             y: y - 10,
             size: 8,

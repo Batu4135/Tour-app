@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Search, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { formatCents, parseEuroToCents } from "@/lib/formatCents";
+import { formatKgFromGrams, normalizeLicenseMaterial, normalizeLicenseWeightGrams } from "@/lib/license";
 
 export type ProductOption = {
   id: number;
@@ -11,6 +12,8 @@ export type ProductOption = {
   name: string;
   defaultPriceCents: number | null;
   licenseFeeCents?: number;
+  licenseMaterial?: "LP" | "LK" | "LA" | "LV" | null;
+  licenseWeightGrams?: number;
 };
 
 export type SelectedProductItem = {
@@ -20,6 +23,8 @@ export type SelectedProductItem = {
   quantity: number;
   unitPriceCents: number;
   licenseFeeCents?: number;
+  licenseMaterial?: "LP" | "LK" | "LA" | "LV" | null;
+  licenseWeightGrams?: number;
 };
 
 type ProductPickerProps = {
@@ -139,7 +144,9 @@ export default function ProductPicker({
           name: product.name,
           quantity: 1,
           unitPriceCents: Math.max(0, price),
-          licenseFeeCents: product.licenseFeeCents ?? licenseFeeMap[product.id] ?? 0
+          licenseFeeCents: product.licenseFeeCents ?? licenseFeeMap[product.id] ?? 0,
+          licenseMaterial: normalizeLicenseMaterial(product.licenseMaterial),
+          licenseWeightGrams: normalizeLicenseWeightGrams(product.licenseWeightGrams ?? 0)
         }
       ]);
     }
@@ -257,6 +264,8 @@ export default function ProductPicker({
         {selectedItems.map((item) => {
           const licenseFee = includeLicenseFee ? (item.licenseFeeCents ?? licenseFeeMap[item.productId] ?? 0) : 0;
           const lineTotal = item.quantity * (item.unitPriceCents + licenseFee);
+          const material = normalizeLicenseMaterial(item.licenseMaterial);
+          const weightGrams = normalizeLicenseWeightGrams(item.licenseWeightGrams ?? 0);
           return (
             <div key={item.productId} className="card space-y-2">
               <div className="flex items-start justify-between gap-3">
@@ -304,6 +313,7 @@ export default function ProductPicker({
                           ? t("licenseIncluded", { amount: formatCents(licenseFee) })
                           : t("licenseOptional")}
                       </p>
+                      {material && weightGrams > 0 ? <p>{`${material} ${formatKgFromGrams(weightGrams)} kg`}</p> : null}
                       {includeLicenseFee && item.quantity > 1 ? (
                         <p>{t("licenseNetTotal", { amount: formatCents(item.quantity * licenseFee) })}</p>
                       ) : null}

@@ -1,6 +1,8 @@
 ﻿import bcrypt from "bcryptjs";
 import { PaymentMethod, PrismaClient } from "@prisma/client";
 
+import { computeLicenseFeeCents, LICENSE_MATERIAL_CODES } from "../lib/license";
+
 const prisma = new PrismaClient();
 
 const CITIES = [
@@ -147,12 +149,17 @@ async function wipeBusinessData() {
 async function seedProducts(productCount: number) {
   const rows = Array.from({ length: productCount }, (_, i) => {
     const skuNum = 10000 + i;
-    const licenseBase = [0, 0, 0, 15, 25, 99][int(0, 5)];
+    const hasLicense = random() >= 0.28;
+    const licenseMaterial = hasLicense ? pick(LICENSE_MATERIAL_CODES) : null;
+    const licenseWeightGrams = hasLicense ? int(80, 9500) : 0;
+    const licenseBase = computeLicenseFeeCents(licenseMaterial, licenseWeightGrams);
     return {
       sku: `T${skuNum}`,
       name: `${pick(PRODUCT_WORDS_A)} ${pick(PRODUCT_WORDS_B)} ${int(100, 999)} Stk.`,
       defaultPriceCents: int(350, 15900),
       licenseFeeCents: licenseBase,
+      licenseMaterial,
+      licenseWeightGrams,
       isActive: true
     };
   });
@@ -162,7 +169,15 @@ async function seedProducts(productCount: number) {
   }
 
   return prisma.product.findMany({
-    select: { id: true, sku: true, name: true, defaultPriceCents: true, licenseFeeCents: true }
+    select: {
+      id: true,
+      sku: true,
+      name: true,
+      defaultPriceCents: true,
+      licenseFeeCents: true,
+      licenseMaterial: true,
+      licenseWeightGrams: true
+    }
   });
 }
 

@@ -1,6 +1,12 @@
 import fs from "fs/promises";
 import path from "path";
 import { prisma } from "../lib/prisma";
+import {
+  LICENSE_RATE_CENTS_PER_KG,
+  computeLicenseFeeCents,
+  normalizeLicenseMaterial,
+  type LicenseMaterialCode
+} from "../lib/license";
 
 type HeaderIndexes = {
   name: number;
@@ -15,8 +21,31 @@ type ParsedRow = {
   defaultPriceCents: number;
 };
 
+type LicenseEntry = {
+  feeCents: number;
+  licenseMaterial: LicenseMaterialCode | null;
+  licenseWeightGrams: number;
+};
+
 function normalizeSku(value: string): string {
   return value.trim();
+}
+
+function canonicalSkuForLookup(value: string): string {
+  return normalizeSku(value).replace(/\s+/g, "").toUpperCase();
+}
+
+function skuLookupCandidates(value: string): string[] {
+  const canonical = canonicalSkuForLookup(value);
+  if (!canonical) return [];
+
+  const candidates = new Set<string>([canonical]);
+  const baseNumericMatch = canonical.match(/^(\d+)[A-Z]+$/);
+  if (baseNumericMatch?.[1]) {
+    candidates.add(baseNumericMatch[1]);
+  }
+
+  return [...candidates];
 }
 
 function detectDelimiter(headerLine: string): string {
@@ -125,6 +154,22 @@ function parsePriceToCents(raw: string): number | null {
   return Math.round(amount * 100);
 }
 
+function parseWeightKgToGrams(raw: string): number | null {
+  const cleaned = raw.replace(/\s/g, "").replace(",", ".").replace(/[^\d.-]/g, "").trim();
+  if (!cleaned) return null;
+  const value = Number.parseFloat(cleaned);
+  if (!Number.isFinite(value) || value < 0) return null;
+  return Math.max(0, Math.round(value * 1000));
+}
+
+function inferLicenseMaterialFromName(name: string): LicenseMaterialCode {
+  const normalized = name.toLowerCase();
+  if (/(alu|aluminium)/i.test(normalized)) return "LA";
+  if (/(verbund|composite|tetra)/i.test(normalized)) return "LV";
+  if (/(papier|papp|karton|serviett|beutel|box)/i.test(normalized)) return "LP";
+  return "LK";
+}
+
 function decodeCsv(buffer: Buffer): string {
   const utf8 = buffer.toString("utf8").replace(/^\uFEFF/, "");
   if (utf8.includes("\uFFFD")) {
@@ -145,7 +190,7 @@ async function resolveCsvPath(): Promise<string> {
   }
 }
 
-async function loadLicenseFeesBySku(): Promise<Map<string, number>> {
+async function loadLicenseFeesBySku(): Promise<Map<string, LicenseEntry>> {
   const licensePath = path.join(process.cwd(), "data", "license-fees.csv");
   try {
     const raw = await fs.readFile(licensePath, "utf8");
@@ -155,23 +200,66 @@ async function loadLicenseFeesBySku(): Promise<Map<string, number>> {
       .filter((line) => line.length > 0);
     if (lines.length < 2) return new Map();
 
-    const header = lines[0].split(",").map((cell) => cell.trim().toLowerCase());
-    const skuIndex = header.findIndex((cell) => cell === "sku");
-    const feeIndex = header.findIndex((cell) => cell === "licensefeecents");
-    if (skuIndex < 0 || feeIndex < 0) return new Map();
+    const delimiter = detectDelimiter(lines[0]);
+    const header = parseCsvLine(lines[0], delimiter).map(normalizeHeader);
 
-    const map = new Map<string, number>();
+    const skuIndex = header.findIndex((cell) => cell === "sku" || cell === "artikelnummer" || cell === "artikelnr");
+    const feeIndex = header.findIndex((cell) => cell === "licensefeecents" || cell === "lizenzgebuehrcent");
+    const materialIndex = header.findIndex(
+      (cell) => cell === "licensematerial" || cell === "lizenztyp" || cell === "licensetype"
+    );
+    const weightKgIndex = header.findIndex(
+      (cell) => cell === "licenseweightkg" || cell === "gewichtkg" || cell === "weightkg"
+    );
+
+    if (skuIndex < 0) return new Map();
+
+    const map = new Map<string, LicenseEntry>();
     for (let i = 1; i < lines.length; i += 1) {
-      const cells = lines[i].split(",").map((cell) => cell.trim());
+      const cells = parseCsvLine(lines[i], delimiter);
       const sku = normalizeSku(cells[skuIndex] ?? "");
-      const fee = Number.parseInt(cells[feeIndex] ?? "", 10);
-      if (!sku || !Number.isFinite(fee) || fee < 0) continue;
-      map.set(sku, fee);
+      if (!sku) continue;
+
+      const material = normalizeLicenseMaterial(materialIndex >= 0 ? cells[materialIndex] : undefined);
+      const weightGramsRaw = weightKgIndex >= 0 ? parseWeightKgToGrams(cells[weightKgIndex] ?? "") : null;
+      const feeRaw = feeIndex >= 0 ? Number.parseInt((cells[feeIndex] ?? "").trim(), 10) : NaN;
+
+      const licenseWeightGrams = weightGramsRaw !== null ? Math.max(0, Math.round(weightGramsRaw)) : 0;
+      const feeFromColumn = Number.isFinite(feeRaw) && feeRaw >= 0 ? Math.round(feeRaw) : null;
+      const feeFromMaterial = material && licenseWeightGrams > 0 ? computeLicenseFeeCents(material, licenseWeightGrams) : 0;
+      const feeCents = feeFromColumn ?? feeFromMaterial;
+
+      map.set(canonicalSkuForLookup(sku), {
+        feeCents: Math.max(0, feeCents),
+        licenseMaterial: material,
+        licenseWeightGrams
+      });
     }
     return map;
   } catch {
     return new Map();
   }
+}
+
+function resolveLicenseEntry(
+  map: Map<string, LicenseEntry>,
+  sku: string
+): { entry: LicenseEntry; source: "exact" | "base" } | null {
+  const candidates = skuLookupCandidates(sku);
+  if (candidates.length === 0) return null;
+
+  const direct = candidates[0];
+  if (direct && map.has(direct)) {
+    return { entry: map.get(direct)!, source: "exact" };
+  }
+
+  for (let i = 1; i < candidates.length; i += 1) {
+    const candidate = candidates[i];
+    if (!candidate || !map.has(candidate)) continue;
+    return { entry: map.get(candidate)!, source: "base" };
+  }
+
+  return null;
 }
 
 function parseRows(lines: string[], delimiter: string, indexes: HeaderIndexes): {
@@ -252,23 +340,51 @@ async function main() {
 
   let created = 0;
   let updated = 0;
+  let matchedExact = 0;
+  let matchedBase = 0;
 
   for (const row of uniqueRows) {
     const normalizedSku = normalizeSku(row.sku);
     const existed = existingSet.has(normalizedSku);
+    const resolved = resolveLicenseEntry(licenseFeesBySku, normalizedSku);
+
+    if (resolved?.source === "exact") matchedExact += 1;
+    if (resolved?.source === "base") matchedBase += 1;
+
+    const baseEntry = resolved?.entry ?? {
+      feeCents: 0,
+      licenseMaterial: null,
+      licenseWeightGrams: 0
+    };
+    const inferredMaterial =
+      baseEntry.feeCents > 0 ? baseEntry.licenseMaterial ?? inferLicenseMaterialFromName(row.name) : null;
+    const derivedWeightGrams =
+      inferredMaterial && baseEntry.feeCents > 0 && baseEntry.licenseWeightGrams <= 0
+        ? Math.round((baseEntry.feeCents / LICENSE_RATE_CENTS_PER_KG[inferredMaterial]) * 1000)
+        : baseEntry.licenseWeightGrams;
+    const licenseWeightGrams = Math.max(0, derivedWeightGrams);
+    const licenseFeeCents =
+      inferredMaterial && licenseWeightGrams > 0
+        ? computeLicenseFeeCents(inferredMaterial, licenseWeightGrams)
+        : Math.max(0, baseEntry.feeCents);
+
     await prisma.product.upsert({
       where: { sku: normalizedSku },
       create: {
         name: row.name,
         sku: normalizedSku,
         defaultPriceCents: row.defaultPriceCents,
-        licenseFeeCents: licenseFeesBySku.get(normalizedSku) ?? 0,
+        licenseFeeCents,
+        licenseMaterial: inferredMaterial,
+        licenseWeightGrams,
         isActive: true
       },
       update: {
         name: row.name,
         defaultPriceCents: row.defaultPriceCents,
-        licenseFeeCents: licenseFeesBySku.get(normalizedSku) ?? 0,
+        licenseFeeCents,
+        licenseMaterial: inferredMaterial,
+        licenseWeightGrams,
         isActive: true
       }
     });
@@ -293,6 +409,7 @@ async function main() {
   console.log(
     `[import:products] Import abgeschlossen. importiert=${uniqueRows.length}, neu=${created}, aktualisiert=${updated}, fehlerhaft=${invalidRows.length}`
   );
+  console.log(`[import:products] Lizenz-Matching: direkt=${matchedExact}, basisSKU=${matchedBase}`);
 }
 
 main()

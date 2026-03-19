@@ -41,6 +41,8 @@ type InitResponse = {
   draft?: DraftData;
   customerPriceMap?: Record<number, number>;
   productLicenseFeeMap?: Record<number, number>;
+  productLicenseMaterialMap?: Record<number, "LP" | "LK" | "LA" | "LV" | null>;
+  productLicenseWeightMap?: Record<number, number>;
   customerSuggestedProducts?: ProductOption[];
   error?: string;
 };
@@ -69,6 +71,10 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
   const [draft, setDraft] = useState<DraftData | null>(null);
   const [customerPriceMap, setCustomerPriceMap] = useState<Record<number, number>>({});
   const [productLicenseFeeMap, setProductLicenseFeeMap] = useState<Record<number, number>>({});
+  const [productLicenseMaterialMap, setProductLicenseMaterialMap] = useState<
+    Record<number, "LP" | "LK" | "LA" | "LV" | null>
+  >({});
+  const [productLicenseWeightMap, setProductLicenseWeightMap] = useState<Record<number, number>>({});
   const [customerSuggestedProducts, setCustomerSuggestedProducts] = useState<ProductOption[]>([]);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [syncState, setSyncState] = useState<"ok" | "pending" | "error">("ok");
@@ -175,6 +181,8 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
 
       setCustomerPriceMap(payload.customerPriceMap ?? {});
       setProductLicenseFeeMap(payload.productLicenseFeeMap ?? {});
+      setProductLicenseMaterialMap(payload.productLicenseMaterialMap ?? {});
+      setProductLicenseWeightMap(payload.productLicenseWeightMap ?? {});
       setCustomerSuggestedProducts(payload.customerSuggestedProducts ?? []);
 
       const pendingWrites = await getPendingWrites().catch(() => []);
@@ -472,6 +480,22 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       }
       return next;
     });
+    setProductLicenseMaterialMap((prev) => {
+      const next = { ...prev };
+      for (const item of items) {
+        next[item.productId] = item.licenseMaterial ?? null;
+      }
+      return next;
+    });
+    setProductLicenseWeightMap((prev) => {
+      const next = { ...prev };
+      for (const item of items) {
+        if (typeof item.licenseWeightGrams === "number" && Number.isFinite(item.licenseWeightGrams)) {
+          next[item.productId] = Math.max(0, Math.round(item.licenseWeightGrams));
+        }
+      }
+      return next;
+    });
 
     updateDraft((prev) => {
       const existingByProductId = new Map(prev.lines.map((line) => [line.productId, line]));
@@ -578,7 +602,9 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
     name: line.productName,
     quantity: line.quantity,
     unitPriceCents: line.unitPriceCents,
-    licenseFeeCents: productLicenseFeeMap[line.productId] ?? 0
+    licenseFeeCents: productLicenseFeeMap[line.productId] ?? 0,
+    licenseMaterial: productLicenseMaterialMap[line.productId] ?? null,
+    licenseWeightGrams: productLicenseWeightMap[line.productId] ?? 0
   }));
   return (
     <section className="space-y-4 pb-[180px]">
@@ -655,7 +681,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
             checked={Boolean(draft.includeLicenseFee)}
             onChange={() => onIncludeLicenseFeeChange(true)}
           />
-          <span>{t("withLicense", { vat: formatCents(Math.round(licenseTotalCents * 0.19)) })}</span>
+          <span>{t("withLicense", { licenseTotal: formatCents(licenseTotalCents) })}</span>
         </label>
         <label className="flex items-center gap-2 text-sm">
           <input
