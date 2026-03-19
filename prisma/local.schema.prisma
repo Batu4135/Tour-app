@@ -36,6 +36,8 @@ model Product {
   name              String
   defaultPriceCents Int?
   licenseFeeCents   Int
+  licenseType       String          @default("NONE")
+  licenseWeightGrams Int            @default(0)
   isActive          Boolean
   createdAt         DateTime
   updatedAt         DateTime
@@ -77,7 +79,7 @@ model Draft {
   date       DateTime
   note       String?
   includeLicenseFee Boolean
-  paymentMethod PaymentMethod
+  paymentMethod String         @default("CASH")
   tourClosedAt DateTime?
   createdAt  DateTime
   updatedAt  DateTime
@@ -114,10 +116,4 @@ model InvoiceRevision {
   author     User?    @relation("RevisionAuthor", fields: [createdBy], references: [id], onDelete: SetNull)
 
   @@index([invoiceId, createdAt])
-}
-
-enum PaymentMethod {
-  CASH
-  BANK
-  DIRECT_DEBIT
 }

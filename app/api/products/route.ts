@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { badRequest, unauthorized } from "@/lib/http";
 import { z } from "zod";
+import { buildLicensePersistence, getLicenseDetails, normalizeLicenseType } from "@/lib/license";
 
 export const runtime = "nodejs";
 
@@ -10,6 +11,8 @@ const createProductSchema = z.object({
   name: z.string().min(2),
   sku: z.string().min(1),
   defaultPriceCents: z.number().int().min(0).optional(),
+  licenseType: z.enum(["NONE", "LP", "LK", "LA", "LV"]).optional(),
+  licenseWeightGrams: z.number().int().min(0).optional(),
   licenseFeeCents: z.number().int().min(0).optional(),
   isActive: z.boolean().optional()
 });
@@ -24,7 +27,7 @@ export async function GET(request: Request) {
   const limitParam = Number.parseInt(url.searchParams.get("limit") ?? "", 10);
   const take = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 500) : q ? 100 : 100;
 
-  const products = await prisma.product.findMany({
+  const rawProducts = await prisma.product.findMany({
     where: {
       ...(includeInactive ? {} : { isActive: true }),
       ...(q
@@ -43,9 +46,21 @@ export async function GET(request: Request) {
       sku: true,
       name: true,
       defaultPriceCents: true,
+      licenseType: true,
+      licenseWeightGrams: true,
       licenseFeeCents: true,
       isActive: true
     }
+  });
+
+  const products = rawProducts.map((product) => {
+    const details = getLicenseDetails(product);
+    return {
+      ...product,
+      licenseType: details.licenseType,
+      licenseWeightGrams: details.licenseWeightGrams,
+      licenseFeeCents: details.unitFeeCents
+    };
   });
 
   return NextResponse.json({ products, total: products.length });
@@ -59,6 +74,12 @@ export async function POST(request: Request) {
   if (!parsed.success) return badRequest("Ungueltige Anfrage.");
   const name = parsed.data.name.trim();
   const sku = parsed.data.sku.trim();
+  const persistedLicense = buildLicensePersistence({
+    licenseType: normalizeLicenseType(parsed.data.licenseType ?? undefined),
+    licenseWeightGrams:
+      typeof parsed.data.licenseWeightGrams === "number" ? Math.round(parsed.data.licenseWeightGrams) : undefined,
+    licenseFeeCents: typeof parsed.data.licenseFeeCents === "number" ? Math.round(parsed.data.licenseFeeCents) : undefined
+  });
 
   try {
     const product = await prisma.product.create({
@@ -69,10 +90,9 @@ export async function POST(request: Request) {
           typeof parsed.data.defaultPriceCents === "number" && parsed.data.defaultPriceCents >= 0
             ? Math.round(parsed.data.defaultPriceCents)
             : 0,
-        licenseFeeCents:
-          typeof parsed.data.licenseFeeCents === "number" && parsed.data.licenseFeeCents >= 0
-            ? Math.round(parsed.data.licenseFeeCents)
-            : 0,
+        licenseType: persistedLicense.licenseType,
+        licenseWeightGrams: persistedLicense.licenseWeightGrams,
+        licenseFeeCents: persistedLicense.licenseFeeCents,
         isActive: parsed.data.isActive ?? true
       }
     });

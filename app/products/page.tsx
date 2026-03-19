@@ -4,12 +4,15 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Check, Plus, Search, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { formatCents, parseEuroToCents } from "@/lib/formatCents";
+import { LICENSE_TYPES, LicenseType, getLicenseDetails } from "@/lib/license";
 
 type Product = {
   id: number;
   sku: string;
   name: string;
   defaultPriceCents: number | null;
+  licenseType: LicenseType;
+  licenseWeightGrams: number;
   licenseFeeCents: number;
   isActive: boolean;
 };
@@ -18,7 +21,8 @@ type EditFields = {
   name: string;
   sku: string;
   defaultPrice: string;
-  licenseFee: string;
+  licenseType: LicenseType;
+  licenseWeightKg: string;
   isActive: boolean;
 };
 
@@ -37,9 +41,25 @@ function toEditFields(product: Product): EditFields {
     name: product.name,
     sku: product.sku,
     defaultPrice: toPriceInput(product.defaultPriceCents),
-    licenseFee: toPriceInput(product.licenseFeeCents),
+    licenseType: product.licenseType,
+    licenseWeightKg: toWeightInput(product.licenseWeightGrams),
     isActive: product.isActive
   };
+}
+
+function toWeightInput(grams: number): string {
+  if (!Number.isFinite(grams) || grams <= 0) return "";
+  const kg = grams / 1000;
+  return kg.toFixed(3).replace(".", ",").replace(/0+$/, "").replace(/,$/, "");
+}
+
+function parseWeightInputToGrams(raw: string): number {
+  const trimmed = raw.trim();
+  if (!trimmed) return 0;
+  const normalized = trimmed.replace(",", ".");
+  const value = Number.parseFloat(normalized);
+  if (!Number.isFinite(value) || value < 0) return 0;
+  return Math.round(value * 1000);
 }
 
 export default function ProductsPage() {
@@ -58,7 +78,8 @@ export default function ProductsPage() {
     name: "",
     sku: "",
     defaultPrice: "",
-    licenseFee: ""
+    licenseType: "NONE" as LicenseType,
+    licenseWeightKg: ""
   });
 
   useEffect(() => {
@@ -131,15 +152,15 @@ export default function ProductsPage() {
           sku: createForm.sku.trim(),
           defaultPriceCents:
             createForm.defaultPrice.trim().length > 0 ? parseEuroToCents(createForm.defaultPrice) : undefined,
-          licenseFeeCents:
-            createForm.licenseFee.trim().length > 0 ? parseEuroToCents(createForm.licenseFee) : undefined,
+          licenseType: createForm.licenseType,
+          licenseWeightGrams: parseWeightInputToGrams(createForm.licenseWeightKg),
           isActive: true
         })
       });
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(payload.error ?? t("saveError"));
 
-      setCreateForm({ name: "", sku: "", defaultPrice: "", licenseFee: "" });
+      setCreateForm({ name: "", sku: "", defaultPrice: "", licenseType: "NONE", licenseWeightKg: "" });
       setFlash({ type: "success", text: t("createSuccess") });
       await loadProducts();
     } catch (createError) {
@@ -170,7 +191,8 @@ export default function ProductsPage() {
           name: edit.name.trim(),
           sku: edit.sku.trim(),
           defaultPriceCents: edit.defaultPrice.trim().length > 0 ? parseEuroToCents(edit.defaultPrice) : null,
-          licenseFeeCents: edit.licenseFee.trim().length > 0 ? parseEuroToCents(edit.licenseFee) : 0,
+          licenseType: edit.licenseType,
+          licenseWeightGrams: parseWeightInputToGrams(edit.licenseWeightKg),
           isActive: edit.isActive
         })
       });
@@ -240,11 +262,24 @@ export default function ProductsPage() {
           onChange={(event) => setCreateForm((prev) => ({ ...prev, defaultPrice: event.target.value }))}
           inputMode="decimal"
         />
+        <select
+          className="input"
+          value={createForm.licenseType}
+          onChange={(event) =>
+            setCreateForm((prev) => ({ ...prev, licenseType: event.target.value as LicenseType }))
+          }
+        >
+          {LICENSE_TYPES.map((licenseType) => (
+            <option key={licenseType} value={licenseType}>
+              {licenseType}
+            </option>
+          ))}
+        </select>
         <input
           className="input"
-          placeholder={t("createLicenseFee")}
-          value={createForm.licenseFee}
-          onChange={(event) => setCreateForm((prev) => ({ ...prev, licenseFee: event.target.value }))}
+          placeholder={t("createLicenseWeightKg")}
+          value={createForm.licenseWeightKg}
+          onChange={(event) => setCreateForm((prev) => ({ ...prev, licenseWeightKg: event.target.value }))}
           inputMode="decimal"
         />
         <button
@@ -329,11 +364,22 @@ export default function ProductsPage() {
                   placeholder={t("createPrice")}
                   inputMode="decimal"
                 />
+                <select
+                  className="input !py-2"
+                  value={edit.licenseType}
+                  onChange={(event) => setEditField(product.id, "licenseType", event.target.value as LicenseType)}
+                >
+                  {LICENSE_TYPES.map((licenseType) => (
+                    <option key={licenseType} value={licenseType}>
+                      {licenseType}
+                    </option>
+                  ))}
+                </select>
                 <input
                   className="input !py-2"
-                  value={edit.licenseFee}
-                  onChange={(event) => setEditField(product.id, "licenseFee", event.target.value)}
-                  placeholder={t("createLicenseFee")}
+                  value={edit.licenseWeightKg}
+                  onChange={(event) => setEditField(product.id, "licenseWeightKg", event.target.value)}
+                  placeholder={t("createLicenseWeightKg")}
                   inputMode="decimal"
                 />
               </div>
@@ -348,10 +394,21 @@ export default function ProductsPage() {
               </label>
 
               <div className="flex items-center justify-between gap-2">
-                <p className="text-xs text-[#4A4A4A]/65">
-                  {edit.defaultPrice.trim() ? formatCents(parseEuroToCents(edit.defaultPrice)) : "-"} /{" "}
-                  {t("licenseFeeLabel")}: {edit.licenseFee.trim() ? formatCents(parseEuroToCents(edit.licenseFee)) : "-"}
-                </p>
+                {(() => {
+                  const details = getLicenseDetails({
+                    licenseType: edit.licenseType,
+                    licenseWeightGrams: parseWeightInputToGrams(edit.licenseWeightKg),
+                    licenseFeeCents: product.licenseFeeCents
+                  });
+                  return (
+                    <p className="text-xs text-[#4A4A4A]/65">
+                      {edit.defaultPrice.trim() ? formatCents(parseEuroToCents(edit.defaultPrice)) : "-"} /{" "}
+                      {details.hasLicense
+                        ? `${details.licenseType} ${toWeightInput(details.licenseWeightGrams)} kg - ${formatCents(details.unitFeeCents)}`
+                        : t("licenseNone")}
+                    </p>
+                  );
+                })()}
                 <div className="flex items-center gap-2">
                   <button
                     type="button"

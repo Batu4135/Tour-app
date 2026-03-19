@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { badRequest, unauthorized } from "@/lib/http";
 import { z } from "zod";
+import { buildLicensePersistence, normalizeLicenseType } from "@/lib/license";
 
 export const runtime = "nodejs";
 
@@ -16,6 +17,8 @@ const updateProductSchema = z.object({
   name: z.string().min(2),
   sku: z.string().min(1),
   defaultPriceCents: z.number().int().min(0).nullable().optional(),
+  licenseType: z.enum(["NONE", "LP", "LK", "LA", "LV"]).optional(),
+  licenseWeightGrams: z.number().int().min(0).optional(),
   licenseFeeCents: z.number().int().min(0).optional(),
   isActive: z.boolean().optional()
 });
@@ -31,6 +34,12 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   if (!parsed.success) return badRequest("Ungueltige Anfrage.");
   const name = parsed.data.name.trim();
   const sku = parsed.data.sku.trim();
+  const persistedLicense = buildLicensePersistence({
+    licenseType: normalizeLicenseType(parsed.data.licenseType ?? undefined),
+    licenseWeightGrams:
+      typeof parsed.data.licenseWeightGrams === "number" ? Math.round(parsed.data.licenseWeightGrams) : undefined,
+    licenseFeeCents: typeof parsed.data.licenseFeeCents === "number" ? Math.round(parsed.data.licenseFeeCents) : undefined
+  });
 
   try {
     const product = await prisma.product.update({
@@ -42,10 +51,9 @@ export async function PATCH(request: Request, { params }: RouteContext) {
           typeof parsed.data.defaultPriceCents === "number" && parsed.data.defaultPriceCents >= 0
             ? Math.round(parsed.data.defaultPriceCents)
             : null,
-        licenseFeeCents:
-          typeof parsed.data.licenseFeeCents === "number" && parsed.data.licenseFeeCents >= 0
-            ? Math.round(parsed.data.licenseFeeCents)
-            : 0,
+        licenseType: persistedLicense.licenseType,
+        licenseWeightGrams: persistedLicense.licenseWeightGrams,
+        licenseFeeCents: persistedLicense.licenseFeeCents,
         isActive: parsed.data.isActive ?? true
       }
     });

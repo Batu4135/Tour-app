@@ -3,6 +3,7 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { badRequest, unauthorized } from "@/lib/http";
+import { getLineLicenseTotals } from "@/lib/license";
 
 export const runtime = "nodejs";
 
@@ -43,7 +44,7 @@ export async function GET(request: Request) {
       customer: { select: { name: true } },
       lines: {
         include: {
-          product: { select: { name: true, licenseFeeCents: true } }
+          product: { select: { name: true, licenseFeeCents: true, licenseType: true, licenseWeightGrams: true } }
         },
         orderBy: { id: "asc" }
       }
@@ -95,8 +96,8 @@ export async function GET(request: Request) {
 
   for (const draft of drafts) {
     const subtotal = draft.lines.reduce((sum, line) => {
-      const licenseFee = draft.includeLicenseFee ? line.product.licenseFeeCents ?? 0 : 0;
-      return sum + line.quantity * (line.unitPriceCents + licenseFee);
+      const { lineFeeCents } = getLineLicenseTotals(line.quantity, line.product ?? {});
+      return sum + line.quantity * line.unitPriceCents + (draft.includeLicenseFee ? lineFeeCents : 0);
     }, 0);
     const vat = Math.round(subtotal * 0.19);
     const total = subtotal + vat;
@@ -146,8 +147,8 @@ export async function GET(request: Request) {
     } else {
       for (const line of draft.lines) {
         ensureSpace(draft.includeLicenseFee ? 24 : 18);
-        const lineLicenseFee = draft.includeLicenseFee ? line.product.licenseFeeCents ?? 0 : 0;
-        const lineTotal = line.quantity * (line.unitPriceCents + lineLicenseFee);
+        const { details, lineFeeCents } = getLineLicenseTotals(line.quantity, line.product ?? {});
+        const lineTotal = line.quantity * line.unitPriceCents + (draft.includeLicenseFee ? lineFeeCents : 0);
         const lineText = `${line.quantity} x ${line.product.name}`;
         const clipped = lineText.length > 72 ? `${lineText.slice(0, 69)}...` : lineText;
         page.drawText(clipped, {
@@ -165,14 +166,17 @@ export async function GET(request: Request) {
           color: rgb(0.22, 0.22, 0.22)
         });
 
-        if (draft.includeLicenseFee && lineLicenseFee > 0) {
-          page.drawText(`Lizenz ${formatMoney(lineLicenseFee)} / Stk | Netto ${formatMoney(lineLicenseFee * line.quantity)} EUR`, {
-            x: left + 18,
-            y: y - 10,
-            size: 8,
-            font: regular,
-            color: rgb(0.45, 0.45, 0.45)
-          });
+        if (draft.includeLicenseFee && details.hasLicense) {
+          page.drawText(
+            `${details.licenseType} ${(details.licenseWeightGrams / 1000).toFixed(3).replace(".", ",")} kg/Stk | ${formatMoney(details.unitFeeCents)} EUR/Stk | Netto ${formatMoney(lineFeeCents)} EUR`,
+            {
+              x: left + 18,
+              y: y - 10,
+              size: 8,
+              font: regular,
+              color: rgb(0.45, 0.45, 0.45)
+            }
+          );
           y -= 22;
         } else {
           y -= 16;

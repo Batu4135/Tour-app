@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { badRequest, notFound, unauthorized } from "@/lib/http";
 import { z } from "zod";
+import { LicenseType, getLicenseDetails, getLineLicenseTotals } from "@/lib/license";
 
 export const runtime = "nodejs";
 
@@ -19,7 +20,13 @@ export async function GET() {
     orderBy: { date: "desc" },
     include: {
       customer: { select: { name: true, routeDay: true } },
-      lines: { select: { quantity: true, unitPriceCents: true, product: { select: { licenseFeeCents: true } } } }
+      lines: {
+        select: {
+          quantity: true,
+          unitPriceCents: true,
+          product: { select: { licenseFeeCents: true, licenseType: true, licenseWeightGrams: true } }
+        }
+      }
     }
   });
 
@@ -36,9 +43,10 @@ export async function GET() {
       tourClosedAt: draft.tourClosedAt ? draft.tourClosedAt.toISOString() : null,
       updatedAt: draft.updatedAt.toISOString(),
       totalCents: draft.lines.reduce(
-        (sum: number, line: any) =>
-          sum +
-          line.quantity * (line.unitPriceCents + (draft.includeLicenseFee ? (line.product?.licenseFeeCents ?? 0) : 0)),
+        (sum: number, line: any) => {
+          const { lineFeeCents } = getLineLicenseTotals(line.quantity, line.product ?? {});
+          return sum + line.quantity * line.unitPriceCents + (draft.includeLicenseFee ? lineFeeCents : 0);
+        },
         0
       )
     }))
@@ -59,7 +67,16 @@ export async function POST(request: Request) {
         customerPrice: {
           include: {
             product: {
-              select: { id: true, name: true, sku: true, defaultPriceCents: true, licenseFeeCents: true, isActive: true }
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+                defaultPriceCents: true,
+                licenseFeeCents: true,
+                licenseType: true,
+                licenseWeightGrams: true,
+                isActive: true
+              }
             }
           },
           orderBy: { productId: "asc" }
@@ -84,17 +101,35 @@ export async function POST(request: Request) {
 
   const customerSuggestedProducts = customer.customerPrice
     .filter((price: any) => price.product?.isActive)
-    .map((price: any) => ({
-      id: price.product.id,
-      sku: price.product.sku,
-      name: price.product.name,
-      defaultPriceCents: price.product.defaultPriceCents,
-      licenseFeeCents: price.product.licenseFeeCents ?? 0
-    }))
+    .map((price: any) => {
+      const details = getLicenseDetails(price.product ?? {});
+      return {
+        id: price.product.id,
+        sku: price.product.sku,
+        name: price.product.name,
+        defaultPriceCents: price.product.defaultPriceCents,
+        licenseType: details.licenseType,
+        licenseWeightGrams: details.licenseWeightGrams,
+        licenseFeeCents: details.unitFeeCents
+      };
+    })
     .sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, "de-DE"));
 
   const customerPriceMap = Object.fromEntries(
     customer.customerPrice.map((price: any) => [price.productId, price.priceCents])
+  ) as Record<number, number>;
+
+  const productLicenseTypeMap = Object.fromEntries(
+    customer.customerPrice.map((price: any) => {
+      const details = getLicenseDetails(price.product ?? {});
+      return [price.productId, details.licenseType];
+    })
+  ) as Record<number, LicenseType>;
+  const productLicenseWeightGramsMap = Object.fromEntries(
+    customer.customerPrice.map((price: any) => {
+      const details = getLicenseDetails(price.product ?? {});
+      return [price.productId, details.licenseWeightGrams];
+    })
   ) as Record<number, number>;
 
   return NextResponse.json({
@@ -112,8 +147,10 @@ export async function POST(request: Request) {
     },
     customerPriceMap,
     productLicenseFeeMap: Object.fromEntries(
-      customer.customerPrice.map((price: any) => [price.productId, price.product?.licenseFeeCents ?? 0])
+      customer.customerPrice.map((price: any) => [price.productId, getLicenseDetails(price.product ?? {}).unitFeeCents])
     ) as Record<number, number>,
+    productLicenseTypeMap,
+    productLicenseWeightGramsMap,
     customerSuggestedProducts
   });
 }

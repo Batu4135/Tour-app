@@ -4,12 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import { Search, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { formatCents, parseEuroToCents } from "@/lib/formatCents";
+import { LicenseType, getLineLicenseTotals } from "@/lib/license";
 
 export type ProductOption = {
   id: number;
   sku: string;
   name: string;
   defaultPriceCents: number | null;
+  licenseType?: LicenseType;
+  licenseWeightGrams?: number;
   licenseFeeCents?: number;
 };
 
@@ -19,6 +22,8 @@ export type SelectedProductItem = {
   name: string;
   quantity: number;
   unitPriceCents: number;
+  licenseType?: LicenseType;
+  licenseWeightGrams?: number;
   licenseFeeCents?: number;
 };
 
@@ -27,6 +32,8 @@ type ProductPickerProps = {
   onChange: (items: SelectedProductItem[]) => void;
   priceOverrides?: Record<number, number>;
   licenseFeeMap?: Record<number, number>;
+  licenseTypeMap?: Record<number, LicenseType>;
+  licenseWeightGramsMap?: Record<number, number>;
   includeLicenseFee?: boolean;
   suggestedProducts?: ProductOption[];
   searchMode?: "all" | "suggestedOnly";
@@ -41,6 +48,8 @@ export default function ProductPicker({
   onChange,
   priceOverrides = {},
   licenseFeeMap = {},
+  licenseTypeMap = {},
+  licenseWeightGramsMap = {},
   includeLicenseFee = false,
   suggestedProducts = [],
   searchMode = "all"
@@ -115,10 +124,14 @@ export default function ProductPicker({
   const totalCents = useMemo(
     () =>
       selectedItems.reduce((sum, item) => {
-        const licenseFee = includeLicenseFee ? (item.licenseFeeCents ?? licenseFeeMap[item.productId] ?? 0) : 0;
-        return sum + item.quantity * (item.unitPriceCents + licenseFee);
+        const { lineFeeCents } = getLineLicenseTotals(item.quantity, {
+          licenseFeeCents: item.licenseFeeCents ?? licenseFeeMap[item.productId] ?? 0,
+          licenseType: item.licenseType ?? licenseTypeMap[item.productId],
+          licenseWeightGrams: item.licenseWeightGrams ?? licenseWeightGramsMap[item.productId]
+        });
+        return sum + item.quantity * item.unitPriceCents + (includeLicenseFee ? lineFeeCents : 0);
       }, 0),
-    [includeLicenseFee, licenseFeeMap, selectedItems]
+    [includeLicenseFee, licenseFeeMap, licenseTypeMap, licenseWeightGramsMap, selectedItems]
   );
 
   function addProduct(product: ProductOption) {
@@ -139,6 +152,8 @@ export default function ProductPicker({
           name: product.name,
           quantity: 1,
           unitPriceCents: Math.max(0, price),
+          licenseType: product.licenseType ?? licenseTypeMap[product.id],
+          licenseWeightGrams: product.licenseWeightGrams ?? licenseWeightGramsMap[product.id],
           licenseFeeCents: product.licenseFeeCents ?? licenseFeeMap[product.id] ?? 0
         }
       ]);
@@ -255,8 +270,12 @@ export default function ProductPicker({
 
       <div className="space-y-2">
         {selectedItems.map((item) => {
-          const licenseFee = includeLicenseFee ? (item.licenseFeeCents ?? licenseFeeMap[item.productId] ?? 0) : 0;
-          const lineTotal = item.quantity * (item.unitPriceCents + licenseFee);
+          const { details, lineFeeCents, lineWeightGrams } = getLineLicenseTotals(item.quantity, {
+            licenseFeeCents: item.licenseFeeCents ?? licenseFeeMap[item.productId] ?? 0,
+            licenseType: item.licenseType ?? licenseTypeMap[item.productId],
+            licenseWeightGrams: item.licenseWeightGrams ?? licenseWeightGramsMap[item.productId]
+          });
+          const lineTotal = item.quantity * item.unitPriceCents + (includeLicenseFee ? lineFeeCents : 0);
           return (
             <div key={item.productId} className="card space-y-2">
               <div className="flex items-start justify-between gap-3">
@@ -297,15 +316,24 @@ export default function ProductPicker({
                 <div className="pb-1 text-right">
                   <p className="text-xs text-[#4A4A4A]/65">{t("lineTotal")}</p>
                   <p className="text-sm font-semibold text-[#2F7EA1]">{formatCents(lineTotal)}</p>
-                  {licenseFee > 0 ? (
+                  {details.hasLicense ? (
                     <div className="space-y-0.5 text-[11px] text-[#4A4A4A]/60">
                       <p>
                         {includeLicenseFee
-                          ? t("licenseIncluded", { amount: formatCents(licenseFee) })
+                          ? t("licenseIncluded", {
+                              type: details.licenseType,
+                              amount: formatCents(details.unitFeeCents),
+                              weightKg: (details.licenseWeightGrams / 1000).toFixed(3).replace(".", ",")
+                            })
                           : t("licenseOptional")}
                       </p>
-                      {includeLicenseFee && item.quantity > 1 ? (
-                        <p>{t("licenseNetTotal", { amount: formatCents(item.quantity * licenseFee) })}</p>
+                      {includeLicenseFee && item.quantity > 0 ? (
+                        <p>
+                          {t("licenseNetTotal", {
+                            amount: formatCents(lineFeeCents),
+                            totalWeightKg: (lineWeightGrams / 1000).toFixed(3).replace(".", ",")
+                          })}
+                        </p>
                       ) : null}
                     </div>
                   ) : null}

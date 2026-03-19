@@ -31,16 +31,19 @@ model Customer {
 }
 
 model Product {
-  id                Int             @id
-  sku               String          @unique
-  name              String
-  defaultPriceCents Int?
-  isActive          Boolean
-  createdAt         DateTime
-  updatedAt         DateTime
-  aliases           ProductAlias[]
-  customerPrice     CustomerPrice[]
-  draftLines        DraftLine[]
+  id                 Int             @id
+  sku                String          @unique
+  name               String
+  defaultPriceCents  Int?
+  licenseFeeCents    Int
+  licenseType        String          @default("NONE")
+  licenseWeightGrams Int             @default(0)
+  isActive           Boolean
+  createdAt          DateTime
+  updatedAt          DateTime
+  aliases            ProductAlias[]
+  customerPrice      CustomerPrice[]
+  draftLines         DraftLine[]
 
   @@index([name])
   @@index([sku])
@@ -71,15 +74,18 @@ model CustomerPrice {
 }
 
 model Draft {
-  id         Int               @id
-  customerId Int
-  date       DateTime
-  note       String?
-  createdAt  DateTime
-  updatedAt  DateTime
-  customer   Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  lines      DraftLine[]
-  revisions  InvoiceRevision[]
+  id                Int               @id
+  customerId        Int
+  date              DateTime
+  note              String?
+  includeLicenseFee Boolean
+  paymentMethod     String            @default("CASH")
+  tourClosedAt      DateTime?
+  createdAt         DateTime
+  updatedAt         DateTime
+  customer          Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  lines             DraftLine[]
+  revisions         InvoiceRevision[]
 
   @@index([customerId, date])
 }

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { badRequest, notFound, unauthorized } from "@/lib/http";
 import { z } from "zod";
+import { LicenseType, getLicenseDetails } from "@/lib/license";
 
 export const runtime = "nodejs";
 
@@ -54,6 +55,8 @@ export async function GET(_: Request, { params }: RouteContext) {
                   id: true,
                   name: true,
                   sku: true,
+                  licenseType: true,
+                  licenseWeightGrams: true,
                   defaultPriceCents: true,
                   licenseFeeCents: true,
                   isActive: true
@@ -64,16 +67,29 @@ export async function GET(_: Request, { params }: RouteContext) {
         }
       },
       lines: {
-        include: { product: { select: { name: true, sku: true, licenseFeeCents: true } } }
+        include: {
+          product: { select: { name: true, sku: true, licenseFeeCents: true, licenseType: true, licenseWeightGrams: true } }
+        }
       }
     }
   });
   if (!draft) return notFound("Vordruck nicht gefunden.");
-  const productLicenseFeeMap = Object.fromEntries(
-    draft.lines.map((line: any) => [line.productId, line.product?.licenseFeeCents ?? 0])
-  ) as Record<number, number>;
+  const productLicenseFeeMap: Record<number, number> = {};
+  const productLicenseTypeMap: Record<number, LicenseType> = {};
+  const productLicenseWeightGramsMap: Record<number, number> = {};
+
+  for (const line of draft.lines) {
+    const details = getLicenseDetails(line.product ?? {});
+    productLicenseFeeMap[line.productId] = details.unitFeeCents;
+    productLicenseTypeMap[line.productId] = details.licenseType;
+    productLicenseWeightGramsMap[line.productId] = details.licenseWeightGrams;
+  }
+
   for (const price of draft.customer.customerPrice) {
-    productLicenseFeeMap[price.productId] = price.product?.licenseFeeCents ?? 0;
+    const details = getLicenseDetails(price.product ?? {});
+    productLicenseFeeMap[price.productId] = details.unitFeeCents;
+    productLicenseTypeMap[price.productId] = details.licenseType;
+    productLicenseWeightGramsMap[price.productId] = details.licenseWeightGrams;
   }
 
   return NextResponse.json({
@@ -100,15 +116,22 @@ export async function GET(_: Request, { params }: RouteContext) {
       draft.customer.customerPrice.map((price: any) => [price.productId, price.priceCents])
     ) as Record<number, number>,
     productLicenseFeeMap,
+    productLicenseTypeMap,
+    productLicenseWeightGramsMap,
     customerSuggestedProducts: draft.customer.customerPrice
       .filter((price: any) => price.product?.isActive)
-      .map((price: any) => ({
-        id: price.product.id,
-        sku: price.product.sku,
-        name: price.product.name,
-        defaultPriceCents: price.product.defaultPriceCents,
-        licenseFeeCents: price.product.licenseFeeCents ?? 0
-      }))
+      .map((price: any) => {
+        const details = getLicenseDetails(price.product ?? {});
+        return {
+          id: price.product.id,
+          sku: price.product.sku,
+          name: price.product.name,
+          defaultPriceCents: price.product.defaultPriceCents,
+          licenseType: details.licenseType,
+          licenseWeightGrams: details.licenseWeightGrams,
+          licenseFeeCents: details.unitFeeCents
+        };
+      })
       .sort((a: any, b: any) => a.name.localeCompare(b.name, "de-DE"))
   });
 }

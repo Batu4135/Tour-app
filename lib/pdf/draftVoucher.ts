@@ -1,4 +1,5 @@
-﻿import { PDFDocument, PDFFont, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, PDFFont, StandardFonts, rgb } from "pdf-lib";
+import { getLineLicenseTotals, summarizeLicenseByType } from "@/lib/license";
 
 export type DraftVoucherFonts = {
   regular: PDFFont;
@@ -29,6 +30,13 @@ function money(cents: number): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }).format(cents / 100);
+}
+
+function weightKg(grams: number): string {
+  return new Intl.NumberFormat("de-DE", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3
+  }).format(grams / 1000);
 }
 
 function formatDate(value: Date): string {
@@ -197,8 +205,8 @@ export function drawDraftVoucherPage(
   const noteBlockHeight = noteLines.length > 0 ? s(16 + noteLines.length * 8) : 0;
 
   const subtotal = lines.reduce((sum: number, line: any) => {
-    const licenseFee = draft.includeLicenseFee ? (line.product?.licenseFeeCents ?? 0) : 0;
-    return sum + line.quantity * (line.unitPriceCents + licenseFee);
+    const { lineFeeCents } = getLineLicenseTotals(line.quantity, line.product ?? {});
+    return sum + line.quantity * line.unitPriceCents + (draft.includeLicenseFee ? lineFeeCents : 0);
   }, 0);
 
   if (lines.length === 0) {
@@ -213,8 +221,8 @@ export function drawDraftVoucherPage(
 
   lines.forEach((line: any, index: number) => {
     const y = rowStartY - index * rowHeight;
-    const lineLicenseFee = draft.includeLicenseFee ? (line.product?.licenseFeeCents ?? 0) : 0;
-    const lineTotal = line.quantity * (line.unitPriceCents + lineLicenseFee);
+    const { details, lineFeeCents } = getLineLicenseTotals(line.quantity, line.product ?? {});
+    const lineTotal = line.quantity * line.unitPriceCents + (draft.includeLicenseFee ? lineFeeCents : 0);
     const sku = String(line.product?.sku ?? "").trim();
     const productName = String(line.product?.name ?? "").trim();
     const labelRaw = options?.showSku && sku.length > 0 ? `${sku} ${productName}` : productName;
@@ -243,9 +251,9 @@ export function drawDraftVoucherPage(
     });
 
     page.drawText(name, { x: productX, y, size: rowFontSize, font: regular, color: textColor });
-    if (draft.includeLicenseFee && lineLicenseFee > 0) {
+    if (draft.includeLicenseFee && details.hasLicense) {
       const small = Math.max(s(5), rowFontSize * 0.62);
-      page.drawText(`Lizenz ${money(lineLicenseFee)} / Stk`, {
+      page.drawText(`${details.licenseType} ${weightKg(details.licenseWeightGrams)} kg - Lizenz ${money(details.unitFeeCents)} / Stk`, {
         x: productX,
         y: y - small * 1.2,
         size: small,
@@ -274,6 +282,9 @@ export function drawDraftVoucherPage(
 
   const vat = Math.round(subtotal * 0.19);
   const total = subtotal + vat;
+  const licenseSummary = draft.includeLicenseFee
+    ? summarizeLicenseByType(lines as Array<{ quantity: number; product?: unknown }>, (line) => line.product ?? {})
+    : [];
   const usedRows = Math.max(1, lines.length);
   const summaryTop = rowStartY - usedRows * rowHeight - summaryGap - noteBlockHeight;
   const summaryScale = Math.max(0.85, Math.min(1.08, rowDensity + 0.08));
@@ -295,6 +306,26 @@ export function drawDraftVoucherPage(
         x: s(104),
         y: noteLabelY - index * s(8.5),
         size: s(8),
+        font: regular,
+        color: textColor
+      });
+    });
+  }
+
+  if (licenseSummary.length > 0) {
+    page.drawText("Lizenzen (Gewicht):", {
+      x: s(64),
+      y: summaryTop,
+      size: s(8.2),
+      font: bold,
+      color: muted
+    });
+
+    licenseSummary.slice(0, 4).forEach((entry, index) => {
+      page.drawText(`${entry.licenseType}: ${weightKg(entry.totalWeightGrams)} kg`, {
+        x: s(64),
+        y: summaryTop - s(10 + index * 8),
+        size: s(7.8),
         font: regular,
         color: textColor
       });
@@ -342,3 +373,5 @@ export function drawDraftVoucherPage(
     color: textColor
   });
 }
+
+

@@ -6,6 +6,7 @@ import { Banknote, CheckCircle2, CreditCard, Landmark, Loader2, Printer } from "
 import { useTranslations } from "next-intl";
 import ProductPicker, { ProductOption, SelectedProductItem } from "@/components/ProductPicker";
 import { formatCents } from "@/lib/formatCents";
+import { LicenseType, getLineLicenseTotals } from "@/lib/license";
 import {
   DraftWritePayload,
   enqueueLatestPendingWrite,
@@ -41,6 +42,8 @@ type InitResponse = {
   draft?: DraftData;
   customerPriceMap?: Record<number, number>;
   productLicenseFeeMap?: Record<number, number>;
+  productLicenseTypeMap?: Record<number, LicenseType>;
+  productLicenseWeightGramsMap?: Record<number, number>;
   customerSuggestedProducts?: ProductOption[];
   error?: string;
 };
@@ -69,6 +72,8 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
   const [draft, setDraft] = useState<DraftData | null>(null);
   const [customerPriceMap, setCustomerPriceMap] = useState<Record<number, number>>({});
   const [productLicenseFeeMap, setProductLicenseFeeMap] = useState<Record<number, number>>({});
+  const [productLicenseTypeMap, setProductLicenseTypeMap] = useState<Record<number, LicenseType>>({});
+  const [productLicenseWeightGramsMap, setProductLicenseWeightGramsMap] = useState<Record<number, number>>({});
   const [customerSuggestedProducts, setCustomerSuggestedProducts] = useState<ProductOption[]>([]);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [syncState, setSyncState] = useState<"ok" | "pending" | "error">("ok");
@@ -85,20 +90,31 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
   const licenseTotalCents = useMemo(
     () =>
       draft
-        ? draft.lines.reduce((sum, line) => sum + line.quantity * (productLicenseFeeMap[line.productId] ?? 0), 0)
+        ? draft.lines.reduce((sum, line) => {
+            const { lineFeeCents } = getLineLicenseTotals(line.quantity, {
+              licenseFeeCents: productLicenseFeeMap[line.productId] ?? 0,
+              licenseType: productLicenseTypeMap[line.productId],
+              licenseWeightGrams: productLicenseWeightGramsMap[line.productId]
+            });
+            return sum + lineFeeCents;
+          }, 0)
         : 0,
-    [draft, productLicenseFeeMap]
+    [draft, productLicenseFeeMap, productLicenseTypeMap, productLicenseWeightGramsMap]
   );
 
   const totalCents = useMemo(
     () =>
       draft
         ? draft.lines.reduce((sum, line) => {
-            const licenseFee = draft.includeLicenseFee ? (productLicenseFeeMap[line.productId] ?? 0) : 0;
-            return sum + line.quantity * (line.unitPriceCents + licenseFee);
+            const { lineFeeCents } = getLineLicenseTotals(line.quantity, {
+              licenseFeeCents: productLicenseFeeMap[line.productId] ?? 0,
+              licenseType: productLicenseTypeMap[line.productId],
+              licenseWeightGrams: productLicenseWeightGramsMap[line.productId]
+            });
+            return sum + line.quantity * line.unitPriceCents + (draft.includeLicenseFee ? lineFeeCents : 0);
           }, 0)
         : 0,
-    [draft, productLicenseFeeMap]
+    [draft, productLicenseFeeMap, productLicenseTypeMap, productLicenseWeightGramsMap]
   );
 
   const writeSnapshot = useCallback(
@@ -175,6 +191,8 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
 
       setCustomerPriceMap(payload.customerPriceMap ?? {});
       setProductLicenseFeeMap(payload.productLicenseFeeMap ?? {});
+      setProductLicenseTypeMap(payload.productLicenseTypeMap ?? {});
+      setProductLicenseWeightGramsMap(payload.productLicenseWeightGramsMap ?? {});
       setCustomerSuggestedProducts(payload.customerSuggestedProducts ?? []);
 
       const pendingWrites = await getPendingWrites().catch(() => []);
@@ -472,6 +490,24 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       }
       return next;
     });
+    setProductLicenseTypeMap((prev) => {
+      const next = { ...prev };
+      for (const item of items) {
+        if (item.licenseType) {
+          next[item.productId] = item.licenseType;
+        }
+      }
+      return next;
+    });
+    setProductLicenseWeightGramsMap((prev) => {
+      const next = { ...prev };
+      for (const item of items) {
+        if (typeof item.licenseWeightGrams === "number" && Number.isFinite(item.licenseWeightGrams)) {
+          next[item.productId] = Math.max(0, Math.round(item.licenseWeightGrams));
+        }
+      }
+      return next;
+    });
 
     updateDraft((prev) => {
       const existingByProductId = new Map(prev.lines.map((line) => [line.productId, line]));
@@ -578,6 +614,8 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
     name: line.productName,
     quantity: line.quantity,
     unitPriceCents: line.unitPriceCents,
+    licenseType: productLicenseTypeMap[line.productId],
+    licenseWeightGrams: productLicenseWeightGramsMap[line.productId] ?? 0,
     licenseFeeCents: productLicenseFeeMap[line.productId] ?? 0
   }));
   return (
@@ -605,6 +643,8 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
         onChange={onItemsChange}
         priceOverrides={customerPriceMap}
         licenseFeeMap={productLicenseFeeMap}
+        licenseTypeMap={productLicenseTypeMap}
+        licenseWeightGramsMap={productLicenseWeightGramsMap}
         includeLicenseFee={Boolean(draft.includeLicenseFee)}
         suggestedProducts={customerSuggestedProducts}
         searchMode="all"
@@ -655,7 +695,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
             checked={Boolean(draft.includeLicenseFee)}
             onChange={() => onIncludeLicenseFeeChange(true)}
           />
-          <span>{t("withLicense", { vat: formatCents(Math.round(licenseTotalCents * 0.19)) })}</span>
+          <span>{t("withLicense", { licenseTotal: formatCents(licenseTotalCents) })}</span>
         </label>
         <label className="flex items-center gap-2 text-sm">
           <input
