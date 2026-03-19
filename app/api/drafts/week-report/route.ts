@@ -6,10 +6,28 @@ import { badRequest, unauthorized } from "@/lib/http";
 
 export const runtime = "nodejs";
 
+function parseIds(raw: string | null): number[] {
+  if (!raw) return [];
+  return Array.from(
+    new Set(
+      raw
+        .split(",")
+        .map((value) => Number.parseInt(value.trim(), 10))
+        .filter((value) => Number.isFinite(value) && value > 0)
+    )
+  );
+}
+
 function parseWeekStart(raw: string | null): Date {
-  if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
-    throw new Error("Ungueltiger Wochenstart.");
+  if (!raw) {
+    const now = new Date();
+    const day = (now.getDay() + 6) % 7;
+    const monday = new Date(now);
+    monday.setHours(0, 0, 0, 0);
+    monday.setDate(monday.getDate() - day);
+    return monday;
   }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) throw new Error("Ungueltiger Wochenstart.");
   const start = new Date(`${raw}T00:00:00.000Z`);
   if (!Number.isFinite(start.getTime())) throw new Error("Ungueltiger Wochenstart.");
   return start;
@@ -28,19 +46,25 @@ function paymentLabel(value: string): string {
   return "Bar";
 }
 
-function dayKey(date: Date): string {
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+function resolveRouteLabel(raw: string | null | undefined): string {
+  const value = (raw ?? "").trim();
+  return value || "Ohne Tour-Tag";
 }
 
-function pickRouteLabel(values: Array<string | null | undefined>): string | null {
-  const counts = new Map<string, number>();
-  for (const value of values) {
-    const cleaned = (value ?? "").trim();
-    if (!cleaned) continue;
-    counts.set(cleaned, (counts.get(cleaned) ?? 0) + 1);
-  }
-  if (counts.size === 0) return null;
-  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+function calculateDraftTotalCents(draft: any): number {
+  const subtotal = draft.lines.reduce((sum: number, line: any) => {
+    const license = draft.includeLicenseFee ? line.product.licenseFeeCents ?? 0 : 0;
+    return sum + line.quantity * (line.unitPriceCents + license);
+  }, 0);
+  const vat = Math.round(subtotal * 0.19);
+  return subtotal + vat;
+}
+
+function estimateDraftHeight(draft: any): number {
+  const lineHeight = draft.includeLicenseFee ? 20 : 13;
+  const linesHeight = draft.lines.length > 0 ? draft.lines.length * lineHeight : 13;
+  const noteHeight = draft.note ? 12 : 0;
+  return 32 + linesHeight + noteHeight + 8;
 }
 
 export async function GET(request: Request) {
@@ -48,6 +72,8 @@ export async function GET(request: Request) {
   if (!user) return unauthorized();
 
   const url = new URL(request.url);
+  const ids = parseIds(url.searchParams.get("ids"));
+
   let weekStart: Date;
   try {
     weekStart = parseWeekStart(url.searchParams.get("start"));
@@ -58,9 +84,7 @@ export async function GET(request: Request) {
   weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
 
   const drafts = await prisma.draft.findMany({
-    where: {
-      date: { gte: weekStart, lt: weekEnd }
-    },
+    where: ids.length > 0 ? { id: { in: ids } } : { date: { gte: weekStart, lt: weekEnd } },
     orderBy: [{ date: "asc" }, { id: "asc" }],
     include: {
       customer: { select: { name: true, routeDay: true } },
@@ -71,12 +95,14 @@ export async function GET(request: Request) {
     }
   });
 
-  const byDay = new Map<string, any[]>();
+  if (drafts.length === 0) return badRequest("Keine Vordrucke gefunden.");
+
+  const byRoute = new Map<string, any[]>();
   for (const draft of drafts) {
-    const key = dayKey(draft.date);
-    const list = byDay.get(key) ?? [];
+    const key = resolveRouteLabel(draft.customer.routeDay);
+    const list = byRoute.get(key) ?? [];
     list.push(draft);
-    byDay.set(key, list);
+    byRoute.set(key, list);
   }
 
   const pdf = await PDFDocument.create();
@@ -88,11 +114,12 @@ export async function GET(request: Request) {
   const left = 42;
   const right = pageWidth - 42;
 
+  const routeGroups = [...byRoute.entries()].sort((a, b) => a[0].localeCompare(b[0], "de-DE"));
+
   let page = pdf.addPage([pageWidth, pageHeight]);
   let y = pageHeight - 52;
-
   const drawTop = () => {
-    page.drawText("Wochenuebersicht Vordrucke", {
+    page.drawText("Uebersicht Beendete Touren", {
       x: left,
       y,
       size: 16,
@@ -100,20 +127,21 @@ export async function GET(request: Request) {
       color: rgb(0.2, 0.2, 0.2)
     });
     y -= 20;
-    page.drawText(
-      `${weekStart.toLocaleDateString("de-DE")} - ${new Date(weekEnd.getTime() - 86400000).toLocaleDateString("de-DE")}`,
-      {
-        x: left,
-        y,
-        size: 10,
-        font: regular,
-        color: rgb(0.4, 0.4, 0.4)
-      }
-    );
+    const subtitle =
+      ids.length > 0
+        ? `${ids.length} Vordrucke ausgewaehlt`
+        : `${weekStart.toLocaleDateString("de-DE")} - ${new Date(weekEnd.getTime() - 86400000).toLocaleDateString("de-DE")}`;
+    page.drawText(subtitle, {
+      x: left,
+      y,
+      size: 10,
+      font: regular,
+      color: rgb(0.4, 0.4, 0.4)
+    });
     y -= 20;
   };
 
-  const ensure = (needed: number) => {
+  const ensureSpace = (needed: number) => {
     if (y - needed >= 48) return;
     page = pdf.addPage([pageWidth, pageHeight]);
     y = pageHeight - 52;
@@ -122,107 +150,111 @@ export async function GET(request: Request) {
 
   drawTop();
 
-  for (const [key, dayDrafts] of byDay.entries()) {
-    const routeLabel = pickRouteLabel(dayDrafts.map((d) => d.customer.routeDay));
-    ensure(44);
+  for (const [routeLabel, routeDrafts] of routeGroups) {
+    ensureSpace(36);
     page.drawRectangle({
       x: left,
-      y: y - 6,
+      y: y - 8,
       width: right - left,
-      height: 24,
-      color: rgb(0.95, 0.97, 1)
+      height: 22,
+      color: rgb(0.91, 0.96, 0.93)
     });
-    page.drawText(new Date(`${key}T12:00:00.000Z`).toLocaleDateString("de-DE"), {
+    page.drawText(routeLabel, {
       x: left + 8,
-      y: y + 2,
-      size: 11,
+      y: y - 1,
+      size: 12,
       font: bold,
-      color: rgb(0.2, 0.2, 0.2)
+      color: rgb(0.11, 0.39, 0.16)
     });
-    if (routeLabel) {
-      page.drawText(`Tour: ${routeLabel}`, {
-        x: left + 120,
-        y: y + 2,
-        size: 10,
-        font: regular,
-        color: rgb(0.25, 0.25, 0.25)
-      });
-    }
     y -= 30;
 
-    for (const draft of dayDrafts) {
-      const subtotal = draft.lines.reduce((sum: number, line: any) => {
-        const license = draft.includeLicenseFee ? line.product.licenseFeeCents ?? 0 : 0;
-        return sum + line.quantity * (line.unitPriceCents + license);
-      }, 0);
-      const vat = Math.round(subtotal * 0.19);
-      const total = subtotal + vat;
+    for (const draft of routeDrafts) {
+      const boxHeight = estimateDraftHeight(draft);
+      ensureSpace(boxHeight + 8);
 
-      const needed = 40 + draft.lines.length * (draft.includeLicenseFee ? 20 : 14);
-      ensure(needed);
+      page.drawRectangle({
+        x: left + 2,
+        y: y - boxHeight,
+        width: right - left - 4,
+        height: boxHeight,
+        color: rgb(0.99, 0.99, 0.99),
+        borderColor: rgb(0.9, 0.9, 0.9),
+        borderWidth: 1
+      });
 
-      page.drawText(`#${draft.id} ${draft.customer.name}`, {
-        x: left + 8,
-        y,
-        size: 10,
+      const total = calculateDraftTotalCents(draft);
+      let lineY = y - 14;
+
+      page.drawText(`${new Date(draft.date).toLocaleDateString("de-DE")} | #${draft.id} | ${draft.customer.name}`.slice(0, 86), {
+        x: left + 10,
+        y: lineY,
+        size: 9.4,
         font: bold,
-        color: rgb(0.18, 0.18, 0.18)
+        color: rgb(0.16, 0.16, 0.16)
       });
-      page.drawText(`${paymentLabel(draft.paymentMethod)} | Gesamt ${formatMoney(total)} EUR`, {
-        x: right - 180,
-        y,
-        size: 9,
-        font: regular,
-        color: rgb(0.3, 0.3, 0.3)
-      });
-      y -= 14;
 
-      for (const line of draft.lines) {
-        ensure(draft.includeLicenseFee ? 20 : 14);
-        const license = draft.includeLicenseFee ? line.product.licenseFeeCents ?? 0 : 0;
-        const lineTotal = line.quantity * (line.unitPriceCents + license);
-        const leftText = `${line.quantity}x ${line.product.sku} ${line.product.name}`.slice(0, 88);
-        page.drawText(leftText, {
-          x: left + 14,
-          y,
-          size: 8.8,
+      page.drawText(`${paymentLabel(draft.paymentMethod)} | Gesamt ${formatMoney(total)} EUR`, {
+        x: right - 188,
+        y: lineY,
+        size: 8.4,
+        font: regular,
+        color: rgb(0.33, 0.33, 0.33)
+      });
+
+      lineY -= 12;
+      if (draft.lines.length === 0) {
+        page.drawText("Keine Positionen", {
+          x: left + 12,
+          y: lineY,
+          size: 8.4,
           font: regular,
-          color: rgb(0.23, 0.23, 0.23)
+          color: rgb(0.45, 0.45, 0.45)
         });
-        page.drawText(`${formatMoney(lineTotal)} EUR`, {
-          x: right - 96,
-          y,
-          size: 8.8,
-          font: regular,
-          color: rgb(0.23, 0.23, 0.23)
-        });
-        if (draft.includeLicenseFee && license > 0) {
-          page.drawText(`Lizenz ${formatMoney(license)} / Stk | Netto ${formatMoney(license * line.quantity)} EUR`, {
-            x: left + 20,
-            y: y - 8,
-            size: 7.7,
+        lineY -= 12;
+      } else {
+        for (const line of draft.lines) {
+          const license = draft.includeLicenseFee ? line.product.licenseFeeCents ?? 0 : 0;
+          const lineTotal = line.quantity * (line.unitPriceCents + license);
+          page.drawText(`${line.quantity}x ${line.product.sku} ${line.product.name}`.slice(0, 84), {
+            x: left + 12,
+            y: lineY,
+            size: 8.2,
             font: regular,
-            color: rgb(0.45, 0.45, 0.45)
+            color: rgb(0.24, 0.24, 0.24)
           });
-          y -= 18;
-        } else {
-          y -= 12;
+          page.drawText(`${formatMoney(lineTotal)} EUR`, {
+            x: right - 90,
+            y: lineY,
+            size: 8.2,
+            font: regular,
+            color: rgb(0.24, 0.24, 0.24)
+          });
+          if (draft.includeLicenseFee && license > 0) {
+            page.drawText(`Lizenz ${formatMoney(license)} / Stk | Netto ${formatMoney(license * line.quantity)} EUR`, {
+              x: left + 18,
+              y: lineY - 8,
+              size: 7.2,
+              font: regular,
+              color: rgb(0.45, 0.45, 0.45)
+            });
+            lineY -= 18;
+          } else {
+            lineY -= 11;
+          }
         }
       }
 
       if (draft.note) {
-        ensure(14);
-        page.drawText(`Notiz: ${String(draft.note).slice(0, 90)}`, {
-          x: left + 14,
-          y,
-          size: 8,
+        page.drawText(`Notiz: ${String(draft.note).slice(0, 92)}`, {
+          x: left + 12,
+          y: lineY,
+          size: 7.6,
           font: regular,
-          color: rgb(0.4, 0.4, 0.4)
+          color: rgb(0.39, 0.39, 0.39)
         });
-        y -= 12;
       }
 
-      y -= 6;
+      y -= boxHeight + 10;
     }
   }
 

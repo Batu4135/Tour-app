@@ -36,33 +36,6 @@ type DraftGroup = {
   debitCount: number;
 };
 
-type WeekLine = {
-  productName: string;
-  productSku: string;
-  quantity: number;
-  lineTotalCents: number;
-};
-
-type WeekDraft = {
-  id: number;
-  customerName: string;
-  customerRouteDay: string | null;
-  date: string;
-  paymentMethod: PaymentMethod;
-  note: string | null;
-  totalCents: number;
-  tourClosedAt: string | null;
-  lines: WeekLine[];
-};
-
-type WeekDay = {
-  key: string;
-  label: string;
-  routeLabel: string | null;
-  drafts: WeekDraft[];
-  isClosed: boolean;
-};
-
 function centsToText(cents: number): string {
   return new Intl.NumberFormat("de-DE", {
     style: "currency",
@@ -73,14 +46,6 @@ function centsToText(cents: number): string {
 function dayKey(value: string | Date): string {
   const date = typeof value === "string" ? new Date(value) : value;
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
-function mondayKey(base: Date, weekShift = 0): string {
-  const d = new Date(base);
-  const day = (d.getDay() + 6) % 7;
-  d.setDate(d.getDate() - day + weekShift * 7);
-  d.setHours(0, 0, 0, 0);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function paymentLabel(method: PaymentMethod, t: (key: string) => string): string {
@@ -109,15 +74,10 @@ export default function DraftsPage() {
   const [error, setError] = useState("");
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [showOverviewByGroup, setShowOverviewByGroup] = useState<Record<string, boolean>>({});
+  const [selectedClosedGroups, setSelectedClosedGroups] = useState<Record<string, boolean>>({});
   const [closingGroupKey, setClosingGroupKey] = useState<string | null>(null);
   const [tourError, setTourError] = useState("");
   const [tourSuccess, setTourSuccess] = useState("");
-
-  const [weekStartKey, setWeekStartKey] = useState(() => mondayKey(new Date()));
-  const [weekDays, setWeekDays] = useState<WeekDay[]>([]);
-  const [weekLoading, setWeekLoading] = useState(false);
-  const [weekError, setWeekError] = useState("");
-  const [weekClosing, setWeekClosing] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(query), 260);
@@ -131,10 +91,6 @@ export default function DraftsPage() {
   useEffect(() => {
     void loadRecentDrafts();
   }, []);
-
-  useEffect(() => {
-    void loadWeekData();
-  }, [weekStartKey]);
 
   const selectedResults = useMemo(() => customers.slice(0, 10), [customers]);
   const todayKey = useMemo(() => dayKey(new Date()), []);
@@ -176,17 +132,34 @@ export default function DraftsPage() {
     });
   }, [groupedDrafts]);
 
-  const weekRangeLabel = useMemo(() => {
-    const start = new Date(`${weekStartKey}T00:00:00.000Z`);
-    const end = new Date(start);
-    end.setUTCDate(end.getUTCDate() + 6);
-    return `${start.toLocaleDateString("de-DE")} - ${end.toLocaleDateString("de-DE")}`;
-  }, [weekStartKey]);
+  useEffect(() => {
+    setSelectedClosedGroups((previous) => {
+      const next: Record<string, boolean> = {};
+      for (const group of groupedDrafts) {
+        if (!group.isClosed) continue;
+        if (previous[group.key]) next[group.key] = true;
+      }
+      return next;
+    });
+  }, [groupedDrafts]);
 
-  const weekIsClosed = useMemo(
-    () => weekDays.length > 0 && weekDays.every((day) => day.drafts.length === 0 || day.isClosed),
-    [weekDays]
+  const closedGroups = useMemo(() => groupedDrafts.filter((group) => group.isClosed), [groupedDrafts]);
+  const selectedClosedGroupCount = useMemo(
+    () => closedGroups.filter((group) => selectedClosedGroups[group.key]).length,
+    [closedGroups, selectedClosedGroups]
   );
+  const selectedClosedDraftIds = useMemo(
+    () =>
+      closedGroups
+        .filter((group) => selectedClosedGroups[group.key])
+        .flatMap((group) => group.drafts.map((draft) => draft.id)),
+    [closedGroups, selectedClosedGroups]
+  );
+  const selectedClosedReportHref = useMemo(() => {
+    if (selectedClosedDraftIds.length === 0) return "";
+    const uniqueIds = Array.from(new Set(selectedClosedDraftIds));
+    return `/api/drafts/week-report?ids=${encodeURIComponent(uniqueIds.join(","))}`;
+  }, [selectedClosedDraftIds]);
 
   async function loadCustomers() {
     const response = await fetch(`/api/customers?q=${encodeURIComponent(debounced)}`);
@@ -200,22 +173,6 @@ export default function DraftsPage() {
     if (response.ok) setRecentDrafts(data.drafts as Draft[]);
   }
 
-  async function loadWeekData() {
-    setWeekLoading(true);
-    setWeekError("");
-    try {
-      const response = await fetch(`/api/drafts/week?start=${encodeURIComponent(weekStartKey)}`);
-      const data = (await response.json()) as { days?: WeekDay[]; error?: string };
-      if (!response.ok) throw new Error(data.error ?? t("weekLoadError"));
-      setWeekDays(data.days ?? []);
-    } catch (weekLoadError) {
-      setWeekError(weekLoadError instanceof Error ? weekLoadError.message : t("weekLoadError"));
-      setWeekDays([]);
-    } finally {
-      setWeekLoading(false);
-    }
-  }
-
   async function deleteDraft(id: number) {
     if (!confirm(t("confirmDelete"))) return;
     setError("");
@@ -225,7 +182,7 @@ export default function DraftsPage() {
       setError(payload.error ?? t("deleteError"));
       return;
     }
-    await Promise.all([loadRecentDrafts(), loadWeekData()]);
+    await loadRecentDrafts();
   }
 
   function toggleGroup(key: string) {
@@ -248,7 +205,7 @@ export default function DraftsPage() {
     }
 
     setTourSuccess(successMessage);
-    await Promise.all([loadRecentDrafts(), loadWeekData()]);
+    await loadRecentDrafts();
   }
 
   async function closeTour(group: DraftGroup) {
@@ -269,29 +226,11 @@ export default function DraftsPage() {
     }
   }
 
-  async function closeWeek() {
-    const ids = weekDays
-      .flatMap((day) => day.drafts)
-      .filter((draft) => !draft.tourClosedAt)
-      .map((draft) => draft.id);
-    if (ids.length === 0) return;
-
-    setWeekClosing(true);
-    setWeekError("");
-    try {
-      await closeDraftIds(ids, t("weekClosed"));
-    } catch (closeError) {
-      setWeekError(closeError instanceof Error ? closeError.message : t("weekCloseError"));
-    } finally {
-      setWeekClosing(false);
-    }
-  }
-
-  function shiftWeek(direction: -1 | 1) {
-    const start = new Date(`${weekStartKey}T00:00:00.000Z`);
-    start.setUTCDate(start.getUTCDate() + direction * 7);
-    const next = `${start.getUTCFullYear()}-${String(start.getUTCMonth() + 1).padStart(2, "0")}-${String(start.getUTCDate()).padStart(2, "0")}`;
-    setWeekStartKey(next);
+  function toggleClosedTourSelection(groupKey: string) {
+    setSelectedClosedGroups((previous) => ({
+      ...previous,
+      [groupKey]: !previous[groupKey]
+    }));
   }
 
   return (
@@ -328,79 +267,27 @@ export default function DraftsPage() {
       </div>
 
       <div className="card space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-semibold">{t("weekTitle")}</p>
-          <div className="flex items-center gap-2">
-            <button type="button" className="secondary-btn !px-2 !py-1" onClick={() => shiftWeek(-1)}>
-              {t("prevWeek")}
-            </button>
-            <button type="button" className="secondary-btn !px-2 !py-1" onClick={() => shiftWeek(1)}>
-              {t("nextWeek")}
-            </button>
-          </div>
-        </div>
-
-        <p className="text-xs text-[#4A4A4A]/70">{weekRangeLabel}</p>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            className="rounded-lg bg-[#2B8A3E] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
-            onClick={() => void closeWeek()}
-            disabled={weekClosing || weekIsClosed}
-          >
-            {weekClosing ? t("weekClosing") : weekIsClosed ? t("weekClosed") : t("weekClose")}
-          </button>
-          <a
-            href={`/api/drafts/week-report?start=${encodeURIComponent(weekStartKey)}`}
-            target="_blank"
-            rel="noreferrer"
-            className="secondary-btn !px-3 !py-1.5 text-xs"
-          >
-            {t("weeklyPrint")}
-          </a>
-        </div>
-
-        {weekLoading ? <p className="text-sm text-[#4A4A4A]/65">{t("weekLoading")}</p> : null}
-        {weekError ? <p className="text-sm text-[#8B2C2C]">{weekError}</p> : null}
-
-        {!weekLoading && weekDays.length === 0 ? <p className="text-sm text-[#4A4A4A]/65">{t("weekEmpty")}</p> : null}
-
-        <div className="space-y-3">
-          {weekDays.map((day) => (
-            <div key={day.key} className="rounded-xl border border-[#E5E5E5] bg-white p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs font-semibold text-[#4A4A4A]/70">{day.label}</p>
-                <div className="flex items-center gap-2">
-                  {day.routeLabel ? <span className="text-xs text-[#2F7EA1]">{day.routeLabel}</span> : null}
-                  {day.isClosed ? <span className="text-xs text-[#1E6F2D]">{t("tourClosedBadge")}</span> : null}
-                </div>
-              </div>
-
-              <div className="mt-2 space-y-2">
-                {day.drafts.map((draft) => (
-                  <div key={`week-${day.key}-${draft.id}`} className="rounded-lg border border-[#E9E9E9] p-2">
-                    <p className="text-sm font-semibold">{draft.customerName}</p>
-                    <p className="text-xs text-[#4A4A4A]/65">
-                      {paymentLabel(draft.paymentMethod, t)} | {centsToText(draft.totalCents)}
-                    </p>
-                    <div className="mt-1 space-y-1">
-                      {draft.lines.map((line, index) => (
-                        <p key={`line-${draft.id}-${index}`} className="text-[11px] text-[#4A4A4A]/75">
-                          {line.quantity}x {line.productSku} {line.productName}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="card space-y-3">
         <p className="text-sm font-semibold">{t("recent")}</p>
+        {closedGroups.length > 0 ? (
+          <div className="rounded-xl border border-[#DDE6EF] bg-white p-3">
+            <p className="text-xs font-semibold text-[#4A4A4A]/70">{t("selectClosedTours")}</p>
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs text-[#4A4A4A]/70">{t("selectedToursCount", { count: selectedClosedGroupCount })}</span>
+              <a
+                href={selectedClosedReportHref || "#"}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(event) => {
+                  if (!selectedClosedReportHref) event.preventDefault();
+                }}
+                className={`secondary-btn !px-3 !py-1.5 text-xs ${selectedClosedReportHref ? "" : "pointer-events-none opacity-50"}`}
+                aria-disabled={!selectedClosedReportHref}
+              >
+                {t("weeklySelectedPdf")}
+              </a>
+            </div>
+          </div>
+        ) : null}
 
         {groupedDrafts.map((group) => (
           <div
@@ -408,12 +295,23 @@ export default function DraftsPage() {
             className={`rounded-xl border p-3 ${group.isClosed ? "border-[#B8E3C4] bg-[#ECFAF0]" : "border-[#E5E5E5] bg-white"}`}
           >
             <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold text-[#4A4A4A]/70">
-                  {group.label}
-                  {group.routeLabel ? ` - ${group.routeLabel}` : ""}
-                </p>
-                {group.isClosed ? <p className="text-xs text-[#1E6F2D]">{t("tourClosedBadge")}</p> : null}
+              <div className="flex items-center gap-2">
+                {group.isClosed ? (
+                  <input
+                    type="checkbox"
+                    checked={Boolean(selectedClosedGroups[group.key])}
+                    onChange={() => toggleClosedTourSelection(group.key)}
+                    className="h-4 w-4 accent-[#2F7EA1]"
+                    aria-label={t("selectClosedTours")}
+                  />
+                ) : null}
+                <div>
+                  <p className="text-xs font-semibold text-[#4A4A4A]/70">
+                    {group.label}
+                    {group.routeLabel ? ` - ${group.routeLabel}` : ""}
+                  </p>
+                  {group.isClosed ? <p className="text-xs text-[#1E6F2D]">{t("tourClosedBadge")}</p> : null}
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 {group.isToday && !group.isClosed ? (

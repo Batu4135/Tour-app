@@ -99,17 +99,9 @@
     "paymentCash": "Nakit",
     "paymentBank": "Banka",
     "paymentDebit": "Lastschrift",
-    "weekTitle": "Haftalik gorunum",
-    "prevWeek": "Onceki hafta",
-    "nextWeek": "Sonraki hafta",
-    "weeklyPrint": "Haftalik PDF",
-    "weekLoading": "Haftalik veriler yukleniyor...",
-    "weekEmpty": "Bu hafta fatura yok.",
-    "weekClose": "Haftayi kapat",
-    "weekClosing": "Hafta kapatiliyor...",
-    "weekClosed": "Hafta kapatildi",
-    "weekLoadError": "Haftalik ozet yuklenemedi.",
-    "weekCloseError": "Hafta kapatilamadi."
+    "selectClosedTours": "Kapatilan turlari sec",
+    "selectedToursCount": "{count} tur secildi",
+    "weeklySelectedPdf": "Haftalik ozet PDF"
   },
   "draftEditor": {
     "loading": "Fatura yükleniyor...",
