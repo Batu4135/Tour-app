@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronUp, Pencil, Search, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Pencil, Search, Trash2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 type Customer = {
@@ -169,6 +169,10 @@ export default function DraftsPage() {
     const uniqueIds = Array.from(new Set(selectedClosedDraftIds));
     return `/api/drafts/week-report?ids=${encodeURIComponent(uniqueIds.join(","))}`;
   }, [selectedClosedDraftIds]);
+  const allClosedSelected = useMemo(
+    () => closedGroups.length > 0 && selectedClosedGroupCount === closedGroups.length,
+    [closedGroups.length, selectedClosedGroupCount]
+  );
 
   async function loadCustomers() {
     const response = await fetch(`/api/customers?q=${encodeURIComponent(debounced)}`);
@@ -267,6 +271,46 @@ export default function DraftsPage() {
     setSelectedClosedGroups({});
   }
 
+  function toggleSelectAllClosedTours() {
+    if (allClosedSelected) {
+      setSelectedClosedGroups({});
+      return;
+    }
+    const all: Record<string, boolean> = {};
+    for (const group of closedGroups) {
+      all[group.key] = true;
+    }
+    setSelectedClosedGroups(all);
+  }
+
+  async function deleteSelectedClosedTours() {
+    if (selectedClosedGroupCount === 0 || deletingGroupKey) return;
+    if (!confirm(t("confirmDeleteSelectedClosedTours", { count: selectedClosedGroupCount }))) return;
+
+    setDeletingGroupKey("bulk");
+    setTourError("");
+    setTourSuccess("");
+    try {
+      for (const group of closedGroups) {
+        if (!selectedClosedGroups[group.key]) continue;
+        for (const draft of group.drafts) {
+          const response = await fetch(`/api/drafts/${draft.id}`, { method: "DELETE" });
+          if (!response.ok) {
+            const payload = (await response.json().catch(() => ({}))) as { error?: string };
+            throw new Error(payload.error ?? t("deleteClosedTourError"));
+          }
+        }
+      }
+      await loadRecentDrafts();
+      setTourSuccess(t("deleteClosedTourSuccess"));
+      stopSelectionMode();
+    } catch (deleteError) {
+      setTourError(deleteError instanceof Error ? deleteError.message : t("deleteClosedTourError"));
+    } finally {
+      setDeletingGroupKey(null);
+    }
+  }
+
   async function deleteClosedTour(group: DraftGroup) {
     if (!group.isClosed || group.drafts.length === 0 || deletingGroupKey) return;
     if (!confirm(t("confirmDeleteClosedTour", { date: group.label }))) return;
@@ -331,162 +375,199 @@ export default function DraftsPage() {
 
       <div className="card space-y-3">
         <p className="text-sm font-semibold">{t("recent")}</p>
+
         {selectionMode ? (
-          <div className="rounded-xl border border-[#DDE6EF] bg-white p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-[#4A4A4A]/70">
-                {t("selectedToursCount", { count: selectedClosedGroupCount })}
-              </span>
-              <div className="flex items-center gap-2">
-                <a
-                  href={selectedClosedReportHref || "#"}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={(event) => {
-                    if (!selectedClosedReportHref) event.preventDefault();
-                  }}
-                  className={`secondary-btn !px-3 !py-1.5 text-xs ${selectedClosedReportHref ? "" : "pointer-events-none opacity-50"}`}
-                  aria-disabled={!selectedClosedReportHref}
-                >
-                  {t("weeklySelectedPdf")}
-                </a>
-                <button type="button" className="secondary-btn !px-3 !py-1.5 text-xs" onClick={stopSelectionMode}>
-                  {t("cancelSelection")}
-                </button>
-              </div>
+          <div className="rounded-2xl bg-[#111827] p-3 text-white">
+            <div className="flex items-center justify-between gap-2">
+              <button
+                type="button"
+                className="rounded-full border border-white/35 px-3 py-1 text-xs font-semibold"
+                onClick={toggleSelectAllClosedTours}
+              >
+                {allClosedSelected ? t("clearSelection") : t("selectAllClosedTours")}
+              </button>
+              <button
+                type="button"
+                className="rounded-full border border-white/35 p-2"
+                onClick={stopSelectionMode}
+                aria-label={t("cancelSelection")}
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <p className="mt-3 text-3xl font-extrabold leading-none">{t("selectedCountTitle", { count: selectedClosedGroupCount })}</p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className="rounded-full border border-white/35 px-3 py-1 text-xs font-semibold disabled:opacity-45"
+                disabled={!selectedClosedReportHref}
+                onClick={() => {
+                  if (!selectedClosedReportHref) return;
+                  const popup = window.open(selectedClosedReportHref, "_blank");
+                  if (!popup) window.location.assign(selectedClosedReportHref);
+                }}
+              >
+                {t("weeklySelectedPdf")}
+              </button>
+              <button
+                type="button"
+                className="rounded-full border border-[#FCA5A5] bg-[#7F1D1D] px-3 py-1 text-xs font-semibold text-white disabled:opacity-45"
+                disabled={selectedClosedGroupCount === 0 || deletingGroupKey === "bulk"}
+                onClick={() => void deleteSelectedClosedTours()}
+              >
+                {deletingGroupKey === "bulk" ? t("deletingClosedTour") : t("deleteSelectedClosedTours")}
+              </button>
             </div>
           </div>
         ) : null}
 
-        {groupedDrafts.map((group) => (
-          <div
-            key={group.key}
-            className={`rounded-xl border p-3 ${group.isClosed ? "border-[#B8E3C4] bg-[#ECFAF0]" : "border-[#E5E5E5] bg-white"}`}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <div
-                className="flex items-center gap-2"
-                onTouchStart={() => startLongPressSelection(group)}
-                onTouchEnd={stopLongPressSelection}
-                onTouchCancel={stopLongPressSelection}
-                onMouseDown={() => startLongPressSelection(group)}
-                onMouseUp={stopLongPressSelection}
-                onMouseLeave={stopLongPressSelection}
-                onContextMenu={(event) => {
-                  if (group.isClosed) event.preventDefault();
-                }}
-                onClick={() => {
-                  if (selectionMode && group.isClosed) {
-                    toggleClosedTourSelection(group.key);
-                  }
-                }}
-              >
-                {selectionMode && group.isClosed ? (
-                  <input
-                    type="checkbox"
-                    checked={Boolean(selectedClosedGroups[group.key])}
-                    onChange={() => toggleClosedTourSelection(group.key)}
-                    className="h-4 w-4 accent-[#2F7EA1]"
-                    aria-label={t("selectClosedTours")}
-                    onClick={(event) => event.stopPropagation()}
-                  />
-                ) : null}
-                <div>
-                  <p className="text-xs font-semibold text-[#4A4A4A]/70">
-                    {group.label}
-                    {group.routeLabel ? ` - ${group.routeLabel}` : ""}
-                  </p>
-                  {group.isClosed ? <p className="text-xs text-[#1E6F2D]">{t("tourClosedBadge")}</p> : null}
+        {groupedDrafts.map((group) => {
+          const selectedInMode = Boolean(selectedClosedGroups[group.key]);
+          return (
+            <div
+              key={group.key}
+              className={`rounded-xl border p-3 ${group.isClosed ? "border-[#B8E3C4] bg-[#ECFAF0]" : "border-[#E5E5E5] bg-white"}`}
+              style={group.isClosed ? { WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" } : undefined}
+              onTouchStart={() => startLongPressSelection(group)}
+              onTouchEnd={stopLongPressSelection}
+              onTouchCancel={stopLongPressSelection}
+              onMouseDown={() => startLongPressSelection(group)}
+              onMouseUp={stopLongPressSelection}
+              onMouseLeave={stopLongPressSelection}
+              onDragStart={(event) => {
+                if (group.isClosed) event.preventDefault();
+              }}
+              onContextMenu={(event) => {
+                if (group.isClosed) event.preventDefault();
+              }}
+              onClick={() => {
+                if (selectionMode && group.isClosed) toggleClosedTourSelection(group.key);
+              }}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  {selectionMode && group.isClosed ? (
+                    <div
+                      className={`h-5 w-5 rounded-full border ${
+                        selectedInMode ? "border-[#2F7EA1] bg-[#2F7EA1]" : "border-[#A3A3A3] bg-white"
+                      }`}
+                      aria-hidden="true"
+                    >
+                      {selectedInMode ? <span className="block text-center text-[11px] font-bold leading-5 text-white">✓</span> : null}
+                    </div>
+                  ) : null}
+                  <div>
+                    <p className="text-xs font-semibold text-[#4A4A4A]/70">
+                      {group.label}
+                      {group.routeLabel ? ` - ${group.routeLabel}` : ""}
+                    </p>
+                    {group.isClosed ? <p className="text-xs text-[#1E6F2D]">{t("tourClosedBadge")}</p> : null}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {!selectionMode && group.isClosed ? (
+                    <button
+                      type="button"
+                      className="secondary-btn !px-2 !py-1 text-xs text-[#8B2C2C]"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void deleteClosedTour(group);
+                      }}
+                      disabled={deletingGroupKey === group.key}
+                    >
+                      {deletingGroupKey === group.key ? t("deletingClosedTour") : t("deleteClosedTour")}
+                    </button>
+                  ) : null}
+                  {!selectionMode && group.isToday && !group.isClosed ? (
+                    <button
+                      type="button"
+                      className="rounded-lg bg-[#2B8A3E] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                      disabled={closingGroupKey === group.key || group.drafts.length === 0}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void closeTour(group);
+                      }}
+                    >
+                      {closingGroupKey === group.key ? t("tourClosing") : t("tourClose")}
+                    </button>
+                  ) : null}
+                  {!selectionMode ? (
+                    <button
+                      type="button"
+                      className="secondary-btn !px-2 !py-1"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        toggleGroup(group.key);
+                      }}
+                      aria-label={openGroups[group.key] ? t("collapseGroup") : t("expandGroup")}
+                    >
+                      {openGroups[group.key] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                  ) : null}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                {group.isClosed ? (
-                  <button
-                    type="button"
-                    className="secondary-btn !px-2 !py-1 text-xs text-[#8B2C2C]"
-                    onClick={() => void deleteClosedTour(group)}
-                    disabled={deletingGroupKey === group.key}
-                  >
-                    {deletingGroupKey === group.key ? t("deletingClosedTour") : t("deleteClosedTour")}
-                  </button>
-                ) : null}
-                {group.isToday && !group.isClosed ? (
-                  <button
-                    type="button"
-                    className="rounded-lg bg-[#2B8A3E] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
-                    disabled={closingGroupKey === group.key || group.drafts.length === 0}
-                    onClick={() => void closeTour(group)}
-                  >
-                    {closingGroupKey === group.key ? t("tourClosing") : t("tourClose")}
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  className="secondary-btn !px-2 !py-1"
-                  onClick={() => toggleGroup(group.key)}
-                  aria-label={openGroups[group.key] ? t("collapseGroup") : t("expandGroup")}
-                >
-                  {openGroups[group.key] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                </button>
-              </div>
-            </div>
 
-            {openGroups[group.key] ? (
-              <div className="mt-3 space-y-2">
-                {group.isClosed ? (
-                  <div className="rounded-xl border border-[#DDE6EF] bg-white p-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        className="secondary-btn !px-3 !py-1.5 text-xs"
-                        onClick={() =>
-                          setShowOverviewByGroup((previous) => ({
-                            ...previous,
-                            [group.key]: !previous[group.key]
-                          }))
-                        }
-                      >
-                        {showOverviewByGroup[group.key] ? t("hideOverview") : t("showOverview")}
-                      </button>
-                    </div>
-
-                    {showOverviewByGroup[group.key] ? (
-                      <p className="mt-2 text-xs text-[#4A4A4A]/70">
-                        {t("cashTotal")}: {centsToText(group.cashTotalCents)} | {t("bankCount")}: {group.bankCount} |{" "}
-                        {t("debitCount")}: {group.debitCount}
-                      </p>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                {group.drafts.map((draft) => (
-                  <div key={draft.id} className="rounded-xl border border-[#E5E5E5] bg-white px-3 py-2">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold">{draft.customerName}</p>
-                        <p className="text-xs text-[#4A4A4A]/65">{centsToText(draft.totalCents)}</p>
-                        <p className="text-[11px] text-[#4A4A4A]/55">{paymentLabel(draft.paymentMethod, t)}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Link href={`/drafts/${draft.id}`} className="secondary-btn !p-2" aria-label={t("editAria")}>
-                          <Pencil size={14} />
-                        </Link>
+              {openGroups[group.key] && !selectionMode ? (
+                <div className="mt-3 space-y-2">
+                  {group.isClosed ? (
+                    <div className="rounded-xl border border-[#DDE6EF] bg-white p-3">
+                      <div className="flex flex-wrap items-center gap-2">
                         <button
                           type="button"
-                          className="secondary-btn !p-2"
-                          onClick={() => void deleteDraft(draft.id)}
-                          aria-label={t("deleteAria")}
+                          className="secondary-btn !px-3 !py-1.5 text-xs"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setShowOverviewByGroup((previous) => ({
+                              ...previous,
+                              [group.key]: !previous[group.key]
+                            }));
+                          }}
                         >
-                          <Trash2 size={14} />
+                          {showOverviewByGroup[group.key] ? t("hideOverview") : t("showOverview")}
                         </button>
                       </div>
+
+                      {showOverviewByGroup[group.key] ? (
+                        <p className="mt-2 text-xs text-[#4A4A4A]/70">
+                          {t("cashTotal")}: {centsToText(group.cashTotalCents)} | {t("bankCount")}: {group.bankCount} |{" "}
+                          {t("debitCount")}: {group.debitCount}
+                        </p>
+                      ) : null}
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        ))}
+                  ) : null}
+
+                  {group.drafts.map((draft) => (
+                    <div key={draft.id} className="rounded-xl border border-[#E5E5E5] bg-white px-3 py-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold">{draft.customerName}</p>
+                          <p className="text-xs text-[#4A4A4A]/65">{centsToText(draft.totalCents)}</p>
+                          <p className="text-[11px] text-[#4A4A4A]/55">{paymentLabel(draft.paymentMethod, t)}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Link href={`/drafts/${draft.id}`} className="secondary-btn !p-2" aria-label={t("editAria")}>
+                            <Pencil size={14} />
+                          </Link>
+                          <button
+                            type="button"
+                            className="secondary-btn !p-2"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void deleteDraft(draft.id);
+                            }}
+                            aria-label={t("deleteAria")}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
 
         {recentDrafts.length === 0 ? <p className="text-sm text-[#4A4A4A]/60">{t("noDrafts")}</p> : null}
         {tourSuccess ? <p className="text-sm text-[#1E6F2D]">{tourSuccess}</p> : null}

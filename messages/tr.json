@@ -107,7 +107,12 @@
     "deletingClosedTour": "Tur siliniyor...",
     "deleteClosedTourError": "Kapatılan tur silinemedi.",
     "deleteClosedTourSuccess": "Kapatılan tur silindi.",
-    "confirmDeleteClosedTour": "{date} tarihli kapatılan tur silinsin mi?"
+    "confirmDeleteClosedTour": "{date} tarihli kapatılan tur silinsin mi?",
+    "selectAllClosedTours": "Tümünü seç",
+    "clearSelection": "Seçimi temizle",
+    "selectedCountTitle": "{count} seçildi",
+    "deleteSelectedClosedTours": "Seçilenleri sil",
+    "confirmDeleteSelectedClosedTours": "{count} kapatılan tur silinsin mi?"
   },
   "draftEditor": {
     "loading": "Fatura yükleniyor...",

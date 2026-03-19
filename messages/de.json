@@ -108,7 +108,12 @@
     "deletingClosedTour": "Tour wird geloescht...",
     "deleteClosedTourError": "Abgeschlossene Tour konnte nicht geloescht werden.",
     "deleteClosedTourSuccess": "Abgeschlossene Tour wurde geloescht.",
-    "confirmDeleteClosedTour": "Abgeschlossene Tour vom {date} wirklich loeschen?"
+    "confirmDeleteClosedTour": "Abgeschlossene Tour vom {date} wirklich loeschen?",
+    "selectAllClosedTours": "Alle auswaehlen",
+    "clearSelection": "Auswahl leeren",
+    "selectedCountTitle": "{count} ausgewaehlt",
+    "deleteSelectedClosedTours": "Ausgewaehlte loeschen",
+    "confirmDeleteSelectedClosedTours": "{count} abgeschlossene Touren wirklich loeschen?"
   },
   "draftEditor": {
     "loading": "Vordruck wird geladen...",
