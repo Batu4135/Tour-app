@@ -79,9 +79,7 @@ export async function GET(request: Request) {
       customer: { select: { name: true, routeDay: true } },
       lines: {
         orderBy: { id: "asc" },
-        include: {
-          product: { select: { name: true, sku: true, licenseFeeCents: true, licenseMaterial: true, licenseWeightGrams: true } }
-        }
+        include: { product: { select: { name: true, sku: true, licenseFeeCents: true } } }
       }
     }
   });

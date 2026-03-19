@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { badRequest, unauthorized } from "@/lib/http";
-import { computeLicenseFeeCents, normalizeLicenseMaterial, normalizeLicenseWeightGrams } from "@/lib/license";
 import { z } from "zod";
 
 export const runtime = "nodejs";
@@ -12,8 +11,6 @@ const createProductSchema = z.object({
   sku: z.string().min(1),
   defaultPriceCents: z.number().int().min(0).optional(),
   licenseFeeCents: z.number().int().min(0).optional(),
-  licenseMaterial: z.enum(["LP", "LK", "LA", "LV"]).nullable().optional(),
-  licenseWeightGrams: z.number().int().min(0).optional(),
   isActive: z.boolean().optional()
 });
 
@@ -47,8 +44,6 @@ export async function GET(request: Request) {
       name: true,
       defaultPriceCents: true,
       licenseFeeCents: true,
-      licenseMaterial: true,
-      licenseWeightGrams: true,
       isActive: true
     }
   });
@@ -64,13 +59,6 @@ export async function POST(request: Request) {
   if (!parsed.success) return badRequest("Ungueltige Anfrage.");
   const name = parsed.data.name.trim();
   const sku = parsed.data.sku.trim();
-  const licenseMaterial = normalizeLicenseMaterial(parsed.data.licenseMaterial);
-  const licenseWeightGrams = licenseMaterial ? normalizeLicenseWeightGrams(parsed.data.licenseWeightGrams ?? 0) : 0;
-  const computedLicenseFeeCents = computeLicenseFeeCents(licenseMaterial, licenseWeightGrams);
-  const manualLicenseFeeCents =
-    typeof parsed.data.licenseFeeCents === "number" && parsed.data.licenseFeeCents >= 0
-      ? Math.round(parsed.data.licenseFeeCents)
-      : 0;
 
   try {
     const product = await prisma.product.create({
@@ -82,9 +70,9 @@ export async function POST(request: Request) {
             ? Math.round(parsed.data.defaultPriceCents)
             : 0,
         licenseFeeCents:
-          licenseMaterial && licenseWeightGrams > 0 ? computedLicenseFeeCents : manualLicenseFeeCents,
-        licenseMaterial,
-        licenseWeightGrams,
+          typeof parsed.data.licenseFeeCents === "number" && parsed.data.licenseFeeCents >= 0
+            ? Math.round(parsed.data.licenseFeeCents)
+            : 0,
         isActive: parsed.data.isActive ?? true
       }
     });

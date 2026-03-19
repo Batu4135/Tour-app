@@ -59,16 +59,7 @@ export async function POST(request: Request) {
         customerPrice: {
           include: {
             product: {
-              select: {
-                id: true,
-                name: true,
-                sku: true,
-                defaultPriceCents: true,
-                licenseFeeCents: true,
-                licenseMaterial: true,
-                licenseWeightGrams: true,
-                isActive: true
-              }
+              select: { id: true, name: true, sku: true, defaultPriceCents: true, licenseFeeCents: true, isActive: true }
             }
           },
           orderBy: { productId: "asc" }
@@ -98,9 +89,7 @@ export async function POST(request: Request) {
       sku: price.product.sku,
       name: price.product.name,
       defaultPriceCents: price.product.defaultPriceCents,
-      licenseFeeCents: price.product.licenseFeeCents ?? 0,
-      licenseMaterial: price.product.licenseMaterial ?? null,
-      licenseWeightGrams: price.product.licenseWeightGrams ?? 0
+      licenseFeeCents: price.product.licenseFeeCents ?? 0
     }))
     .sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, "de-DE"));
 
@@ -124,12 +113,6 @@ export async function POST(request: Request) {
     customerPriceMap,
     productLicenseFeeMap: Object.fromEntries(
       customer.customerPrice.map((price: any) => [price.productId, price.product?.licenseFeeCents ?? 0])
-    ) as Record<number, number>,
-    productLicenseMaterialMap: Object.fromEntries(
-      customer.customerPrice.map((price: any) => [price.productId, price.product?.licenseMaterial ?? null])
-    ) as Record<number, "LP" | "LK" | "LA" | "LV" | null>,
-    productLicenseWeightMap: Object.fromEntries(
-      customer.customerPrice.map((price: any) => [price.productId, price.product?.licenseWeightGrams ?? 0])
     ) as Record<number, number>,
     customerSuggestedProducts
   });

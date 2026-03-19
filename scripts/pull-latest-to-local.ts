@@ -49,15 +49,11 @@ async function ensureLocalSchema() {
       "name" TEXT NOT NULL,
       "defaultPriceCents" INTEGER,
       "licenseFeeCents" INTEGER NOT NULL DEFAULT 0,
-      "licenseMaterial" TEXT,
-      "licenseWeightGrams" INTEGER NOT NULL DEFAULT 0,
       "isActive" BOOLEAN NOT NULL,
       "createdAt" DATETIME NOT NULL,
       "updatedAt" DATETIME NOT NULL
     );
   `);
-  await local.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN "licenseMaterial" TEXT;`).catch(() => undefined);
-  await local.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN "licenseWeightGrams" INTEGER NOT NULL DEFAULT 0;`).catch(() => undefined);
   await local.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "Product_sku_key" ON "Product"("sku");`);
 
   await local.$executeRawUnsafe(`
@@ -196,8 +192,6 @@ async function main() {
           name: item.name,
           defaultPriceCents: item.defaultPriceCents,
           licenseFeeCents: item.licenseFeeCents ?? 0,
-          licenseMaterial: item.licenseMaterial ?? null,
-          licenseWeightGrams: item.licenseWeightGrams ?? 0,
           isActive: item.isActive,
           createdAt: item.createdAt ?? new Date(0),
           updatedAt: item.updatedAt ?? item.createdAt ?? new Date(0)

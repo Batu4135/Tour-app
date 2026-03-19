@@ -36,8 +36,6 @@ model Product {
   name              String
   defaultPriceCents Int?
   licenseFeeCents   Int             @default(0)
-  licenseMaterial   LicenseMaterial?
-  licenseWeightGrams Int            @default(0)
   isActive          Boolean         @default(true)
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @default(now()) @updatedAt
@@ -122,11 +120,4 @@ enum PaymentMethod {
   CASH
   BANK
   DIRECT_DEBIT
-}
-
-enum LicenseMaterial {
-  LP
-  LK
-  LA
-  LV
 }

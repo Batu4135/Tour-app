@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { badRequest, unauthorized } from "@/lib/http";
-import { computeLicenseFeeCents, normalizeLicenseMaterial, normalizeLicenseWeightGrams } from "@/lib/license";
 import { z } from "zod";
 
 export const runtime = "nodejs";
@@ -18,8 +17,6 @@ const updateProductSchema = z.object({
   sku: z.string().min(1),
   defaultPriceCents: z.number().int().min(0).nullable().optional(),
   licenseFeeCents: z.number().int().min(0).optional(),
-  licenseMaterial: z.enum(["LP", "LK", "LA", "LV"]).nullable().optional(),
-  licenseWeightGrams: z.number().int().min(0).optional(),
   isActive: z.boolean().optional()
 });
 
@@ -34,13 +31,6 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   if (!parsed.success) return badRequest("Ungueltige Anfrage.");
   const name = parsed.data.name.trim();
   const sku = parsed.data.sku.trim();
-  const licenseMaterial = normalizeLicenseMaterial(parsed.data.licenseMaterial);
-  const licenseWeightGrams = licenseMaterial ? normalizeLicenseWeightGrams(parsed.data.licenseWeightGrams ?? 0) : 0;
-  const computedLicenseFeeCents = computeLicenseFeeCents(licenseMaterial, licenseWeightGrams);
-  const manualLicenseFeeCents =
-    typeof parsed.data.licenseFeeCents === "number" && parsed.data.licenseFeeCents >= 0
-      ? Math.round(parsed.data.licenseFeeCents)
-      : 0;
 
   try {
     const product = await prisma.product.update({
@@ -53,9 +43,9 @@ export async function PATCH(request: Request, { params }: RouteContext) {
             ? Math.round(parsed.data.defaultPriceCents)
             : null,
         licenseFeeCents:
-          licenseMaterial && licenseWeightGrams > 0 ? computedLicenseFeeCents : manualLicenseFeeCents,
-        licenseMaterial,
-        licenseWeightGrams,
+          typeof parsed.data.licenseFeeCents === "number" && parsed.data.licenseFeeCents >= 0
+            ? Math.round(parsed.data.licenseFeeCents)
+            : 0,
         isActive: parsed.data.isActive ?? true
       }
     });

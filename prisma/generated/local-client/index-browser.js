@@ -141,9 +141,6 @@ exports.Prisma.ProductScalarFieldEnum = {
   sku: 'sku',
   name: 'name',
   defaultPriceCents: 'defaultPriceCents',
-  licenseFeeCents: 'licenseFeeCents',
-  licenseMaterial: 'licenseMaterial',
-  licenseWeightGrams: 'licenseWeightGrams',
   isActive: 'isActive',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -171,9 +168,6 @@ exports.Prisma.DraftScalarFieldEnum = {
   customerId: 'customerId',
   date: 'date',
   note: 'note',
-  includeLicenseFee: 'includeLicenseFee',
-  paymentMethod: 'paymentMethod',
-  tourClosedAt: 'tourClosedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
