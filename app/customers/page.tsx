@@ -124,49 +124,6 @@ export default function CustomersPage() {
       </header>
 
       <div className="card space-y-3">
-        <div className="relative">
-          <Search className="search-icon" size={16} />
-          <input
-            className="search-input"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={t("searchPlaceholder")}
-          />
-        </div>
-        {query ? (
-          <div className="rounded-xl border border-[#E5E5E5] bg-[#F8F9FA] px-3 py-2 text-xs text-[#4A4A4A]/70">
-            {t("autocompleteHint")}
-          </div>
-        ) : null}
-        <div className="space-y-2">
-          <p className="text-xs font-semibold text-[#4A4A4A]/70">{t("routeFilterTitle")}</p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className={selectedRouteDay === "all" ? "primary-btn !w-auto !px-3 !py-2" : "secondary-btn !w-auto !px-3 !py-2"}
-              onClick={() => setSelectedRouteDay("all")}
-            >
-              {t("allRoutes")}
-            </button>
-            {routeOptions.map((routeDay) => (
-              <button
-                key={routeDay}
-                type="button"
-                className={
-                  selectedRouteDay === routeDay
-                    ? "primary-btn !w-auto !px-3 !py-2"
-                    : "secondary-btn !w-auto !px-3 !py-2"
-                }
-                onClick={() => setSelectedRouteDay(routeDay)}
-              >
-                {routeDay}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="card space-y-3">
         <button
           type="button"
           className="flex w-full items-center justify-between text-left"
@@ -212,6 +169,49 @@ export default function CustomersPage() {
         ) : (
           <p className="text-xs text-[#4A4A4A]/65">{t("newCustomerHint")}</p>
         )}
+      </div>
+
+      <div className="card space-y-3">
+        <div className="relative">
+          <Search className="search-icon" size={16} />
+          <input
+            className="search-input"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={t("searchPlaceholder")}
+          />
+        </div>
+        {query ? (
+          <div className="rounded-xl border border-[#E5E5E5] bg-[#F8F9FA] px-3 py-2 text-xs text-[#4A4A4A]/70">
+            {t("autocompleteHint")}
+          </div>
+        ) : null}
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-[#4A4A4A]/70">{t("routeFilterTitle")}</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className={selectedRouteDay === "all" ? "primary-btn !w-auto !px-3 !py-2" : "secondary-btn !w-auto !px-3 !py-2"}
+              onClick={() => setSelectedRouteDay("all")}
+            >
+              {t("allRoutes")}
+            </button>
+            {routeOptions.map((routeDay) => (
+              <button
+                key={routeDay}
+                type="button"
+                className={
+                  selectedRouteDay === routeDay
+                    ? "primary-btn !w-auto !px-3 !py-2"
+                    : "secondary-btn !w-auto !px-3 !py-2"
+                }
+                onClick={() => setSelectedRouteDay(routeDay)}
+              >
+                {routeDay}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {error ? <p className="text-sm text-[#4A4A4A]">{error}</p> : null}

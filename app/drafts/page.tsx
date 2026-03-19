@@ -54,15 +54,17 @@ function paymentLabel(method: PaymentMethod, t: (key: string) => string): string
   return t("paymentCash");
 }
 
-function pickRouteLabel(values: Array<string | null | undefined>): string | null {
-  const counts = new Map<string, number>();
-  for (const value of values) {
-    const cleaned = (value ?? "").trim();
-    if (!cleaned) continue;
-    counts.set(cleaned, (counts.get(cleaned) ?? 0) + 1);
-  }
-  if (counts.size === 0) return null;
-  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+function combineRouteLabels(values: Array<string | null | undefined>): string | null {
+  const labels = Array.from(
+    new Set(
+      values
+        .map((value) => (value ?? "").trim())
+        .filter((value) => value.length > 0)
+    )
+  ).sort((a, b) => a.localeCompare(b, "de-DE"));
+
+  if (labels.length === 0) return null;
+  return labels.join("/");
 }
 
 export default function DraftsPage() {
@@ -112,7 +114,7 @@ export default function DraftsPage() {
       return {
         key,
         label: new Date(`${key}T12:00:00.000Z`).toLocaleDateString("de-DE"),
-        routeLabel: pickRouteLabel(drafts.map((draft) => draft.customerRouteDay)),
+        routeLabel: combineRouteLabels(drafts.map((draft) => draft.customerRouteDay)),
         drafts,
         isToday: key === todayKey,
         isClosed,

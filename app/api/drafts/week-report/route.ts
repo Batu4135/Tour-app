@@ -89,7 +89,7 @@ export async function GET(request: Request) {
   const draftDates = drafts.map((draft) => new Date(draft.date));
   const rangeFrom = ids.length > 0 ? minDate(draftDates) : weekStart;
   const rangeTo = ids.length > 0 ? maxDate(draftDates) : new Date(weekEnd.getTime() - 86400000);
-  const rangeTitle = `Übersicht vom ${formatDate(rangeFrom)} bis ${formatDate(rangeTo)}`;
+  const rangeSubtitle = `vom ${formatDate(rangeFrom)} bis ${formatDate(rangeTo)}`;
 
   const sorted = [...drafts].sort((a, b) => {
     const routeA = resolveRouteLabel(a.customer.routeDay);
@@ -107,8 +107,10 @@ export async function GET(request: Request) {
   for (const draft of sorted) {
     const routeLabel = resolveRouteLabel(draft.customer.routeDay);
     drawDraftVoucherPage(pdf, fonts, draft, {
-      headerTitle: rangeTitle,
-      headerSubtitle: routeLabel
+      headerTitle: routeLabel,
+      headerSubtitle: rangeSubtitle,
+      headerTitleSize: 14,
+      showSku: true
     });
   }
 

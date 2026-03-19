@@ -8,6 +8,8 @@ export type DraftVoucherFonts = {
 type DrawDraftVoucherOptions = {
   headerTitle?: string;
   headerSubtitle?: string;
+  headerTitleSize?: number;
+  showSku?: boolean;
 };
 
 const A4_WIDTH = 595;
@@ -94,7 +96,7 @@ export function drawDraftVoucherPage(
   const licenseModeText = draft.includeLicenseFee ? "Inkl. Lizenzierung" : "Ohne Lizenzierung";
   const headerSubtitle = options?.headerSubtitle ?? licenseModeText;
 
-  let headerTitleSize = s(10);
+  let headerTitleSize = s(options?.headerTitleSize ?? 10);
   while (regular.widthOfTextAtSize(headerTitle, headerTitleSize) > pageWidth - s(20) && headerTitleSize > s(7)) {
     headerTitleSize -= s(0.4);
   }
@@ -213,7 +215,10 @@ export function drawDraftVoucherPage(
     const y = rowStartY - index * rowHeight;
     const lineLicenseFee = draft.includeLicenseFee ? (line.product?.licenseFeeCents ?? 0) : 0;
     const lineTotal = line.quantity * (line.unitPriceCents + lineLicenseFee);
-    const name = String(line.product?.name ?? "").slice(0, nameMaxChars);
+    const sku = String(line.product?.sku ?? "").trim();
+    const productName = String(line.product?.name ?? "").trim();
+    const labelRaw = options?.showSku && sku.length > 0 ? `${sku} ${productName}` : productName;
+    const name = labelRaw.slice(0, nameMaxChars);
     const qtyText = String(line.quantity);
 
     const badgeWidth = Math.max(s(18), bold.widthOfTextAtSize(qtyText, qtyFontSize) + qtyBadgePaddingX);
