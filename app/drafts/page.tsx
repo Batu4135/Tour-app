@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronUp, Pencil, Search, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -75,9 +75,12 @@ export default function DraftsPage() {
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [showOverviewByGroup, setShowOverviewByGroup] = useState<Record<string, boolean>>({});
   const [selectedClosedGroups, setSelectedClosedGroups] = useState<Record<string, boolean>>({});
+  const [selectionMode, setSelectionMode] = useState(false);
   const [closingGroupKey, setClosingGroupKey] = useState<string | null>(null);
+  const [deletingGroupKey, setDeletingGroupKey] = useState<string | null>(null);
   const [tourError, setTourError] = useState("");
   const [tourSuccess, setTourSuccess] = useState("");
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(query), 260);
@@ -142,6 +145,12 @@ export default function DraftsPage() {
       return next;
     });
   }, [groupedDrafts]);
+
+  useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    };
+  }, []);
 
   const closedGroups = useMemo(() => groupedDrafts.filter((group) => group.isClosed), [groupedDrafts]);
   const selectedClosedGroupCount = useMemo(
@@ -226,11 +235,65 @@ export default function DraftsPage() {
     }
   }
 
+  function clearLongPressTimer() {
+    if (!longPressTimerRef.current) return;
+    clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = null;
+  }
+
+  function startLongPressSelection(group: DraftGroup) {
+    if (!group.isClosed || selectionMode) return;
+    clearLongPressTimer();
+    longPressTimerRef.current = setTimeout(() => {
+      setSelectionMode(true);
+      setSelectedClosedGroups((previous) => ({ ...previous, [group.key]: true }));
+      longPressTimerRef.current = null;
+    }, 420);
+  }
+
+  function stopLongPressSelection() {
+    clearLongPressTimer();
+  }
+
   function toggleClosedTourSelection(groupKey: string) {
     setSelectedClosedGroups((previous) => ({
       ...previous,
       [groupKey]: !previous[groupKey]
     }));
+  }
+
+  function stopSelectionMode() {
+    setSelectionMode(false);
+    setSelectedClosedGroups({});
+  }
+
+  async function deleteClosedTour(group: DraftGroup) {
+    if (!group.isClosed || group.drafts.length === 0 || deletingGroupKey) return;
+    if (!confirm(t("confirmDeleteClosedTour", { date: group.label }))) return;
+
+    setDeletingGroupKey(group.key);
+    setTourError("");
+    setTourSuccess("");
+    try {
+      for (const draft of group.drafts) {
+        const response = await fetch(`/api/drafts/${draft.id}`, { method: "DELETE" });
+        if (!response.ok) {
+          const payload = (await response.json().catch(() => ({}))) as { error?: string };
+          throw new Error(payload.error ?? t("deleteClosedTourError"));
+        }
+      }
+      await loadRecentDrafts();
+      setTourSuccess(t("deleteClosedTourSuccess"));
+      setSelectedClosedGroups((previous) => {
+        const next = { ...previous };
+        delete next[group.key];
+        return next;
+      });
+    } catch (deleteError) {
+      setTourError(deleteError instanceof Error ? deleteError.message : t("deleteClosedTourError"));
+    } finally {
+      setDeletingGroupKey(null);
+    }
   }
 
   return (
@@ -268,23 +331,29 @@ export default function DraftsPage() {
 
       <div className="card space-y-3">
         <p className="text-sm font-semibold">{t("recent")}</p>
-        {closedGroups.length > 0 ? (
+        {selectionMode ? (
           <div className="rounded-xl border border-[#DDE6EF] bg-white p-3">
-            <p className="text-xs font-semibold text-[#4A4A4A]/70">{t("selectClosedTours")}</p>
-            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs text-[#4A4A4A]/70">{t("selectedToursCount", { count: selectedClosedGroupCount })}</span>
-              <a
-                href={selectedClosedReportHref || "#"}
-                target="_blank"
-                rel="noreferrer"
-                onClick={(event) => {
-                  if (!selectedClosedReportHref) event.preventDefault();
-                }}
-                className={`secondary-btn !px-3 !py-1.5 text-xs ${selectedClosedReportHref ? "" : "pointer-events-none opacity-50"}`}
-                aria-disabled={!selectedClosedReportHref}
-              >
-                {t("weeklySelectedPdf")}
-              </a>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-[#4A4A4A]/70">
+                {t("selectedToursCount", { count: selectedClosedGroupCount })}
+              </span>
+              <div className="flex items-center gap-2">
+                <a
+                  href={selectedClosedReportHref || "#"}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(event) => {
+                    if (!selectedClosedReportHref) event.preventDefault();
+                  }}
+                  className={`secondary-btn !px-3 !py-1.5 text-xs ${selectedClosedReportHref ? "" : "pointer-events-none opacity-50"}`}
+                  aria-disabled={!selectedClosedReportHref}
+                >
+                  {t("weeklySelectedPdf")}
+                </a>
+                <button type="button" className="secondary-btn !px-3 !py-1.5 text-xs" onClick={stopSelectionMode}>
+                  {t("cancelSelection")}
+                </button>
+              </div>
             </div>
           </div>
         ) : null}
@@ -295,14 +364,31 @@ export default function DraftsPage() {
             className={`rounded-xl border p-3 ${group.isClosed ? "border-[#B8E3C4] bg-[#ECFAF0]" : "border-[#E5E5E5] bg-white"}`}
           >
             <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                {group.isClosed ? (
+              <div
+                className="flex items-center gap-2"
+                onTouchStart={() => startLongPressSelection(group)}
+                onTouchEnd={stopLongPressSelection}
+                onTouchCancel={stopLongPressSelection}
+                onMouseDown={() => startLongPressSelection(group)}
+                onMouseUp={stopLongPressSelection}
+                onMouseLeave={stopLongPressSelection}
+                onContextMenu={(event) => {
+                  if (group.isClosed) event.preventDefault();
+                }}
+                onClick={() => {
+                  if (selectionMode && group.isClosed) {
+                    toggleClosedTourSelection(group.key);
+                  }
+                }}
+              >
+                {selectionMode && group.isClosed ? (
                   <input
                     type="checkbox"
                     checked={Boolean(selectedClosedGroups[group.key])}
                     onChange={() => toggleClosedTourSelection(group.key)}
                     className="h-4 w-4 accent-[#2F7EA1]"
                     aria-label={t("selectClosedTours")}
+                    onClick={(event) => event.stopPropagation()}
                   />
                 ) : null}
                 <div>
@@ -314,6 +400,16 @@ export default function DraftsPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                {group.isClosed ? (
+                  <button
+                    type="button"
+                    className="secondary-btn !px-2 !py-1 text-xs text-[#8B2C2C]"
+                    onClick={() => void deleteClosedTour(group)}
+                    disabled={deletingGroupKey === group.key}
+                  >
+                    {deletingGroupKey === group.key ? t("deletingClosedTour") : t("deleteClosedTour")}
+                  </button>
+                ) : null}
                 {group.isToday && !group.isClosed ? (
                   <button
                     type="button"
@@ -339,7 +435,7 @@ export default function DraftsPage() {
               <div className="mt-3 space-y-2">
                 {group.isClosed ? (
                   <div className="rounded-xl border border-[#DDE6EF] bg-white p-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"
                         className="secondary-btn !px-3 !py-1.5 text-xs"
@@ -352,14 +448,6 @@ export default function DraftsPage() {
                       >
                         {showOverviewByGroup[group.key] ? t("hideOverview") : t("showOverview")}
                       </button>
-                      <a
-                        href={`/api/drafts/day-report?ids=${encodeURIComponent(group.drafts.map((draft) => draft.id).join(","))}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="secondary-btn !px-3 !py-1.5 text-xs"
-                      >
-                        {t("dailyPdf")}
-                      </a>
                     </div>
 
                     {showOverviewByGroup[group.key] ? (

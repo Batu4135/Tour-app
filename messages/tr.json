@@ -99,9 +99,15 @@
     "paymentCash": "Nakit",
     "paymentBank": "Banka",
     "paymentDebit": "Lastschrift",
-    "selectClosedTours": "Kapatilan turlari sec",
-    "selectedToursCount": "{count} tur secildi",
-    "weeklySelectedPdf": "Haftalik ozet PDF"
+    "selectClosedTours": "Kapatılan turları seç",
+    "selectedToursCount": "{count} kapatılan tur seçildi",
+    "weeklySelectedPdf": "Haftalık özet göster",
+    "cancelSelection": "Seçimi kapat",
+    "deleteClosedTour": "Turu sil",
+    "deletingClosedTour": "Tur siliniyor...",
+    "deleteClosedTourError": "Kapatılan tur silinemedi.",
+    "deleteClosedTourSuccess": "Kapatılan tur silindi.",
+    "confirmDeleteClosedTour": "{date} tarihli kapatılan tur silinsin mi?"
   },
   "draftEditor": {
     "loading": "Fatura yükleniyor...",

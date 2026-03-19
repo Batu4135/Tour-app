@@ -100,9 +100,15 @@
     "paymentCash": "Bar",
     "paymentBank": "Bank",
     "paymentDebit": "Lastschrift",
-    "selectClosedTours": "Beendete Touren auswaehlen",
-    "selectedToursCount": "{count} Touren ausgewaehlt",
-    "weeklySelectedPdf": "Woechentliche Uebersicht PDF"
+    "selectClosedTours": "Abgeschlossene Touren auswaehlen",
+    "selectedToursCount": "{count} abgeschlossene Touren ausgewaehlt",
+    "weeklySelectedPdf": "Haftalık özet anzeigen",
+    "cancelSelection": "Auswahl beenden",
+    "deleteClosedTour": "Tour loeschen",
+    "deletingClosedTour": "Tour wird geloescht...",
+    "deleteClosedTourError": "Abgeschlossene Tour konnte nicht geloescht werden.",
+    "deleteClosedTourSuccess": "Abgeschlossene Tour wurde geloescht.",
+    "confirmDeleteClosedTour": "Abgeschlossene Tour vom {date} wirklich loeschen?"
   },
   "draftEditor": {
     "loading": "Vordruck wird geladen...",
