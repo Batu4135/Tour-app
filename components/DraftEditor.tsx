@@ -540,6 +540,42 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
     }
 
     const pdfUrl = `/api/drafts/${draft.id}/pdf`;
+    try {
+      const response = await fetch(pdfUrl);
+      if (!response.ok) throw new Error(t("saveError"));
+      const blob = await response.blob();
+      const file = new File([blob], `vordruck-${draft.id}.pdf`, { type: "application/pdf" });
+      const nav = navigator as Navigator & {
+        canShare?: (data: { files?: File[] }) => boolean;
+        share?: (data: { title?: string; text?: string; files?: File[]; url?: string }) => Promise<void>;
+      };
+
+      if (typeof nav.share === "function" && typeof nav.canShare === "function" && nav.canShare({ files: [file] })) {
+        await nav.share({
+          title: `Fatura ${draft.id}`,
+          text: draft.customerName,
+          files: [file]
+        });
+        setIsPrinting(false);
+        return;
+      }
+
+      if (typeof nav.share === "function") {
+        await nav.share({
+          title: `Fatura ${draft.id}`,
+          text: draft.customerName,
+          url: `${window.location.origin}${pdfUrl}`
+        });
+        setIsPrinting(false);
+        return;
+      }
+    } catch (shareError) {
+      if (shareError instanceof Error && shareError.name === "AbortError") {
+        setIsPrinting(false);
+        return;
+      }
+    }
+
     const popup = window.open(pdfUrl, "_blank");
     if (!popup) {
       window.location.assign(pdfUrl);

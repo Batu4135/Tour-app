@@ -200,8 +200,6 @@
     "quantity": "Menge",
     "price": "Preis",
     "lineTotal": "Summe",
-    "licensePlus": "+ Lizenz",
-    "licensePerUnit": "{amount} / Stk",
     "licenseIncluded": "+ Lizenz {amount} / Stk",
     "licenseNetTotal": "Lizenz netto gesamt: {amount}",
     "licenseOptional": "Lizenz optional",

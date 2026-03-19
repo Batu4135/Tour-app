@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Search, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { formatCents, parseEuroToCents } from "@/lib/formatCents";
-import { normalizeLicenseMaterial, normalizeLicenseWeightGrams } from "@/lib/license";
+import { formatKgFromGrams, normalizeLicenseMaterial, normalizeLicenseWeightGrams } from "@/lib/license";
 
 export type ProductOption = {
   id: number;
@@ -264,6 +264,8 @@ export default function ProductPicker({
         {selectedItems.map((item) => {
           const licenseFee = includeLicenseFee ? (item.licenseFeeCents ?? licenseFeeMap[item.productId] ?? 0) : 0;
           const lineTotal = item.quantity * (item.unitPriceCents + licenseFee);
+          const material = normalizeLicenseMaterial(item.licenseMaterial);
+          const weightGrams = normalizeLicenseWeightGrams(item.licenseWeightGrams ?? 0);
           return (
             <div key={item.productId} className="card space-y-2">
               <div className="flex items-start justify-between gap-3">
@@ -304,10 +306,17 @@ export default function ProductPicker({
                 <div className="pb-1 text-right">
                   <p className="text-xs text-[#4A4A4A]/65">{t("lineTotal")}</p>
                   <p className="text-sm font-semibold text-[#2F7EA1]">{formatCents(lineTotal)}</p>
-                  {includeLicenseFee && licenseFee > 0 ? (
+                  {licenseFee > 0 ? (
                     <div className="space-y-0.5 text-[11px] text-[#4A4A4A]/60">
-                      <p>{t("licensePlus")}</p>
-                      <p>{t("licensePerUnit", { amount: formatCents(licenseFee) })}</p>
+                      <p>
+                        {includeLicenseFee
+                          ? t("licenseIncluded", { amount: formatCents(licenseFee) })
+                          : t("licenseOptional")}
+                      </p>
+                      {material && weightGrams > 0 ? <p>{`${material} ${formatKgFromGrams(weightGrams)} kg`}</p> : null}
+                      {includeLicenseFee && item.quantity > 1 ? (
+                        <p>{t("licenseNetTotal", { amount: formatCents(item.quantity * licenseFee) })}</p>
+                      ) : null}
                     </div>
                   ) : null}
                 </div>

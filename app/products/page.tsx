@@ -4,7 +4,6 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Check, Plus, Search, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { formatCents, parseEuroToCents } from "@/lib/formatCents";
-import { computeLicenseFeeCents, normalizeLicenseMaterial } from "@/lib/license";
 
 type Product = {
   id: number;
@@ -61,17 +60,6 @@ function parseWeightKgToGrams(raw: string): number {
   const parsed = Number.parseFloat(cleaned);
   if (!Number.isFinite(parsed) || parsed < 0) return 0;
   return Math.max(0, Math.round(parsed * 1000));
-}
-
-function autoLicenseFeeInput(
-  licenseMaterial: "" | "LP" | "LK" | "LA" | "LV",
-  licenseWeightKg: string
-): string | null {
-  const material = normalizeLicenseMaterial(licenseMaterial);
-  if (!material) return null;
-  const weightGrams = parseWeightKgToGrams(licenseWeightKg);
-  if (weightGrams <= 0) return null;
-  return toPriceInput(computeLicenseFeeCents(material, weightGrams));
 }
 
 export default function ProductsPage() {
@@ -140,27 +128,13 @@ export default function ProductsPage() {
   }
 
   function setEditField(productId: number, field: keyof EditFields, value: string | boolean) {
-    setEdits((prev) => {
-      const current = prev[productId];
-      if (!current) return prev;
-
-      const next = {
-        ...current,
+    setEdits((prev) => ({
+      ...prev,
+      [productId]: {
+        ...prev[productId],
         [field]: value
-      } as EditFields;
-
-      if (field === "licenseMaterial" || field === "licenseWeightKg") {
-        const calculated = autoLicenseFeeInput(next.licenseMaterial, next.licenseWeightKg);
-        if (calculated !== null) {
-          next.licenseFee = calculated;
-        }
       }
-
-      return {
-        ...prev,
-        [productId]: next
-      };
-    });
+    }));
   }
 
   async function onCreate(event: FormEvent) {
@@ -310,15 +284,10 @@ export default function ProductsPage() {
           className="input"
           value={createForm.licenseMaterial}
           onChange={(event) =>
-            setCreateForm((prev) => {
-              const licenseMaterial = event.target.value as "" | "LP" | "LK" | "LA" | "LV";
-              const calculated = autoLicenseFeeInput(licenseMaterial, prev.licenseWeightKg);
-              return {
-                ...prev,
-                licenseMaterial,
-                licenseFee: calculated ?? prev.licenseFee
-              };
-            })
+            setCreateForm((prev) => ({
+              ...prev,
+              licenseMaterial: event.target.value as "" | "LP" | "LK" | "LA" | "LV"
+            }))
           }
         >
           <option value="">{t("createLicenseType")}</option>
@@ -331,17 +300,7 @@ export default function ProductsPage() {
           className="input"
           placeholder={t("createLicenseWeight")}
           value={createForm.licenseWeightKg}
-          onChange={(event) =>
-            setCreateForm((prev) => {
-              const licenseWeightKg = event.target.value;
-              const calculated = autoLicenseFeeInput(prev.licenseMaterial, licenseWeightKg);
-              return {
-                ...prev,
-                licenseWeightKg,
-                licenseFee: calculated ?? prev.licenseFee
-              };
-            })
-          }
+          onChange={(event) => setCreateForm((prev) => ({ ...prev, licenseWeightKg: event.target.value }))}
           inputMode="decimal"
         />
         <button
