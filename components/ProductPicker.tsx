@@ -270,7 +270,7 @@ export default function ProductPicker({
 
       <div className="space-y-2">
         {selectedItems.map((item) => {
-          const { details, lineFeeCents, lineWeightGrams } = getLineLicenseTotals(item.quantity, {
+          const { details, lineFeeCents } = getLineLicenseTotals(item.quantity, {
             licenseFeeCents: item.licenseFeeCents ?? licenseFeeMap[item.productId] ?? 0,
             licenseType: item.licenseType ?? licenseTypeMap[item.productId],
             licenseWeightGrams: item.licenseWeightGrams ?? licenseWeightGramsMap[item.productId]
@@ -316,25 +316,14 @@ export default function ProductPicker({
                 <div className="pb-1 text-right">
                   <p className="text-xs text-[#4A4A4A]/65">{t("lineTotal")}</p>
                   <p className="text-sm font-semibold text-[#2F7EA1]">{formatCents(lineTotal)}</p>
-                  {details.hasLicense ? (
+                  {details.hasLicense && includeLicenseFee ? (
                     <div className="space-y-0.5 text-[11px] text-[#4A4A4A]/60">
                       <p>
-                        {includeLicenseFee
-                          ? t("licenseIncluded", {
-                              type: details.licenseType,
-                              amount: formatCents(details.unitFeeCents),
-                              weightKg: (details.licenseWeightGrams / 1000).toFixed(3).replace(".", ",")
-                            })
-                          : t("licenseOptional")}
+                        {t("licenseIncluded", {
+                          type: details.licenseType,
+                          amount: formatCents(details.unitFeeCents)
+                        })}
                       </p>
-                      {includeLicenseFee && item.quantity > 0 ? (
-                        <p>
-                          {t("licenseNetTotal", {
-                            amount: formatCents(lineFeeCents),
-                            totalWeightKg: (lineWeightGrams / 1000).toFixed(3).replace(".", ",")
-                          })}
-                        </p>
-                      ) : null}
                     </div>
                   ) : null}
                 </div>

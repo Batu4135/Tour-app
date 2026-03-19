@@ -233,6 +233,33 @@ function mapRateToLicenseType(rateCentsPerKg: number): "NONE" | "LP" | "LK" | "L
   return "NONE";
 }
 
+function normalizeMaterialText(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function mapRateAndArticleToLicenseType(rateCentsPerKg: number, articleName: string): "NONE" | "LP" | "LK" | "LA" | "LV" {
+  const rateType = mapRateToLicenseType(rateCentsPerKg);
+  if (rateType !== "LK") return rateType;
+
+  const text = normalizeMaterialText(articleName);
+  if (!text) return "LK";
+
+  if (/(^| )alu(minium)?( |$)|(^| )aluminium( |$)/.test(text)) {
+    return "LA";
+  }
+
+  if (/(^| )verbund( |$)|(^| )mehrschicht( |$)|(^| )composite( |$)/.test(text)) {
+    return "LV";
+  }
+
+  return "LK";
+}
+
 function loadLicenseFeesFromOfficialXlsx(filePath: string): Map<string, ParsedLicenseData> {
   const workbook = xlsx.readFile(filePath, { cellDates: false, raw: false });
   const sheetName = workbook.SheetNames[0];
@@ -250,6 +277,7 @@ function loadLicenseFeesFromOfficialXlsx(filePath: string): Map<string, ParsedLi
   }
 
   const header = rows[headerRowIndex].map((cell) => normalizeHeader(String(cell ?? "")));
+  const articleNameIndex = header.findIndex((value) => value === "artikel" || value === "produkt" || value === "bezeichnung");
   const skuIndex = header.findIndex((value) => value === "artikelnr" || value === "artikelnummer" || value === "sku");
   const weightIndex = header.findIndex((value) => value === "gewicht" || value === "weight");
   const rateIndex = header.findIndex(
@@ -265,6 +293,7 @@ function loadLicenseFeesFromOfficialXlsx(filePath: string): Map<string, ParsedLi
     const row = rows[i];
     const sku = normalizeSku(String(row[skuIndex] ?? ""));
     if (!sku) continue;
+    const articleName = articleNameIndex >= 0 ? String(row[articleNameIndex] ?? "") : "";
 
     const weightKg = parseDecimal(String(row[weightIndex] ?? ""));
     const rateEuroPerKg = parseDecimal(String(row[rateIndex] ?? ""));
@@ -272,7 +301,7 @@ function loadLicenseFeesFromOfficialXlsx(filePath: string): Map<string, ParsedLi
 
     const licenseWeightGrams = Math.round(weightKg * 1000);
     const rateCentsPerKg = Math.round(rateEuroPerKg * 100);
-    const licenseType = mapRateToLicenseType(rateCentsPerKg);
+    const licenseType = mapRateAndArticleToLicenseType(rateCentsPerKg, articleName);
     if (licenseType === "NONE") continue;
 
     const licenseFeeCents = Math.round((licenseWeightGrams * rateCentsPerKg) / 1000);

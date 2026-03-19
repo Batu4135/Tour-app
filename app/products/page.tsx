@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Check, Plus, Search, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { formatCents, parseEuroToCents } from "@/lib/formatCents";
-import { LICENSE_TYPES, LicenseType, getLicenseDetails } from "@/lib/license";
+import { LICENSE_TYPES, LicenseType } from "@/lib/license";
 
 type Product = {
   id: number;
@@ -30,6 +30,10 @@ type FlashMessage = {
   type: "success" | "error";
   text: string;
 };
+
+function FieldLabel({ text }: { text: string }) {
+  return <p className="text-[11px] font-medium uppercase tracking-wide text-[#4A4A4A]/60">{text}</p>;
+}
 
 function toPriceInput(value: number | null): string {
   if (value === null) return "";
@@ -243,45 +247,60 @@ export default function ProductsPage() {
           <Plus size={16} />
           {t("createTitle")}
         </p>
-        <input
-          className="input"
-          placeholder={t("createName")}
-          value={createForm.name}
-          onChange={(event) => setCreateForm((prev) => ({ ...prev, name: event.target.value }))}
-        />
-        <input
-          className="input"
-          placeholder={t("createSku")}
-          value={createForm.sku}
-          onChange={(event) => setCreateForm((prev) => ({ ...prev, sku: event.target.value }))}
-        />
-        <input
-          className="input"
-          placeholder={t("createPrice")}
-          value={createForm.defaultPrice}
-          onChange={(event) => setCreateForm((prev) => ({ ...prev, defaultPrice: event.target.value }))}
-          inputMode="decimal"
-        />
-        <select
-          className="input"
-          value={createForm.licenseType}
-          onChange={(event) =>
-            setCreateForm((prev) => ({ ...prev, licenseType: event.target.value as LicenseType }))
-          }
-        >
-          {LICENSE_TYPES.map((licenseType) => (
-            <option key={licenseType} value={licenseType}>
-              {licenseType}
-            </option>
-          ))}
-        </select>
-        <input
-          className="input"
-          placeholder={t("createLicenseWeightKg")}
-          value={createForm.licenseWeightKg}
-          onChange={(event) => setCreateForm((prev) => ({ ...prev, licenseWeightKg: event.target.value }))}
-          inputMode="decimal"
-        />
+        <div className="space-y-1">
+          <FieldLabel text={t("fieldNameShort")} />
+          <input
+            className="input"
+            placeholder={t("createName")}
+            value={createForm.name}
+            onChange={(event) => setCreateForm((prev) => ({ ...prev, name: event.target.value }))}
+          />
+        </div>
+        <div className="space-y-1">
+          <FieldLabel text={t("fieldSkuShort")} />
+          <input
+            className="input"
+            placeholder={t("createSku")}
+            value={createForm.sku}
+            onChange={(event) => setCreateForm((prev) => ({ ...prev, sku: event.target.value }))}
+          />
+        </div>
+        <div className="space-y-1">
+          <FieldLabel text={t("fieldPriceShort")} />
+          <input
+            className="input"
+            placeholder={t("createPrice")}
+            value={createForm.defaultPrice}
+            onChange={(event) => setCreateForm((prev) => ({ ...prev, defaultPrice: event.target.value }))}
+            inputMode="decimal"
+          />
+        </div>
+        <div className="space-y-1">
+          <FieldLabel text={t("fieldLicenseTypeShort")} />
+          <select
+            className="input"
+            value={createForm.licenseType}
+            onChange={(event) =>
+              setCreateForm((prev) => ({ ...prev, licenseType: event.target.value as LicenseType }))
+            }
+          >
+            {LICENSE_TYPES.map((licenseType) => (
+              <option key={licenseType} value={licenseType}>
+                {licenseType}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <FieldLabel text={t("fieldWeightShort")} />
+          <input
+            className="input"
+            placeholder={t("createLicenseWeightKg")}
+            value={createForm.licenseWeightKg}
+            onChange={(event) => setCreateForm((prev) => ({ ...prev, licenseWeightKg: event.target.value }))}
+            inputMode="decimal"
+          />
+        </div>
         <button
           type="submit"
           className="primary-btn w-full"
@@ -345,43 +364,58 @@ export default function ProductsPage() {
           return (
             <article key={product.id} className="card space-y-2 py-3">
               <div className="grid grid-cols-1 gap-2">
-                <input
-                  className="input !py-2"
-                  value={edit.name}
-                  onChange={(event) => setEditField(product.id, "name", event.target.value)}
-                  placeholder={t("createName")}
-                />
-                <input
-                  className="input !py-2"
-                  value={edit.sku}
-                  onChange={(event) => setEditField(product.id, "sku", event.target.value)}
-                  placeholder={t("createSku")}
-                />
-                <input
-                  className="input !py-2"
-                  value={edit.defaultPrice}
-                  onChange={(event) => setEditField(product.id, "defaultPrice", event.target.value)}
-                  placeholder={t("createPrice")}
-                  inputMode="decimal"
-                />
-                <select
-                  className="input !py-2"
-                  value={edit.licenseType}
-                  onChange={(event) => setEditField(product.id, "licenseType", event.target.value as LicenseType)}
-                >
-                  {LICENSE_TYPES.map((licenseType) => (
-                    <option key={licenseType} value={licenseType}>
-                      {licenseType}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  className="input !py-2"
-                  value={edit.licenseWeightKg}
-                  onChange={(event) => setEditField(product.id, "licenseWeightKg", event.target.value)}
-                  placeholder={t("createLicenseWeightKg")}
-                  inputMode="decimal"
-                />
+                <div className="space-y-1">
+                  <FieldLabel text={t("fieldNameShort")} />
+                  <input
+                    className="input !py-2"
+                    value={edit.name}
+                    onChange={(event) => setEditField(product.id, "name", event.target.value)}
+                    placeholder={t("createName")}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <FieldLabel text={t("fieldSkuShort")} />
+                  <input
+                    className="input !py-2"
+                    value={edit.sku}
+                    onChange={(event) => setEditField(product.id, "sku", event.target.value)}
+                    placeholder={t("createSku")}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <FieldLabel text={t("fieldPriceShort")} />
+                  <input
+                    className="input !py-2"
+                    value={edit.defaultPrice}
+                    onChange={(event) => setEditField(product.id, "defaultPrice", event.target.value)}
+                    placeholder={t("createPrice")}
+                    inputMode="decimal"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <FieldLabel text={t("fieldLicenseTypeShort")} />
+                  <select
+                    className="input !py-2"
+                    value={edit.licenseType}
+                    onChange={(event) => setEditField(product.id, "licenseType", event.target.value as LicenseType)}
+                  >
+                    {LICENSE_TYPES.map((licenseType) => (
+                      <option key={licenseType} value={licenseType}>
+                        {licenseType}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <FieldLabel text={t("fieldWeightShort")} />
+                  <input
+                    className="input !py-2"
+                    value={edit.licenseWeightKg}
+                    onChange={(event) => setEditField(product.id, "licenseWeightKg", event.target.value)}
+                    placeholder={t("createLicenseWeightKg")}
+                    inputMode="decimal"
+                  />
+                </div>
               </div>
 
               <label className="inline-flex items-center gap-2 text-sm text-[#4A4A4A]/80">
@@ -394,21 +428,6 @@ export default function ProductsPage() {
               </label>
 
               <div className="flex items-center justify-between gap-2">
-                {(() => {
-                  const details = getLicenseDetails({
-                    licenseType: edit.licenseType,
-                    licenseWeightGrams: parseWeightInputToGrams(edit.licenseWeightKg),
-                    licenseFeeCents: product.licenseFeeCents
-                  });
-                  return (
-                    <p className="text-xs text-[#4A4A4A]/65">
-                      {edit.defaultPrice.trim() ? formatCents(parseEuroToCents(edit.defaultPrice)) : "-"} /{" "}
-                      {details.hasLicense
-                        ? `${details.licenseType} ${toWeightInput(details.licenseWeightGrams)} kg - ${formatCents(details.unitFeeCents)}`
-                        : t("licenseNone")}
-                    </p>
-                  );
-                })()}
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
