@@ -173,6 +173,7 @@
                          "fieldPriceShort":  "\u20AC",
                          "fieldLicenseTypeShort":  "Lisans tipi",
                          "fieldWeightShort":  "kg",
+                         "licenseSectionTitle":  "Lisans",
                          "licenseFeeLabel":  "Lisans",
                          "licenseNone":  "Lisans yok",
                          "createAction":  "Ürün ekle",

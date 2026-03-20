@@ -167,6 +167,7 @@ function hasProductChanges(product: Product, edit: EditFields): boolean {
 export default function ProductsPage() {
   const t = useTranslations("productsPage");
   const saveIntentRef = useRef<number | null>(null);
+  const productCardRefs = useRef<Record<number, HTMLElement | null>>({});
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
@@ -179,7 +180,7 @@ export default function ProductsPage() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [savedProductId, setSavedProductId] = useState<number | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const [openProducts, setOpenProducts] = useState<Record<number, boolean>>({});
+  const [openProductId, setOpenProductId] = useState<number | null>(null);
   const [createForm, setCreateForm] = useState({
     name: "",
     sku: "",
@@ -213,13 +214,7 @@ export default function ProductsPage() {
       return next;
     });
 
-    setOpenProducts((prev) => {
-      const next: Record<number, boolean> = {};
-      for (const product of products) {
-        next[product.id] = prev[product.id] ?? false;
-      }
-      return next;
-    });
+    setOpenProductId((prev) => (prev !== null && products.some((product) => product.id === prev) ? prev : null));
   }, [products]);
 
   const suggestions = useMemo(() => products.slice(0, 8), [products]);
@@ -240,8 +235,37 @@ export default function ProductsPage() {
     }
   }
 
-  function toggleProduct(productId: number) {
-    setOpenProducts((prev) => ({ ...prev, [productId]: !prev[productId] }));
+  function resetProductEdit(product: Product) {
+    setSavedProductId((prev) => (prev === product.id ? null : prev));
+    setEdits((prev) => {
+      const current = prev[product.id] ?? toEditFields(product);
+      if (!hasProductChanges(product, current)) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        [product.id]: toEditFields(product)
+      };
+    });
+  }
+
+  function toggleProduct(product: Product) {
+    setOpenProductId((prev) => {
+      if (prev === product.id) {
+        resetProductEdit(product);
+        return null;
+      }
+
+      if (prev !== null) {
+        const previousProduct = products.find((entry) => entry.id === prev);
+        if (previousProduct) {
+          resetProductEdit(previousProduct);
+        }
+      }
+
+      return product.id;
+    });
   }
 
   function setEditField(productId: number, field: keyof EditFields, value: string | boolean) {
@@ -266,29 +290,25 @@ export default function ProductsPage() {
   }
 
   function handleEditBlur(product: Product, event: FocusEvent<HTMLElement>) {
-    const nextTarget = event.relatedTarget as HTMLElement | null;
-    if (nextTarget?.dataset?.saveProductId === String(product.id)) {
+    if (saveIntentRef.current === product.id || savingId === product.id || deletingId === product.id) {
+      clearSaveIntent(product.id);
+      return;
+    }
+
+    const card = productCardRefs.current[product.id];
+    const nextTarget = event.relatedTarget as Node | null;
+    if (card && nextTarget && card.contains(nextTarget)) {
       return;
     }
 
     window.setTimeout(() => {
-      if (saveIntentRef.current === product.id || savingId === product.id || deletingId === product.id) {
-        clearSaveIntent(product.id);
+      const activeElement = document.activeElement;
+      const activeInsideCard = Boolean(card && activeElement && card.contains(activeElement));
+      if (activeInsideCard || saveIntentRef.current === product.id || savingId === product.id || deletingId === product.id) {
         return;
       }
 
-      setEdits((prev) => {
-        const current = prev[product.id] ?? toEditFields(product);
-        if (!hasProductChanges(product, current)) {
-          return prev;
-        }
-
-        return {
-          ...prev,
-          [product.id]: toEditFields(product)
-        };
-      });
-      setSavedProductId((prev) => (prev === product.id ? null : prev));
+      resetProductEdit(product);
     }, 0);
   }
 
@@ -435,6 +455,9 @@ export default function ProductsPage() {
               />
             </div>
 
+            <p className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#8A6A1E]">
+              {t("licenseSectionTitle")}
+            </p>
             <div className="rounded-2xl border border-[#E7D2A2] bg-[#FFF7E8] p-2">
               <div className="grid grid-cols-3 gap-1">
                 <select
@@ -530,7 +553,7 @@ export default function ProductsPage() {
       <div className="space-y-2">
         {products.map((product) => {
           const edit = edits[product.id] ?? toEditFields(product);
-          const isOpen = Boolean(openProducts[product.id]);
+          const isOpen = openProductId === product.id;
           const isSaving = savingId === product.id;
           const isDeleting = deletingId === product.id;
           const isDirty = hasProductChanges(product, edit);
@@ -539,11 +562,17 @@ export default function ProductsPage() {
           const editCalculatedFeeCents = calculateLicenseFeeCents(edit.licenseType, editWeightGrams);
 
           return (
-            <article key={product.id} className="card space-y-2 py-3">
+            <article
+              key={product.id}
+              className="card space-y-2 py-3"
+              ref={(node) => {
+                productCardRefs.current[product.id] = node;
+              }}
+            >
               <button
                 type="button"
                 className="flex w-full items-start justify-between gap-3 text-left"
-                onClick={() => toggleProduct(product.id)}
+                onClick={() => toggleProduct(product)}
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold">{edit.name || product.name}</p>
@@ -582,6 +611,9 @@ export default function ProductsPage() {
                     />
                   </div>
 
+                  <p className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#8A6A1E]">
+                    {t("licenseSectionTitle")}
+                  </p>
                   <div className="rounded-2xl border border-[#E7D2A2] bg-[#FFF7E8] p-2">
                     <div className="grid grid-cols-3 gap-1">
                       <select
