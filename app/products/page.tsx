@@ -66,6 +66,18 @@ function parseWeightInputToGrams(raw: string): number {
   return Math.round(value * 1000);
 }
 
+function getLicenseRateCentsPerKg(type: LicenseType): number {
+  if (type === "LP") return 25;
+  if (type === "LK" || type === "LA" || type === "LV") return 99;
+  return 0;
+}
+
+function calculateLicenseFeeCents(type: LicenseType, weightGrams: number): number {
+  const rate = getLicenseRateCentsPerKg(type);
+  if (rate <= 0 || weightGrams <= 0) return 0;
+  return Math.round((weightGrams * rate) / 1000);
+}
+
 export default function ProductsPage() {
   const t = useTranslations("productsPage");
   const [query, setQuery] = useState("");
@@ -235,6 +247,10 @@ export default function ProductsPage() {
     }
   }
 
+  const createWeightGrams = parseWeightInputToGrams(createForm.licenseWeightKg);
+  const createRateCentsPerKg = getLicenseRateCentsPerKg(createForm.licenseType);
+  const createCalculatedFeeCents = calculateLicenseFeeCents(createForm.licenseType, createWeightGrams);
+
   return (
     <section className="space-y-4">
       <header className="space-y-1">
@@ -260,20 +276,25 @@ export default function ProductsPage() {
           <FieldLabel text={t("fieldSkuShort")} />
           <input
             className="input"
-            placeholder={t("createSku")}
+            placeholder=""
             value={createForm.sku}
             onChange={(event) => setCreateForm((prev) => ({ ...prev, sku: event.target.value }))}
           />
         </div>
         <div className="space-y-1">
           <FieldLabel text={t("fieldPriceShort")} />
-          <input
-            className="input"
-            placeholder={t("createPrice")}
-            value={createForm.defaultPrice}
-            onChange={(event) => setCreateForm((prev) => ({ ...prev, defaultPrice: event.target.value }))}
-            inputMode="decimal"
-          />
+          <div className="relative">
+            <input
+              className="input pr-8"
+              placeholder=""
+              value={createForm.defaultPrice}
+              onChange={(event) => setCreateForm((prev) => ({ ...prev, defaultPrice: event.target.value }))}
+              inputMode="decimal"
+            />
+            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-[#4A4A4A]/70">
+              €
+            </span>
+          </div>
         </div>
         <div className="space-y-1">
           <FieldLabel text={t("fieldLicenseTypeShort")} />
@@ -290,16 +311,24 @@ export default function ProductsPage() {
               </option>
             ))}
           </select>
+          <p className="text-xs text-[#4A4A4A]/65">
+            {createForm.licenseType === "NONE" || createRateCentsPerKg <= 0
+              ? t("licenseNone")
+              : `${createForm.licenseType} - ${formatCents(createRateCentsPerKg)} / kg`}
+          </p>
         </div>
         <div className="space-y-1">
           <FieldLabel text={t("fieldWeightShort")} />
           <input
             className="input"
-            placeholder={t("createLicenseWeightKg")}
+            placeholder=""
             value={createForm.licenseWeightKg}
             onChange={(event) => setCreateForm((prev) => ({ ...prev, licenseWeightKg: event.target.value }))}
             inputMode="decimal"
           />
+          <p className="text-xs text-[#4A4A4A]/65">
+            {createCalculatedFeeCents > 0 ? `${t("licenseFeeLabel")}: ${formatCents(createCalculatedFeeCents)}` : t("licenseNone")}
+          </p>
         </div>
         <button
           type="submit"
@@ -359,6 +388,9 @@ export default function ProductsPage() {
       <div className="space-y-2">
         {products.map((product) => {
           const edit = edits[product.id] ?? toEditFields(product);
+          const editWeightGrams = parseWeightInputToGrams(edit.licenseWeightKg);
+          const editRateCentsPerKg = getLicenseRateCentsPerKg(edit.licenseType);
+          const editCalculatedFeeCents = calculateLicenseFeeCents(edit.licenseType, editWeightGrams);
           const isSaving = savingId === product.id;
           const isDeleting = deletingId === product.id;
           return (
@@ -379,18 +411,23 @@ export default function ProductsPage() {
                     className="input !py-2"
                     value={edit.sku}
                     onChange={(event) => setEditField(product.id, "sku", event.target.value)}
-                    placeholder={t("createSku")}
+                    placeholder=""
                   />
                 </div>
                 <div className="space-y-1">
                   <FieldLabel text={t("fieldPriceShort")} />
-                  <input
-                    className="input !py-2"
-                    value={edit.defaultPrice}
-                    onChange={(event) => setEditField(product.id, "defaultPrice", event.target.value)}
-                    placeholder={t("createPrice")}
-                    inputMode="decimal"
-                  />
+                  <div className="relative">
+                    <input
+                      className="input !py-2 pr-8"
+                      value={edit.defaultPrice}
+                      onChange={(event) => setEditField(product.id, "defaultPrice", event.target.value)}
+                      placeholder=""
+                      inputMode="decimal"
+                    />
+                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-[#4A4A4A]/70">
+                      €
+                    </span>
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <FieldLabel text={t("fieldLicenseTypeShort")} />
@@ -405,6 +442,11 @@ export default function ProductsPage() {
                       </option>
                     ))}
                   </select>
+                  <p className="text-xs text-[#4A4A4A]/65">
+                    {edit.licenseType === "NONE" || editRateCentsPerKg <= 0
+                      ? t("licenseNone")
+                      : `${edit.licenseType} - ${formatCents(editRateCentsPerKg)} / kg`}
+                  </p>
                 </div>
                 <div className="space-y-1">
                   <FieldLabel text={t("fieldWeightShort")} />
@@ -412,9 +454,12 @@ export default function ProductsPage() {
                     className="input !py-2"
                     value={edit.licenseWeightKg}
                     onChange={(event) => setEditField(product.id, "licenseWeightKg", event.target.value)}
-                    placeholder={t("createLicenseWeightKg")}
+                    placeholder=""
                     inputMode="decimal"
                   />
+                  <p className="text-xs text-[#4A4A4A]/65">
+                    {editCalculatedFeeCents > 0 ? `${t("licenseFeeLabel")}: ${formatCents(editCalculatedFeeCents)}` : t("licenseNone")}
+                  </p>
                 </div>
               </div>
 

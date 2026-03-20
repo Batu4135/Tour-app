@@ -17,9 +17,11 @@ type ParsedRow = {
   defaultPriceCents: number;
 };
 
+type LicenseType = "NONE" | "LP" | "LK" | "LA" | "LV";
+
 type ParsedLicenseData = {
   licenseFeeCents: number;
-  licenseType: "NONE" | "LP" | "LK" | "LA" | "LV";
+  licenseType: LicenseType;
   licenseWeightGrams: number;
 };
 
@@ -37,9 +39,7 @@ function normalizeLicenseLookupSku(value: string): string {
 
 function getLicenseLookupKeys(rawSku: string): string[] {
   const normalized = normalizeLicenseLookupSku(rawSku);
-  const keys = new Set<string>([normalized]);
-  const normalizedWithoutLeadingZeros = normalized.replace(/^0+/, "") || "0";
-  keys.add(normalizedWithoutLeadingZeros);
+  const keys = new Set<string>([normalized, normalized.replace(/^0+/, "") || "0"]);
 
   const suffixLetters = normalized.match(/^(\d{4,})[A-Z]+$/);
   if (suffixLetters) {
@@ -77,7 +77,6 @@ function parseCsvLine(line: string, delimiter: string): string[] {
 
   for (let i = 0; i < line.length; i += 1) {
     const char = line[i];
-
     if (char === '"') {
       if (inQuotes && line[i + 1] === '"') {
         current += '"';
@@ -87,13 +86,11 @@ function parseCsvLine(line: string, delimiter: string): string[] {
       }
       continue;
     }
-
     if (char === delimiter && !inQuotes) {
       cells.push(current.trim());
       current = "";
       continue;
     }
-
     current += char;
   }
 
@@ -109,7 +106,11 @@ function normalizeHeader(value: string): string {
     .replace(/ä/g, "ae")
     .replace(/ö/g, "oe")
     .replace(/ü/g, "ue")
-    .replace(/ß/g, "ss");
+    .replace(/ß/g, "ss")
+    .replace(/Ã¤/g, "ae")
+    .replace(/Ã¶/g, "oe")
+    .replace(/Ã¼/g, "ue")
+    .replace(/ÃŸ/g, "ss");
 }
 
 function findHeaderIndexes(headers: string[]): HeaderIndexes {
@@ -124,16 +125,10 @@ function findHeaderIndexes(headers: string[]): HeaderIndexes {
   );
 
   if (nameIndex < 0 || skuIndex < 0 || priceIndex < 0) {
-    throw new Error(
-      "CSV Header ungueltig. Erwartet Spalten: name, artikelnummer, preis (Reihenfolge egal)."
-    );
+    throw new Error("CSV Header ungueltig. Erwartet Spalten: name, artikelnummer, preis (Reihenfolge egal).");
   }
 
-  return {
-    name: nameIndex,
-    sku: skuIndex,
-    price: priceIndex
-  };
+  return { name: nameIndex, sku: skuIndex, price: priceIndex };
 }
 
 function parsePriceToCents(raw: string): number | null {
@@ -171,23 +166,6 @@ function parseDecimal(raw: string): number | null {
   return value;
 }
 
-function parseWeightKgToGrams(raw: string): number | null {
-  const cleaned = raw.replace(/\s/g, "").trim();
-  if (!cleaned) return null;
-  const normalized = cleaned.replace(",", ".");
-  const value = Number.parseFloat(normalized);
-  if (!Number.isFinite(value) || value < 0) return null;
-  return Math.round(value * 1000);
-}
-
-function parseIntegerCents(raw: string): number | null {
-  const cleaned = raw.replace(/[^\d\-]/g, "");
-  if (!cleaned) return null;
-  const parsed = Number.parseInt(cleaned, 10);
-  if (!Number.isFinite(parsed) || parsed < 0) return null;
-  return parsed;
-}
-
 function decodeCsv(buffer: Buffer): string {
   const utf8 = buffer.toString("utf8").replace(/^\uFEFF/, "");
   if (utf8.includes("\uFFFD")) {
@@ -211,8 +189,9 @@ async function resolveCsvPath(): Promise<string> {
 const DEFAULT_OFFICIAL_LICENSE_PATHS = [
   process.env.OFFICIAL_LICENSE_XLSX_PATH?.trim() || "",
   "c:\\Users\\batu4\\Downloads\\ARTIKELLISTE MIT LIZENSGEBÜHREN (1).xlsx",
+  "c:\\Users\\batu4\\Downloads\\ARTIKELLISTE MIT LIZENSGEBÃœHREN (1).xlsx",
   path.join(process.cwd(), "data", "ARTIKELLISTE MIT LIZENSGEBÜHREN (1).xlsx"),
-  path.join(process.cwd(), "data", "license-fees.xlsx")
+  path.join(process.cwd(), "data", "ARTIKELLISTE MIT LIZENSGEBÃœHREN (1).xlsx")
 ].filter((value) => value.length > 0);
 
 async function resolveOfficialLicensePath(): Promise<string | null> {
@@ -227,37 +206,32 @@ async function resolveOfficialLicensePath(): Promise<string | null> {
   return null;
 }
 
-function mapRateToLicenseType(rateCentsPerKg: number): "NONE" | "LP" | "LK" | "LA" | "LV" {
+function mapRateToLicenseType(rateCentsPerKg: number): LicenseType {
   if (rateCentsPerKg === 25) return "LP";
   if (rateCentsPerKg === 99) return "LK";
   return "NONE";
 }
 
-function normalizeMaterialText(value: string): string {
+function normalizeOfficialTypeCell(value: string): string {
   return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "")
+    .replace(/Ä/g, "AE")
+    .replace(/Ö/g, "OE")
+    .replace(/Ü/g, "UE")
+    .replace(/ß/g, "SS");
 }
 
-function mapRateAndArticleToLicenseType(rateCentsPerKg: number, articleName: string): "NONE" | "LP" | "LK" | "LA" | "LV" {
-  const rateType = mapRateToLicenseType(rateCentsPerKg);
-  if (rateType !== "LK") return rateType;
-
-  const text = normalizeMaterialText(articleName);
-  if (!text) return "LK";
-
-  if (/(^| )alu(minium)?( |$)|(^| )aluminium( |$)/.test(text)) {
-    return "LA";
-  }
-
-  if (/(^| )verbund( |$)|(^| )mehrschicht( |$)|(^| )composite( |$)/.test(text)) {
-    return "LV";
-  }
-
-  return "LK";
+function mapOfficialLicenseTypeFromCell(value: string): LicenseType | null {
+  const normalized = normalizeOfficialTypeCell(value);
+  if (!normalized) return null;
+  if (normalized === "LP" || normalized.includes("PAPIER")) return "LP";
+  if (normalized === "LK" || normalized.includes("KUNSTSTOFF")) return "LK";
+  if (normalized === "LA" || normalized.includes("ALU")) return "LA";
+  if (normalized === "LV" || normalized.includes("VERBUND")) return "LV";
+  if (normalized === "NONE" || normalized === "KEINE") return "NONE";
+  return null;
 }
 
 function loadLicenseFeesFromOfficialXlsx(filePath: string): Map<string, ParsedLicenseData> {
@@ -277,11 +251,18 @@ function loadLicenseFeesFromOfficialXlsx(filePath: string): Map<string, ParsedLi
   }
 
   const header = rows[headerRowIndex].map((cell) => normalizeHeader(String(cell ?? "")));
-  const articleNameIndex = header.findIndex((value) => value === "artikel" || value === "produkt" || value === "bezeichnung");
   const skuIndex = header.findIndex((value) => value === "artikelnr" || value === "artikelnummer" || value === "sku");
   const weightIndex = header.findIndex((value) => value === "gewicht" || value === "weight");
   const rateIndex = header.findIndex(
     (value) => value === "lizensgeb" || value === "lizenzgeb" || value === "lizenzgebuehr" || value === "licensefee"
+  );
+  const licenseTypeIndex = header.findIndex(
+    (value) =>
+      value === "lizenztyp" ||
+      value === "lizenzart" ||
+      value === "lizenstyp" ||
+      value === "material" ||
+      value === "stoff"
   );
 
   if (skuIndex < 0 || weightIndex < 0 || rateIndex < 0) {
@@ -293,7 +274,6 @@ function loadLicenseFeesFromOfficialXlsx(filePath: string): Map<string, ParsedLi
     const row = rows[i];
     const sku = normalizeSku(String(row[skuIndex] ?? ""));
     if (!sku) continue;
-    const articleName = articleNameIndex >= 0 ? String(row[articleNameIndex] ?? "") : "";
 
     const weightKg = parseDecimal(String(row[weightIndex] ?? ""));
     const rateEuroPerKg = parseDecimal(String(row[rateIndex] ?? ""));
@@ -301,7 +281,12 @@ function loadLicenseFeesFromOfficialXlsx(filePath: string): Map<string, ParsedLi
 
     const licenseWeightGrams = Math.round(weightKg * 1000);
     const rateCentsPerKg = Math.round(rateEuroPerKg * 100);
-    const licenseType = mapRateAndArticleToLicenseType(rateCentsPerKg, articleName);
+    const explicitType =
+      licenseTypeIndex >= 0 ? mapOfficialLicenseTypeFromCell(String(row[licenseTypeIndex] ?? "")) : null;
+    const rateType = mapRateToLicenseType(rateCentsPerKg);
+
+    // Strikt datenbasiert: nur offizieller Typ oder eindeutig ueber 0.25 EUR/kg => LP.
+    const licenseType: LicenseType = explicitType ?? (rateType === "LP" ? "LP" : "NONE");
     if (licenseType === "NONE") continue;
 
     const licenseFeeCents = Math.round((licenseWeightGrams * rateCentsPerKg) / 1000);
@@ -310,7 +295,6 @@ function loadLicenseFeesFromOfficialXlsx(filePath: string): Map<string, ParsedLi
       licenseWeightGrams,
       licenseFeeCents
     });
-
     map.set(normalizeLicenseLookupSku(sku), persisted);
   }
 
@@ -319,55 +303,12 @@ function loadLicenseFeesFromOfficialXlsx(filePath: string): Map<string, ParsedLi
 
 async function loadLicenseFeesBySku(): Promise<Map<string, ParsedLicenseData>> {
   const officialPath = await resolveOfficialLicensePath();
-  if (officialPath) {
-    return loadLicenseFeesFromOfficialXlsx(officialPath);
-  }
-
-  const licensePath = path.join(process.cwd(), "data", "license-fees.csv");
-  try {
-    const raw = await fs.readFile(licensePath);
-    const content = decodeCsv(raw);
-    const lines = content
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0);
-    if (lines.length < 2) return new Map();
-
-    const delimiter = detectDelimiter(content.split(/\r?\n/)[0] ?? lines[0]);
-    const header = parseCsvLine(lines[0], delimiter).map(normalizeHeader);
-    const skuIndex = header.findIndex((cell) => cell === "sku" || cell === "artikelnummer");
-    const feeIndex = header.findIndex((cell) => cell === "licensefeecents" || cell === "lizenzgebuehrcents");
-    const typeIndex = header.findIndex((cell) => cell === "licensetype" || cell === "lizenztyp" || cell === "lizenzart");
-    const weightKgIndex = header.findIndex(
-      (cell) => cell === "licenseweightkg" || cell === "lizenzgewichtkg" || cell === "weightkg"
+  if (!officialPath) {
+    throw new Error(
+      "Offizielle Lizenz-Excel wurde nicht gefunden. Bitte OFFICIAL_LICENSE_XLSX_PATH setzen oder Datei in data/ ablegen."
     );
-    const weightGramsIndex = header.findIndex(
-      (cell) => cell === "licenseweightgrams" || cell === "lizenzgewichtgrams" || cell === "weightgrams"
-    );
-
-    if (skuIndex < 0) return new Map();
-
-    const map = new Map<string, ParsedLicenseData>();
-    for (let i = 1; i < lines.length; i += 1) {
-      const cells = parseCsvLine(lines[i], delimiter);
-      const sku = normalizeSku(cells[skuIndex] ?? "");
-      if (!sku) continue;
-
-      const type = typeIndex >= 0 ? (cells[typeIndex] ?? "").trim() : "";
-      const weightGramsFromKg = weightKgIndex >= 0 ? parseWeightKgToGrams(cells[weightKgIndex] ?? "") : null;
-      const weightGramsDirect = weightGramsIndex >= 0 ? parseIntegerCents(cells[weightGramsIndex] ?? "") : null;
-
-      const persisted = buildLicensePersistence({
-        licenseType: type || undefined,
-        licenseWeightGrams: weightGramsDirect ?? weightGramsFromKg ?? undefined
-      });
-
-      map.set(normalizeLicenseLookupSku(sku), persisted);
-    }
-    return map;
-  } catch {
-    return new Map();
   }
+  return loadLicenseFeesFromOfficialXlsx(officialPath);
 }
 
 function resolveLicenseForSku(sku: string, map: Map<string, ParsedLicenseData>): ParsedLicenseData {
@@ -375,7 +316,6 @@ function resolveLicenseForSku(sku: string, map: Map<string, ParsedLicenseData>):
     const found = map.get(key);
     if (found) return found;
   }
-
   return buildLicensePersistence({ licenseFeeCents: 0, licenseType: "NONE", licenseWeightGrams: 0 });
 }
 
@@ -409,12 +349,7 @@ function parseRows(lines: string[], delimiter: string, indexes: HeaderIndexes): 
       continue;
     }
 
-    validRows.push({
-      lineNumber,
-      name,
-      sku,
-      defaultPriceCents: priceCents
-    });
+    validRows.push({ lineNumber, name, sku, defaultPriceCents: priceCents });
   }
 
   return { validRows, invalidRows };
@@ -437,7 +372,6 @@ async function main() {
   const headers = parseCsvLine(lines[0], delimiter);
   const indexes = findHeaderIndexes(headers);
   const { validRows, invalidRows } = parseRows(lines, delimiter, indexes);
-
   if (validRows.length === 0) {
     throw new Error("Keine gueltigen CSV-Zeilen zum Import gefunden.");
   }
@@ -451,10 +385,9 @@ async function main() {
 
   const existing = await prisma.product.findMany({
     where: { sku: { in: uniqueRows.map((row) => normalizeSku(row.sku)) } },
-    select: { sku: true, licenseType: true }
+    select: { sku: true }
   });
   const existingSet = new Set(existing.map((item) => item.sku));
-  const existingTypeBySku = new Map(existing.map((item) => [normalizeLicenseLookupSku(item.sku), item.licenseType]));
 
   let created = 0;
   let updated = 0;
@@ -463,9 +396,6 @@ async function main() {
     const normalizedSku = normalizeSku(row.sku);
     const existed = existingSet.has(normalizedSku);
     const license = resolveLicenseForSku(normalizedSku, licenseFeesBySku);
-    const existingType = existingTypeBySku.get(normalizeLicenseLookupSku(normalizedSku));
-    const licenseType =
-      license.licenseType === "LK" && (existingType === "LA" || existingType === "LV") ? existingType : license.licenseType;
 
     await prisma.product.upsert({
       where: { sku: normalizedSku },
@@ -474,7 +404,7 @@ async function main() {
         sku: normalizedSku,
         defaultPriceCents: row.defaultPriceCents,
         licenseFeeCents: license.licenseFeeCents,
-        licenseType,
+        licenseType: license.licenseType,
         licenseWeightGrams: license.licenseWeightGrams,
         isActive: true
       },
@@ -482,17 +412,14 @@ async function main() {
         name: row.name,
         defaultPriceCents: row.defaultPriceCents,
         licenseFeeCents: license.licenseFeeCents,
-        licenseType,
+        licenseType: license.licenseType,
         licenseWeightGrams: license.licenseWeightGrams,
         isActive: true
       }
     });
 
-    if (existed) {
-      updated += 1;
-    } else {
-      created += 1;
-    }
+    if (existed) updated += 1;
+    else created += 1;
   }
 
   if (invalidRows.length > 0) {
