@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Plus, Search, Trash2 } from "lucide-react";
+import { Check, Plus, Search, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { formatCents, parseEuroToCents } from "@/lib/formatCents";
 import { LICENSE_TYPES, LicenseType } from "@/lib/license";
@@ -30,6 +30,10 @@ type FlashMessage = {
   type: "success" | "error";
   text: string;
 };
+
+function FieldLabel({ text }: { text: string }) {
+  return <p className="text-[11px] font-medium uppercase tracking-wide text-[#4A4A4A]/60">{text}</p>;
+}
 
 function toPriceInput(value: number | null): string {
   if (value === null) return "";
@@ -172,8 +176,8 @@ export default function ProductsPage() {
     }
   }
 
-  async function onSave(productId: number, options?: { silentSuccess?: boolean; edit?: EditFields }) {
-    const edit = options?.edit ?? edits[productId];
+  async function onSave(productId: number) {
+    const edit = edits[productId];
     if (!edit) return;
     if (!edit.name.trim() || !edit.sku.trim()) {
       setFlash({ type: "error", text: t("requiredFields") });
@@ -182,7 +186,7 @@ export default function ProductsPage() {
 
     setSavingId(productId);
     setError("");
-    if (!options?.silentSuccess) setFlash(null);
+    setFlash(null);
     try {
       const response = await fetch(`/api/products/${productId}`, {
         method: "PATCH",
@@ -196,18 +200,11 @@ export default function ProductsPage() {
           isActive: edit.isActive
         })
       });
-      const payload = (await response.json()) as { error?: string; product?: Product };
+      const payload = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(payload.error ?? t("saveError"));
 
-      if (payload.product) {
-        const updatedProduct = payload.product;
-        setProducts((prev) => prev.map((product) => (product.id === productId ? updatedProduct : product)));
-        setEdits((prev) => ({ ...prev, [productId]: toEditFields(updatedProduct) }));
-      }
-
-      if (!options?.silentSuccess) {
-        setFlash({ type: "success", text: t("updateSuccess") });
-      }
+      setFlash({ type: "success", text: t("updateSuccess") });
+      await loadProducts();
     } catch (saveError) {
       const message = saveError instanceof Error ? saveError.message : t("saveError");
       setError(message);
@@ -215,12 +212,6 @@ export default function ProductsPage() {
     } finally {
       setSavingId(null);
     }
-  }
-
-  function onEditBlur(productId: number) {
-    window.setTimeout(() => {
-      void onSave(productId, { silentSuccess: true });
-    }, 0);
   }
 
   async function onDelete(productId: number) {
@@ -256,48 +247,60 @@ export default function ProductsPage() {
           <Plus size={16} />
           {t("createTitle")}
         </p>
-        <input
-          className="input"
-          placeholder={t("createName")}
-          value={createForm.name}
-          onChange={(event) => setCreateForm((prev) => ({ ...prev, name: event.target.value }))}
-        />
-        <input
-          className="input"
-          placeholder={t("fieldSkuShort")}
-          value={createForm.sku}
-          onChange={(event) => setCreateForm((prev) => ({ ...prev, sku: event.target.value }))}
-        />
-        <div className="relative">
+        <div className="space-y-1">
+          <FieldLabel text={t("fieldNameShort")} />
           <input
-            className="input pr-8"
-            placeholder={t("fieldPriceShort")}
+            className="input"
+            placeholder={t("createName")}
+            value={createForm.name}
+            onChange={(event) => setCreateForm((prev) => ({ ...prev, name: event.target.value }))}
+          />
+        </div>
+        <div className="space-y-1">
+          <FieldLabel text={t("fieldSkuShort")} />
+          <input
+            className="input"
+            placeholder={t("createSku")}
+            value={createForm.sku}
+            onChange={(event) => setCreateForm((prev) => ({ ...prev, sku: event.target.value }))}
+          />
+        </div>
+        <div className="space-y-1">
+          <FieldLabel text={t("fieldPriceShort")} />
+          <input
+            className="input"
+            placeholder={t("createPrice")}
             value={createForm.defaultPrice}
             onChange={(event) => setCreateForm((prev) => ({ ...prev, defaultPrice: event.target.value }))}
             inputMode="decimal"
           />
-          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-[#4A4A4A]/65">
-            EUR
-          </span>
         </div>
-        <select
-          className="input"
-          value={createForm.licenseType}
-          onChange={(event) => setCreateForm((prev) => ({ ...prev, licenseType: event.target.value as LicenseType }))}
-        >
-          {LICENSE_TYPES.map((licenseType) => (
-            <option key={licenseType} value={licenseType}>
-              {licenseType}
-            </option>
-          ))}
-        </select>
-        <input
-          className="input"
-          placeholder={t("fieldWeightShort")}
-          value={createForm.licenseWeightKg}
-          onChange={(event) => setCreateForm((prev) => ({ ...prev, licenseWeightKg: event.target.value }))}
-          inputMode="decimal"
-        />
+        <div className="space-y-1">
+          <FieldLabel text={t("fieldLicenseTypeShort")} />
+          <select
+            className="input"
+            value={createForm.licenseType}
+            onChange={(event) =>
+              setCreateForm((prev) => ({ ...prev, licenseType: event.target.value as LicenseType }))
+            }
+          >
+            {LICENSE_TYPES.map((licenseType) => (
+              <option key={licenseType} value={licenseType}>
+                {licenseType}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <FieldLabel text={t("fieldWeightShort")} />
+          <input
+            className="input"
+            placeholder={t("createLicenseWeightKg")}
+            value={createForm.licenseWeightKg}
+            onChange={(event) => setCreateForm((prev) => ({ ...prev, licenseWeightKg: event.target.value }))}
+            inputMode="decimal"
+          />
+        </div>
         <button
           type="submit"
           className="primary-btn w-full"
@@ -361,80 +364,94 @@ export default function ProductsPage() {
           return (
             <article key={product.id} className="card space-y-2 py-3">
               <div className="grid grid-cols-1 gap-2">
-                <input
-                  className="input !py-2"
-                  value={edit.name}
-                  onChange={(event) => setEditField(product.id, "name", event.target.value)}
-                  onBlur={() => onEditBlur(product.id)}
-                  placeholder={t("createName")}
-                />
-                <input
-                  className="input !py-2"
-                  value={edit.sku}
-                  onChange={(event) => setEditField(product.id, "sku", event.target.value)}
-                  onBlur={() => onEditBlur(product.id)}
-                  placeholder={t("fieldSkuShort")}
-                />
-                <div className="relative">
+                <div className="space-y-1">
+                  <FieldLabel text={t("fieldNameShort")} />
                   <input
-                    className="input !py-2 pr-8"
+                    className="input !py-2"
+                    value={edit.name}
+                    onChange={(event) => setEditField(product.id, "name", event.target.value)}
+                    placeholder={t("createName")}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <FieldLabel text={t("fieldSkuShort")} />
+                  <input
+                    className="input !py-2"
+                    value={edit.sku}
+                    onChange={(event) => setEditField(product.id, "sku", event.target.value)}
+                    placeholder={t("createSku")}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <FieldLabel text={t("fieldPriceShort")} />
+                  <input
+                    className="input !py-2"
                     value={edit.defaultPrice}
                     onChange={(event) => setEditField(product.id, "defaultPrice", event.target.value)}
-                    onBlur={() => onEditBlur(product.id)}
-                    placeholder={t("fieldPriceShort")}
+                    placeholder={t("createPrice")}
                     inputMode="decimal"
                   />
-                  <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-[#4A4A4A]/65">
-                    EUR
-                  </span>
                 </div>
-                <select
-                  className="input !py-2"
-                  value={edit.licenseType}
-                  onChange={(event) => setEditField(product.id, "licenseType", event.target.value as LicenseType)}
-                  onBlur={() => onEditBlur(product.id)}
-                >
-                  {LICENSE_TYPES.map((licenseType) => (
-                    <option key={licenseType} value={licenseType}>
-                      {licenseType}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  className="input !py-2"
-                  value={edit.licenseWeightKg}
-                  onChange={(event) => setEditField(product.id, "licenseWeightKg", event.target.value)}
-                  onBlur={() => onEditBlur(product.id)}
-                  placeholder={t("fieldWeightShort")}
-                  inputMode="decimal"
-                />
+                <div className="space-y-1">
+                  <FieldLabel text={t("fieldLicenseTypeShort")} />
+                  <select
+                    className="input !py-2"
+                    value={edit.licenseType}
+                    onChange={(event) => setEditField(product.id, "licenseType", event.target.value as LicenseType)}
+                  >
+                    {LICENSE_TYPES.map((licenseType) => (
+                      <option key={licenseType} value={licenseType}>
+                        {licenseType}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <FieldLabel text={t("fieldWeightShort")} />
+                  <input
+                    className="input !py-2"
+                    value={edit.licenseWeightKg}
+                    onChange={(event) => setEditField(product.id, "licenseWeightKg", event.target.value)}
+                    placeholder={t("createLicenseWeightKg")}
+                    inputMode="decimal"
+                  />
+                </div>
               </div>
 
               <label className="inline-flex items-center gap-2 text-sm text-[#4A4A4A]/80">
                 <input
                   type="checkbox"
                   checked={edit.isActive}
-                  onChange={(event) => {
-                    const nextEdit: EditFields = { ...edit, isActive: event.target.checked };
-                    setEditField(product.id, "isActive", event.target.checked);
-                    void onSave(product.id, { silentSuccess: true, edit: nextEdit });
-                  }}
+                  onChange={(event) => setEditField(product.id, "isActive", event.target.checked)}
                 />
                 {t("active")}
               </label>
 
-              <div className="flex items-center justify-end gap-2">
-                {isSaving ? <p className="text-xs text-[#4A4A4A]/65">{t("saving")}</p> : null}
-                <button
-                  type="button"
-                  className="rounded-lg border border-[#F4CCCC] bg-[#FFF4F4] p-2 text-[#B42318] transition hover:bg-[#FFE7E7] disabled:opacity-50"
-                  onClick={() => void onDelete(product.id)}
-                  disabled={isSaving || isDeleting}
-                  aria-label={isDeleting ? t("deleting") : t("deleteAction")}
-                  title={isDeleting ? t("deleting") : t("deleteAction")}
-                >
-                  <Trash2 size={16} />
-                </button>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="secondary-btn !px-3 !py-2"
+                    onClick={() => void onSave(product.id)}
+                    disabled={isSaving || isDeleting}
+                  >
+                    <span className="flex items-center gap-1">
+                      <Check size={14} />
+                      {isSaving ? t("saving") : t("saveAction")}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-btn !px-3 !py-2"
+                    onClick={() => void onDelete(product.id)}
+                    disabled={isSaving || isDeleting}
+                  >
+                    <span className="flex items-center gap-1">
+                      <Trash2 size={14} />
+                      {isDeleting ? t("deleting") : t("deleteAction")}
+                    </span>
+                  </button>
+                </div>
               </div>
             </article>
           );
