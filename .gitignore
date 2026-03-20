@@ -12,5 +12,3 @@ local.db-journal
 backups
 public/sw.js
 public/workbox-*.js
-data/licensed-products-from-excel.csv
-data/missing-license-fee-products.csv
