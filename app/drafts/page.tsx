@@ -564,7 +564,7 @@ export default function DraftsPage() {
                           </Link>
                           <button
                             type="button"
-                            className="secondary-btn !p-2"
+                            className="danger-btn !p-2"
                             onClick={(event) => {
                               event.stopPropagation();
                               void deleteDraft(draft.id);

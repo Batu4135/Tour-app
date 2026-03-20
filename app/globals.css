@@ -50,6 +50,10 @@ select {
   @apply touch-target rounded-xl border border-[#E5E5E5] bg-white px-4 py-3 font-medium text-[#4A4A4A] transition-all active:scale-95;
 }
 
+.danger-btn {
+  @apply touch-target rounded-xl border border-[#F4C7C7] bg-[#FFF1F1] px-4 py-3 font-medium text-[#B42318] transition-all active:scale-95;
+}
+
 .input {
   @apply w-full rounded-xl border border-[#E5E5E5] bg-white px-4 py-3 text-[#4A4A4A] outline-none transition-all placeholder:text-[#4A4A4A]/50 focus:border-[#2F7EA1] focus:ring-1 focus:ring-[#2F7EA1];
 }

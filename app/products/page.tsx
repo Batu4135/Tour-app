@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Check, Plus, Search, Trash2 } from "lucide-react";
+import { Check, ChevronDown, Plus, Search, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { formatCents, parseEuroToCents } from "@/lib/formatCents";
 import { LICENSE_TYPES, LicenseType } from "@/lib/license";
@@ -17,11 +17,13 @@ type Product = {
   isActive: boolean;
 };
 
+type EditableLicenseType = "" | Exclude<LicenseType, "NONE">;
+
 type EditFields = {
   name: string;
   sku: string;
   defaultPrice: string;
-  licenseType: LicenseType;
+  licenseType: EditableLicenseType;
   licenseWeightKg: string;
   isActive: boolean;
 };
@@ -31,24 +33,9 @@ type FlashMessage = {
   text: string;
 };
 
-function FieldLabel({ text }: { text: string }) {
-  return <p className="text-[11px] font-medium uppercase tracking-wide text-[#4A4A4A]/60">{text}</p>;
-}
-
 function toPriceInput(value: number | null): string {
-  if (value === null) return "";
+  if (value === null || !Number.isFinite(value) || value <= 0) return "";
   return (value / 100).toFixed(2).replace(".", ",");
-}
-
-function toEditFields(product: Product): EditFields {
-  return {
-    name: product.name,
-    sku: product.sku,
-    defaultPrice: toPriceInput(product.defaultPriceCents),
-    licenseType: product.licenseType,
-    licenseWeightKg: toWeightInput(product.licenseWeightGrams),
-    isActive: product.isActive
-  };
 }
 
 function toWeightInput(grams: number): string {
@@ -66,16 +53,50 @@ function parseWeightInputToGrams(raw: string): number {
   return Math.round(value * 1000);
 }
 
-function getLicenseRateCentsPerKg(type: LicenseType): number {
+function getLicenseRateCentsPerKg(type: EditableLicenseType): number {
   if (type === "LP") return 25;
   if (type === "LK" || type === "LA" || type === "LV") return 99;
   return 0;
 }
 
-function calculateLicenseFeeCents(type: LicenseType, weightGrams: number): number {
+function calculateLicenseFeeCents(type: EditableLicenseType, weightGrams: number): number {
   const rate = getLicenseRateCentsPerKg(type);
   if (rate <= 0 || weightGrams <= 0) return 0;
   return Math.round((weightGrams * rate) / 1000);
+}
+
+function toEditableLicenseType(type: LicenseType): EditableLicenseType {
+  return type === "NONE" ? "" : type;
+}
+
+function toPersistedLicenseType(type: EditableLicenseType): LicenseType | undefined {
+  return type || undefined;
+}
+
+function toEditFields(product: Product): EditFields {
+  return {
+    name: product.name,
+    sku: product.sku,
+    defaultPrice: toPriceInput(product.defaultPriceCents),
+    licenseType: toEditableLicenseType(product.licenseType),
+    licenseWeightKg: toWeightInput(product.licenseWeightGrams),
+    isActive: product.isActive
+  };
+}
+
+function getPersistedPriceCents(value: string): number | null {
+  return value.trim().length > 0 ? parseEuroToCents(value) : null;
+}
+
+function hasProductChanges(product: Product, edit: EditFields): boolean {
+  return (
+    product.name !== edit.name.trim() ||
+    product.sku !== edit.sku.trim() ||
+    (product.defaultPriceCents ?? null) !== getPersistedPriceCents(edit.defaultPrice) ||
+    product.licenseType !== (toPersistedLicenseType(edit.licenseType) ?? "NONE") ||
+    product.licenseWeightGrams !== parseWeightInputToGrams(edit.licenseWeightKg) ||
+    product.isActive !== edit.isActive
+  );
 }
 
 export default function ProductsPage() {
@@ -90,11 +111,14 @@ export default function ProductsPage() {
   const [creating, setCreating] = useState(false);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [savedProductId, setSavedProductId] = useState<number | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [openProducts, setOpenProducts] = useState<Record<number, boolean>>({});
   const [createForm, setCreateForm] = useState({
     name: "",
     sku: "",
     defaultPrice: "",
-    licenseType: "NONE" as LicenseType,
+    licenseType: "" as EditableLicenseType,
     licenseWeightKg: ""
   });
 
@@ -122,6 +146,14 @@ export default function ProductsPage() {
       }
       return next;
     });
+
+    setOpenProducts((prev) => {
+      const next: Record<number, boolean> = {};
+      for (const product of products) {
+        next[product.id] = prev[product.id] ?? false;
+      }
+      return next;
+    });
   }, [products]);
 
   const suggestions = useMemo(() => products.slice(0, 8), [products]);
@@ -142,7 +174,12 @@ export default function ProductsPage() {
     }
   }
 
+  function toggleProduct(productId: number) {
+    setOpenProducts((prev) => ({ ...prev, [productId]: !prev[productId] }));
+  }
+
   function setEditField(productId: number, field: keyof EditFields, value: string | boolean) {
+    setSavedProductId((prev) => (prev === productId ? null : prev));
     setEdits((prev) => ({
       ...prev,
       [productId]: {
@@ -168,7 +205,7 @@ export default function ProductsPage() {
           sku: createForm.sku.trim(),
           defaultPriceCents:
             createForm.defaultPrice.trim().length > 0 ? parseEuroToCents(createForm.defaultPrice) : undefined,
-          licenseType: createForm.licenseType,
+          licenseType: toPersistedLicenseType(createForm.licenseType),
           licenseWeightGrams: parseWeightInputToGrams(createForm.licenseWeightKg),
           isActive: true
         })
@@ -176,7 +213,8 @@ export default function ProductsPage() {
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(payload.error ?? t("saveError"));
 
-      setCreateForm({ name: "", sku: "", defaultPrice: "", licenseType: "NONE", licenseWeightKg: "" });
+      setCreateForm({ name: "", sku: "", defaultPrice: "", licenseType: "", licenseWeightKg: "" });
+      setCreateOpen(false);
       setFlash({ type: "success", text: t("createSuccess") });
       await loadProducts();
     } catch (createError) {
@@ -197,6 +235,7 @@ export default function ProductsPage() {
     }
 
     setSavingId(productId);
+    setSavedProductId(null);
     setError("");
     setFlash(null);
     try {
@@ -206,8 +245,8 @@ export default function ProductsPage() {
         body: JSON.stringify({
           name: edit.name.trim(),
           sku: edit.sku.trim(),
-          defaultPriceCents: edit.defaultPrice.trim().length > 0 ? parseEuroToCents(edit.defaultPrice) : null,
-          licenseType: edit.licenseType,
+          defaultPriceCents: getPersistedPriceCents(edit.defaultPrice),
+          licenseType: toPersistedLicenseType(edit.licenseType),
           licenseWeightGrams: parseWeightInputToGrams(edit.licenseWeightKg),
           isActive: edit.isActive
         })
@@ -215,7 +254,7 @@ export default function ProductsPage() {
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(payload.error ?? t("saveError"));
 
-      setFlash({ type: "success", text: t("updateSuccess") });
+      setSavedProductId(productId);
       await loadProducts();
     } catch (saveError) {
       const message = saveError instanceof Error ? saveError.message : t("saveError");
@@ -248,7 +287,6 @@ export default function ProductsPage() {
   }
 
   const createWeightGrams = parseWeightInputToGrams(createForm.licenseWeightKg);
-  const createRateCentsPerKg = getLicenseRateCentsPerKg(createForm.licenseType);
   const createCalculatedFeeCents = calculateLicenseFeeCents(createForm.licenseType, createWeightGrams);
 
   return (
@@ -258,86 +296,107 @@ export default function ProductsPage() {
         <p className="text-sm text-[#4A4A4A]/70">{t("subtitle")}</p>
       </header>
 
-      <form className="card space-y-3" onSubmit={onCreate}>
-        <p className="flex items-center gap-2 text-sm font-semibold">
-          <Plus size={16} />
-          {t("createTitle")}
-        </p>
-        <div className="space-y-1">
-          <FieldLabel text={t("fieldNameShort")} />
-          <input
-            className="input"
-            placeholder={t("createName")}
-            value={createForm.name}
-            onChange={(event) => setCreateForm((prev) => ({ ...prev, name: event.target.value }))}
-          />
-        </div>
-        <div className="space-y-1">
-          <FieldLabel text={t("fieldSkuShort")} />
-          <input
-            className="input"
-            placeholder=""
-            value={createForm.sku}
-            onChange={(event) => setCreateForm((prev) => ({ ...prev, sku: event.target.value }))}
-          />
-        </div>
-        <div className="space-y-1">
-          <FieldLabel text={t("fieldPriceShort")} />
-          <div className="relative">
-            <input
-              className="input pr-8"
-              placeholder=""
-              value={createForm.defaultPrice}
-              onChange={(event) => setCreateForm((prev) => ({ ...prev, defaultPrice: event.target.value }))}
-              inputMode="decimal"
-            />
-            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-[#4A4A4A]/70">
-              €
-            </span>
-          </div>
-        </div>
-        <div className="space-y-1">
-          <FieldLabel text={t("fieldLicenseTypeShort")} />
-          <select
-            className="input"
-            value={createForm.licenseType}
-            onChange={(event) =>
-              setCreateForm((prev) => ({ ...prev, licenseType: event.target.value as LicenseType }))
-            }
-          >
-            {LICENSE_TYPES.map((licenseType) => (
-              <option key={licenseType} value={licenseType}>
-                {licenseType}
-              </option>
-            ))}
-          </select>
-          <p className="text-xs text-[#4A4A4A]/65">
-            {createForm.licenseType === "NONE" || createRateCentsPerKg <= 0
-              ? t("licenseNone")
-              : `${createForm.licenseType} - ${formatCents(createRateCentsPerKg)} / kg`}
-          </p>
-        </div>
-        <div className="space-y-1">
-          <FieldLabel text={t("fieldWeightShort")} />
-          <input
-            className="input"
-            placeholder=""
-            value={createForm.licenseWeightKg}
-            onChange={(event) => setCreateForm((prev) => ({ ...prev, licenseWeightKg: event.target.value }))}
-            inputMode="decimal"
-          />
-          <p className="text-xs text-[#4A4A4A]/65">
-            {createCalculatedFeeCents > 0 ? `${t("licenseFeeLabel")}: ${formatCents(createCalculatedFeeCents)}` : t("licenseNone")}
-          </p>
-        </div>
+      <div className="card space-y-3">
         <button
-          type="submit"
-          className="primary-btn w-full"
-          disabled={creating || !createForm.name.trim() || !createForm.sku.trim()}
+          type="button"
+          className="flex w-full items-center justify-between text-left"
+          onClick={() => setCreateOpen((prev) => !prev)}
         >
-          {creating ? t("creating") : t("createAction")}
+          <p className="flex items-center gap-2 text-sm font-semibold">
+            <Plus size={16} />
+            {t("createTitle")}
+          </p>
+          <ChevronDown size={18} className={`transition-transform ${createOpen ? "rotate-180" : ""}`} />
         </button>
-      </form>
+        {createOpen ? (
+          <form className="space-y-2" onSubmit={onCreate}>
+            <input
+              className="input"
+              placeholder={t("createName")}
+              value={createForm.name}
+              onChange={(event) => setCreateForm((prev) => ({ ...prev, name: event.target.value }))}
+            />
+
+            <div className="grid grid-cols-2 gap-1">
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#4A4A4A]/60">
+                  {t("fieldSkuShort")}
+                </span>
+                <input
+                  className="input pl-12 pr-3"
+                  placeholder=""
+                  value={createForm.sku}
+                  onChange={(event) => setCreateForm((prev) => ({ ...prev, sku: event.target.value }))}
+                />
+              </div>
+              <div className="relative">
+                <input
+                  className="input pr-9"
+                  placeholder=""
+                  value={createForm.defaultPrice}
+                  onChange={(event) => setCreateForm((prev) => ({ ...prev, defaultPrice: event.target.value }))}
+                  inputMode="decimal"
+                />
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#4A4A4A]/60">
+                  {"\u20AC"}
+                </span>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-[#E7D2A2] bg-[#FFF7E8] p-2">
+              <div className="grid grid-cols-3 gap-1">
+                <select
+                  className="input !border-[#E1C989] !bg-[#FFFDF7] !px-3"
+                  value={createForm.licenseType}
+                  onChange={(event) =>
+                    setCreateForm((prev) => ({ ...prev, licenseType: event.target.value as EditableLicenseType }))
+                  }
+                >
+                  <option value="">-</option>
+                  {LICENSE_TYPES.filter((licenseType) => licenseType !== "NONE").map((licenseType) => (
+                    <option key={licenseType} value={licenseType}>
+                      {licenseType}
+                    </option>
+                  ))}
+                </select>
+                <div className="relative">
+                  <input
+                    className="input !border-[#E1C989] !bg-[#FFFDF7] pr-10"
+                    placeholder=""
+                    value={createForm.licenseWeightKg}
+                    onChange={(event) => setCreateForm((prev) => ({ ...prev, licenseWeightKg: event.target.value }))}
+                    inputMode="decimal"
+                  />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#8A6A1E]">
+                    {t("fieldWeightShort")}
+                  </span>
+                </div>
+                <div className="relative">
+                  <input
+                    className="input !border-[#E1C989] !bg-[#FFFDF7] pr-9"
+                    value={toPriceInput(createCalculatedFeeCents)}
+                    readOnly
+                    placeholder=""
+                  />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#8A6A1E]">
+                    {"\u20AC"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="primary-btn w-full"
+              disabled={creating || !createForm.name.trim() || !createForm.sku.trim()}
+            >
+              {creating ? t("creating") : t("createAction")}
+            </button>
+          </form>
+        ) : (
+          <p className="text-xs text-[#4A4A4A]/65">{t("createHint")}</p>
+        )}
+      </div>
 
       <div className="card space-y-2">
         <label htmlFor="product-query" className="text-sm font-semibold">
@@ -369,8 +428,7 @@ export default function ProductsPage() {
                 >
                   <p className="text-sm font-medium">{product.name}</p>
                   <p className="text-xs text-[#4A4A4A]/60">
-                    {product.sku}{" "}
-                    {product.defaultPriceCents !== null ? `- ${formatCents(product.defaultPriceCents)}` : "-"}
+                    {product.sku} {product.defaultPriceCents !== null ? `- ${formatCents(product.defaultPriceCents)}` : "-"}
                   </p>
                 </button>
               ))}
@@ -388,116 +446,152 @@ export default function ProductsPage() {
       <div className="space-y-2">
         {products.map((product) => {
           const edit = edits[product.id] ?? toEditFields(product);
-          const editWeightGrams = parseWeightInputToGrams(edit.licenseWeightKg);
-          const editRateCentsPerKg = getLicenseRateCentsPerKg(edit.licenseType);
-          const editCalculatedFeeCents = calculateLicenseFeeCents(edit.licenseType, editWeightGrams);
+          const isOpen = Boolean(openProducts[product.id]);
           const isSaving = savingId === product.id;
           const isDeleting = deletingId === product.id;
+          const isDirty = hasProductChanges(product, edit);
+          const showSavedHint = savedProductId === product.id && !isDirty && !isSaving;
+          const editWeightGrams = parseWeightInputToGrams(edit.licenseWeightKg);
+          const editCalculatedFeeCents = calculateLicenseFeeCents(edit.licenseType, editWeightGrams);
+
           return (
             <article key={product.id} className="card space-y-2 py-3">
-              <div className="grid grid-cols-1 gap-2">
-                <div className="space-y-1">
-                  <FieldLabel text={t("fieldNameShort")} />
+              <button
+                type="button"
+                className="flex w-full items-start justify-between gap-3 text-left"
+                onClick={() => toggleProduct(product.id)}
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">{edit.name || product.name}</p>
+                  <p className="truncate text-xs text-[#4A4A4A]/60">{edit.sku || product.sku}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {showSavedHint ? <span className="text-xs font-semibold text-[#2B8A3E]">{t("savedHint")}</span> : null}
+                  <ChevronDown size={18} className={`shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                </div>
+              </button>
+
+              {isOpen ? (
+                <div className="space-y-2">
                   <input
-                    className="input !py-2"
+                    className="input"
                     value={edit.name}
                     onChange={(event) => setEditField(product.id, "name", event.target.value)}
                     placeholder={t("createName")}
                   />
-                </div>
-                <div className="space-y-1">
-                  <FieldLabel text={t("fieldSkuShort")} />
-                  <input
-                    className="input !py-2"
-                    value={edit.sku}
-                    onChange={(event) => setEditField(product.id, "sku", event.target.value)}
-                    placeholder=""
-                  />
-                </div>
-                <div className="space-y-1">
-                  <FieldLabel text={t("fieldPriceShort")} />
-                  <div className="relative">
-                    <input
-                      className="input !py-2 pr-8"
-                      value={edit.defaultPrice}
-                      onChange={(event) => setEditField(product.id, "defaultPrice", event.target.value)}
-                      placeholder=""
-                      inputMode="decimal"
-                    />
-                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-[#4A4A4A]/70">
-                      €
-                    </span>
+
+                  <div className="grid grid-cols-2 gap-1">
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#4A4A4A]/60">
+                        {t("fieldSkuShort")}
+                      </span>
+                      <input
+                        className="input pl-12 pr-3"
+                        value={edit.sku}
+                        onChange={(event) => setEditField(product.id, "sku", event.target.value)}
+                        placeholder=""
+                      />
+                    </div>
+
+                    <div className="relative">
+                      <input
+                        className="input pr-9"
+                        value={edit.defaultPrice}
+                        onChange={(event) => setEditField(product.id, "defaultPrice", event.target.value)}
+                        placeholder=""
+                        inputMode="decimal"
+                      />
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#4A4A4A]/60">
+                        {"\u20AC"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-[#E7D2A2] bg-[#FFF7E8] p-2">
+                    <div className="grid grid-cols-3 gap-1">
+                      <select
+                        className="input !border-[#E1C989] !bg-[#FFFDF7] !px-3"
+                        value={edit.licenseType}
+                        onChange={(event) =>
+                          setEditField(product.id, "licenseType", event.target.value as EditableLicenseType)
+                        }
+                      >
+                        <option value="">-</option>
+                        {LICENSE_TYPES.filter((licenseType) => licenseType !== "NONE").map((licenseType) => (
+                          <option key={licenseType} value={licenseType}>
+                            {licenseType}
+                          </option>
+                        ))}
+                      </select>
+
+                      <div className="relative">
+                        <input
+                          className="input !border-[#E1C989] !bg-[#FFFDF7] pr-10"
+                          value={edit.licenseWeightKg}
+                          onChange={(event) => setEditField(product.id, "licenseWeightKg", event.target.value)}
+                          placeholder=""
+                          inputMode="decimal"
+                        />
+                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#8A6A1E]">
+                          {t("fieldWeightShort")}
+                        </span>
+                      </div>
+
+                      <div className="relative">
+                        <input
+                          className="input !border-[#E1C989] !bg-[#FFFDF7] pr-9"
+                          value={toPriceInput(editCalculatedFeeCents)}
+                          readOnly
+                          placeholder=""
+                        />
+                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#8A6A1E]">
+                          {"\u20AC"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="inline-flex items-center gap-2 text-sm text-[#4A4A4A]/80">
+                      <input
+                        type="checkbox"
+                        checked={edit.isActive}
+                        onChange={(event) => setEditField(product.id, "isActive", event.target.checked)}
+                      />
+                      {t("active")}
+                    </label>
+
+                    <div className="flex items-center gap-2">
+                      {isDirty || isSaving ? (
+                        <button
+                          type="button"
+                          className="primary-btn !w-auto !px-3 !py-2"
+                          onClick={() => void onSave(product.id)}
+                          disabled={isSaving || isDeleting}
+                        >
+                          <span className="flex items-center gap-1">
+                            <Check size={14} />
+                            {isSaving ? t("saving") : t("saveAction")}
+                          </span>
+                        </button>
+                      ) : null}
+
+                      <button
+                        type="button"
+                        className="danger-btn !w-auto !px-3 !py-2 disabled:opacity-50"
+                        onClick={() => void onDelete(product.id)}
+                        disabled={isSaving || isDeleting}
+                        aria-label={isDeleting ? t("deleting") : t("deleteAction")}
+                      >
+                        <span className="flex items-center gap-1">
+                          <Trash2 size={14} />
+                          {isDeleting ? t("deleting") : t("deleteAction")}
+                        </span>
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-1">
-                  <FieldLabel text={t("fieldLicenseTypeShort")} />
-                  <select
-                    className="input !py-2"
-                    value={edit.licenseType}
-                    onChange={(event) => setEditField(product.id, "licenseType", event.target.value as LicenseType)}
-                  >
-                    {LICENSE_TYPES.map((licenseType) => (
-                      <option key={licenseType} value={licenseType}>
-                        {licenseType}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-[#4A4A4A]/65">
-                    {edit.licenseType === "NONE" || editRateCentsPerKg <= 0
-                      ? t("licenseNone")
-                      : `${edit.licenseType} - ${formatCents(editRateCentsPerKg)} / kg`}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <FieldLabel text={t("fieldWeightShort")} />
-                  <input
-                    className="input !py-2"
-                    value={edit.licenseWeightKg}
-                    onChange={(event) => setEditField(product.id, "licenseWeightKg", event.target.value)}
-                    placeholder=""
-                    inputMode="decimal"
-                  />
-                  <p className="text-xs text-[#4A4A4A]/65">
-                    {editCalculatedFeeCents > 0 ? `${t("licenseFeeLabel")}: ${formatCents(editCalculatedFeeCents)}` : t("licenseNone")}
-                  </p>
-                </div>
-              </div>
-
-              <label className="inline-flex items-center gap-2 text-sm text-[#4A4A4A]/80">
-                <input
-                  type="checkbox"
-                  checked={edit.isActive}
-                  onChange={(event) => setEditField(product.id, "isActive", event.target.checked)}
-                />
-                {t("active")}
-              </label>
-
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="secondary-btn !px-3 !py-2"
-                    onClick={() => void onSave(product.id)}
-                    disabled={isSaving || isDeleting}
-                  >
-                    <span className="flex items-center gap-1">
-                      <Check size={14} />
-                      {isSaving ? t("saving") : t("saveAction")}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    className="secondary-btn !px-3 !py-2"
-                    onClick={() => void onDelete(product.id)}
-                    disabled={isSaving || isDeleting}
-                  >
-                    <span className="flex items-center gap-1">
-                      <Trash2 size={14} />
-                      {isDeleting ? t("deleting") : t("deleteAction")}
-                    </span>
-                  </button>
-                </div>
-              </div>
+              ) : null}
             </article>
           );
         })}

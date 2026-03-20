@@ -281,7 +281,7 @@ export default function CustomerDetailPage() {
           <button className="primary-btn" type="submit" disabled={saving || !data.routeDay?.trim()}>
             {saving ? t("saving") : t("save")}
           </button>
-          <button className="secondary-btn flex items-center justify-center gap-2" type="button" onClick={onDeleteCustomer}>
+          <button className="danger-btn flex items-center justify-center gap-2" type="button" onClick={onDeleteCustomer}>
             <Trash2 size={16} />
             {t("deleteCustomer")}
           </button>
@@ -401,7 +401,7 @@ function PriceRow({
         <button type="button" className="secondary-btn px-3 py-2 text-sm" onClick={() => onSave(price.id, euroToCents(value))}>
           {saveLabel}
         </button>
-        <button type="button" className="secondary-btn px-3 py-2" onClick={() => onDelete(price.id)}>
+        <button type="button" className="danger-btn px-3 py-2" onClick={() => onDelete(price.id)}>
           <Trash2 size={16} />
         </button>
       </div>

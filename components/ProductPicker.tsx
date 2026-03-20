@@ -283,7 +283,7 @@ export default function ProductPicker({
                   <p className="truncate text-sm font-semibold">{item.name}</p>
                   <p className="text-xs text-[#4A4A4A]/60">{item.sku}</p>
                 </div>
-                <button type="button" className="secondary-btn !p-2" onClick={() => removeItem(item.productId)}>
+                <button type="button" className="danger-btn !p-2" onClick={() => removeItem(item.productId)}>
                   <Trash2 size={14} />
                 </button>
               </div>

@@ -37,7 +37,7 @@ export default function DraftLineItem({ line, onIncrease, onDecrease, onDelete }
         </button>
         <button
           type="button"
-          className="secondary-btn !border-[#E5E5E5] !p-2"
+          className="danger-btn !p-2"
           onClick={() => onDelete(line.id)}
           aria-label="Delete"
         >
