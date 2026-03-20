@@ -1,7 +1,7 @@
 "use client";
 
-import { FocusEvent, FormEvent, InputHTMLAttributes, useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, Plus, Search, Trash2 } from "lucide-react";
+import { FormEvent, InputHTMLAttributes, useEffect, useMemo, useRef, useState } from "react";
+import { AlertCircle, Check, CheckCircle2, ChevronDown, Plus, Search, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { formatCents, parseEuroToCents } from "@/lib/formatCents";
 import { LICENSE_TYPES, LicenseType } from "@/lib/license";
@@ -92,14 +92,12 @@ function CompactPrefixField({
   prefix,
   value,
   onChange,
-  onBlur,
   inputMode,
   className = ""
 }: {
   prefix: string;
   value: string;
   onChange: (value: string) => void;
-  onBlur?: (event: FocusEvent<HTMLInputElement>) => void;
   inputMode?: InputHTMLAttributes<HTMLInputElement>["inputMode"];
   className?: string;
 }) {
@@ -110,7 +108,6 @@ function CompactPrefixField({
         className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[#4A4A4A] outline-none placeholder:text-[#4A4A4A]/50"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        onBlur={onBlur}
         placeholder=""
         inputMode={inputMode}
       />
@@ -122,7 +119,6 @@ function CompactSuffixField({
   suffix,
   value,
   onChange,
-  onBlur,
   inputMode,
   readOnly = false,
   className = "",
@@ -131,7 +127,6 @@ function CompactSuffixField({
   suffix: string;
   value: string;
   onChange?: (value: string) => void;
-  onBlur?: (event: FocusEvent<HTMLInputElement>) => void;
   inputMode?: InputHTMLAttributes<HTMLInputElement>["inputMode"];
   readOnly?: boolean;
   className?: string;
@@ -143,7 +138,6 @@ function CompactSuffixField({
         className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[#4A4A4A] outline-none placeholder:text-[#4A4A4A]/50"
         value={value}
         onChange={onChange ? (event) => onChange(event.target.value) : undefined}
-        onBlur={onBlur}
         placeholder=""
         inputMode={inputMode}
         readOnly={readOnly}
@@ -166,7 +160,6 @@ function hasProductChanges(product: Product, edit: EditFields): boolean {
 
 export default function ProductsPage() {
   const t = useTranslations("productsPage");
-  const saveIntentRef = useRef<number | null>(null);
   const productCardRefs = useRef<Record<number, HTMLElement | null>>({});
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -216,6 +209,28 @@ export default function ProductsPage() {
 
     setOpenProductId((prev) => (prev !== null && products.some((product) => product.id === prev) ? prev : null));
   }, [products]);
+
+  useEffect(() => {
+    function handlePointerDown(event: PointerEvent) {
+      if (openProductId === null || savingId === openProductId || deletingId === openProductId) {
+        return;
+      }
+
+      const openProduct = products.find((product) => product.id === openProductId);
+      if (!openProduct) return;
+
+      const card = productCardRefs.current[openProductId];
+      const target = event.target as Node | null;
+      if (card && target && card.contains(target)) {
+        return;
+      }
+
+      resetProductEdit(openProduct);
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [deletingId, openProductId, products, savingId]);
 
   const suggestions = useMemo(() => products.slice(0, 8), [products]);
 
@@ -277,39 +292,6 @@ export default function ProductsPage() {
         [field]: value
       }
     }));
-  }
-
-  function markSaveIntent(productId: number) {
-    saveIntentRef.current = productId;
-  }
-
-  function clearSaveIntent(productId: number) {
-    if (saveIntentRef.current === productId) {
-      saveIntentRef.current = null;
-    }
-  }
-
-  function handleEditBlur(product: Product, event: FocusEvent<HTMLElement>) {
-    if (saveIntentRef.current === product.id || savingId === product.id || deletingId === product.id) {
-      clearSaveIntent(product.id);
-      return;
-    }
-
-    const card = productCardRefs.current[product.id];
-    const nextTarget = event.relatedTarget as Node | null;
-    if (card && nextTarget && card.contains(nextTarget)) {
-      return;
-    }
-
-    window.setTimeout(() => {
-      const activeElement = document.activeElement;
-      const activeInsideCard = Boolean(card && activeElement && card.contains(activeElement));
-      if (activeInsideCard || saveIntentRef.current === product.id || savingId === product.id || deletingId === product.id) {
-        return;
-      }
-
-      resetProductEdit(product);
-    }, 0);
   }
 
   async function onCreate(event: FormEvent) {
@@ -378,13 +360,13 @@ export default function ProductsPage() {
       if (!response.ok) throw new Error(payload.error ?? t("saveError"));
 
       setSavedProductId(productId);
+      setFlash({ type: "success", text: t("updateSuccess") });
       await loadProducts();
     } catch (saveError) {
       const message = saveError instanceof Error ? saveError.message : t("saveError");
       setError(message);
       setFlash({ type: "error", text: message });
     } finally {
-      clearSaveIntent(productId);
       setSavingId(null);
     }
   }
@@ -545,7 +527,16 @@ export default function ProductsPage() {
       </div>
 
       {flash ? (
-        <p className={`text-sm ${flash.type === "success" ? "text-[#2B8A3E]" : "text-[#A33A3A]"}`}>{flash.text}</p>
+        <div
+          className={`flex items-center gap-2 rounded-2xl border px-3 py-3 text-sm font-semibold ${
+            flash.type === "success"
+              ? "border-[#B7E4C0] bg-[#F1FBF3] text-[#246B35]"
+              : "border-[#F1B7B7] bg-[#FFF4F4] text-[#A33A3A]"
+          }`}
+        >
+          {flash.type === "success" ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+          <span>{flash.text}</span>
+        </div>
       ) : null}
       {loading ? <p className="text-sm text-[#4A4A4A]/65">{t("loading")}</p> : null}
       {error ? <p className="text-sm text-[#4A4A4A]">{error}</p> : null}
@@ -579,7 +570,12 @@ export default function ProductsPage() {
                   <p className="truncate text-xs text-[#4A4A4A]/60">{edit.sku || product.sku}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  {showSavedHint ? <span className="text-xs font-semibold text-[#2B8A3E]">{t("savedHint")}</span> : null}
+                  {showSavedHint ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[#E9F8EC] px-2.5 py-1 text-xs font-semibold text-[#246B35]">
+                      <CheckCircle2 size={14} />
+                      {t("savedHint")}
+                    </span>
+                  ) : null}
                   <ChevronDown size={18} className={`shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`} />
                 </div>
               </button>
@@ -590,7 +586,6 @@ export default function ProductsPage() {
                     className="input"
                     value={edit.name}
                     onChange={(event) => setEditField(product.id, "name", event.target.value)}
-                    onBlur={(event) => handleEditBlur(product, event)}
                     placeholder={t("createName")}
                   />
 
@@ -599,14 +594,12 @@ export default function ProductsPage() {
                       prefix={t("fieldSkuShort")}
                       value={edit.sku}
                       onChange={(value) => setEditField(product.id, "sku", value)}
-                      onBlur={(event) => handleEditBlur(product, event)}
                     />
 
                     <CompactSuffixField
                       suffix={t("fieldPriceShort")}
                       value={edit.defaultPrice}
                       onChange={(value) => setEditField(product.id, "defaultPrice", value)}
-                      onBlur={(event) => handleEditBlur(product, event)}
                       inputMode="decimal"
                     />
                   </div>
@@ -622,7 +615,6 @@ export default function ProductsPage() {
                         onChange={(event) =>
                           setEditField(product.id, "licenseType", event.target.value as EditableLicenseType)
                         }
-                        onBlur={(event) => handleEditBlur(product, event)}
                       >
                         <option value="">-</option>
                         {LICENSE_TYPES.filter((licenseType) => licenseType !== "NONE").map((licenseType) => (
@@ -635,7 +627,6 @@ export default function ProductsPage() {
                         suffix={t("fieldWeightShort")}
                         value={edit.licenseWeightKg}
                         onChange={(value) => setEditField(product.id, "licenseWeightKg", value)}
-                        onBlur={(event) => handleEditBlur(product, event)}
                         inputMode="decimal"
                         className="!border-[#E1C989] !bg-[#FFFDF7]"
                         suffixClassName="text-[#8A6A1E]"
@@ -657,7 +648,6 @@ export default function ProductsPage() {
                         type="checkbox"
                         checked={edit.isActive}
                         onChange={(event) => setEditField(product.id, "isActive", event.target.checked)}
-                        onBlur={(event) => handleEditBlur(product, event)}
                       />
                       {t("active")}
                     </label>
@@ -667,9 +657,6 @@ export default function ProductsPage() {
                         <button
                           type="button"
                           className="primary-btn !w-auto !px-3 !py-2"
-                          data-save-product-id={product.id}
-                          onMouseDown={() => markSaveIntent(product.id)}
-                          onTouchStart={() => markSaveIntent(product.id)}
                           onClick={() => void onSave(product.id)}
                           disabled={isSaving || isDeleting}
                         >
