@@ -45,7 +45,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <body className={`${manrope.className} bg-[#F8F9FA] text-[#4A4A4A]`}>
         <NextIntlClientProvider messages={messages} locale={locale}>
           <AppHeader />
-          <main className="mx-auto min-h-screen w-full max-w-md px-4 pb-[110px] pt-2">{children}</main>
+          <main
+            className="mx-auto min-h-screen w-full max-w-md px-4 pt-2"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 140px)" }}
+          >
+            {children}
+          </main>
           <BottomNav />
         </NextIntlClientProvider>
       </body>

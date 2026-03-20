@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FocusEvent, FormEvent, InputHTMLAttributes, useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, Plus, Search, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { formatCents, parseEuroToCents } from "@/lib/formatCents";
@@ -88,6 +88,71 @@ function getPersistedPriceCents(value: string): number | null {
   return value.trim().length > 0 ? parseEuroToCents(value) : null;
 }
 
+function CompactPrefixField({
+  prefix,
+  value,
+  onChange,
+  onBlur,
+  inputMode,
+  className = ""
+}: {
+  prefix: string;
+  value: string;
+  onChange: (value: string) => void;
+  onBlur?: (event: FocusEvent<HTMLInputElement>) => void;
+  inputMode?: InputHTMLAttributes<HTMLInputElement>["inputMode"];
+  className?: string;
+}) {
+  return (
+    <div className={`flex min-h-[52px] items-center gap-3 rounded-xl border border-[#E5E5E5] bg-white px-3 ${className}`}>
+      <span className="shrink-0 text-xs font-semibold text-[#4A4A4A]/60">{prefix}</span>
+      <input
+        className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[#4A4A4A] outline-none placeholder:text-[#4A4A4A]/50"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onBlur={onBlur}
+        placeholder=""
+        inputMode={inputMode}
+      />
+    </div>
+  );
+}
+
+function CompactSuffixField({
+  suffix,
+  value,
+  onChange,
+  onBlur,
+  inputMode,
+  readOnly = false,
+  className = "",
+  suffixClassName = ""
+}: {
+  suffix: string;
+  value: string;
+  onChange?: (value: string) => void;
+  onBlur?: (event: FocusEvent<HTMLInputElement>) => void;
+  inputMode?: InputHTMLAttributes<HTMLInputElement>["inputMode"];
+  readOnly?: boolean;
+  className?: string;
+  suffixClassName?: string;
+}) {
+  return (
+    <div className={`flex min-h-[52px] items-center gap-3 rounded-xl border border-[#E5E5E5] bg-white px-3 ${className}`}>
+      <input
+        className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[#4A4A4A] outline-none placeholder:text-[#4A4A4A]/50"
+        value={value}
+        onChange={onChange ? (event) => onChange(event.target.value) : undefined}
+        onBlur={onBlur}
+        placeholder=""
+        inputMode={inputMode}
+        readOnly={readOnly}
+      />
+      <span className={`shrink-0 text-xs font-semibold text-[#4A4A4A]/60 ${suffixClassName}`}>{suffix}</span>
+    </div>
+  );
+}
+
 function hasProductChanges(product: Product, edit: EditFields): boolean {
   return (
     product.name !== edit.name.trim() ||
@@ -101,6 +166,7 @@ function hasProductChanges(product: Product, edit: EditFields): boolean {
 
 export default function ProductsPage() {
   const t = useTranslations("productsPage");
+  const saveIntentRef = useRef<number | null>(null);
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
@@ -189,6 +255,43 @@ export default function ProductsPage() {
     }));
   }
 
+  function markSaveIntent(productId: number) {
+    saveIntentRef.current = productId;
+  }
+
+  function clearSaveIntent(productId: number) {
+    if (saveIntentRef.current === productId) {
+      saveIntentRef.current = null;
+    }
+  }
+
+  function handleEditBlur(product: Product, event: FocusEvent<HTMLElement>) {
+    const nextTarget = event.relatedTarget as HTMLElement | null;
+    if (nextTarget?.dataset?.saveProductId === String(product.id)) {
+      return;
+    }
+
+    window.setTimeout(() => {
+      if (saveIntentRef.current === product.id || savingId === product.id || deletingId === product.id) {
+        clearSaveIntent(product.id);
+        return;
+      }
+
+      setEdits((prev) => {
+        const current = prev[product.id] ?? toEditFields(product);
+        if (!hasProductChanges(product, current)) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          [product.id]: toEditFields(product)
+        };
+      });
+      setSavedProductId((prev) => (prev === product.id ? null : prev));
+    }, 0);
+  }
+
   async function onCreate(event: FormEvent) {
     event.preventDefault();
     if (!createForm.name.trim() || !createForm.sku.trim()) return;
@@ -261,6 +364,7 @@ export default function ProductsPage() {
       setError(message);
       setFlash({ type: "error", text: message });
     } finally {
+      clearSaveIntent(productId);
       setSavingId(null);
     }
   }
@@ -318,29 +422,17 @@ export default function ProductsPage() {
             />
 
             <div className="grid grid-cols-2 gap-1">
-              <div className="relative">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#4A4A4A]/60">
-                  {t("fieldSkuShort")}
-                </span>
-                <input
-                  className="input pl-12 pr-3"
-                  placeholder=""
-                  value={createForm.sku}
-                  onChange={(event) => setCreateForm((prev) => ({ ...prev, sku: event.target.value }))}
-                />
-              </div>
-              <div className="relative">
-                <input
-                  className="input pr-9"
-                  placeholder=""
-                  value={createForm.defaultPrice}
-                  onChange={(event) => setCreateForm((prev) => ({ ...prev, defaultPrice: event.target.value }))}
-                  inputMode="decimal"
-                />
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#4A4A4A]/60">
-                  {"\u20AC"}
-                </span>
-              </div>
+              <CompactPrefixField
+                prefix={t("fieldSkuShort")}
+                value={createForm.sku}
+                onChange={(value) => setCreateForm((prev) => ({ ...prev, sku: value }))}
+              />
+              <CompactSuffixField
+                suffix={t("fieldPriceShort")}
+                value={createForm.defaultPrice}
+                onChange={(value) => setCreateForm((prev) => ({ ...prev, defaultPrice: value }))}
+                inputMode="decimal"
+              />
             </div>
 
             <div className="rounded-2xl border border-[#E7D2A2] bg-[#FFF7E8] p-2">
@@ -359,29 +451,21 @@ export default function ProductsPage() {
                     </option>
                   ))}
                 </select>
-                <div className="relative">
-                  <input
-                    className="input !border-[#E1C989] !bg-[#FFFDF7] pr-10"
-                    placeholder=""
-                    value={createForm.licenseWeightKg}
-                    onChange={(event) => setCreateForm((prev) => ({ ...prev, licenseWeightKg: event.target.value }))}
-                    inputMode="decimal"
-                  />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#8A6A1E]">
-                    {t("fieldWeightShort")}
-                  </span>
-                </div>
-                <div className="relative">
-                  <input
-                    className="input !border-[#E1C989] !bg-[#FFFDF7] pr-9"
-                    value={toPriceInput(createCalculatedFeeCents)}
-                    readOnly
-                    placeholder=""
-                  />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#8A6A1E]">
-                    {"\u20AC"}
-                  </span>
-                </div>
+                <CompactSuffixField
+                  suffix={t("fieldWeightShort")}
+                  value={createForm.licenseWeightKg}
+                  onChange={(value) => setCreateForm((prev) => ({ ...prev, licenseWeightKg: value }))}
+                  inputMode="decimal"
+                  className="!border-[#E1C989] !bg-[#FFFDF7]"
+                  suffixClassName="text-[#8A6A1E]"
+                />
+                <CompactSuffixField
+                  suffix={t("fieldPriceShort")}
+                  value={toPriceInput(createCalculatedFeeCents)}
+                  readOnly
+                  className="!border-[#E1C989] !bg-[#FFFDF7]"
+                  suffixClassName="text-[#8A6A1E]"
+                />
               </div>
             </div>
 
@@ -477,34 +561,25 @@ export default function ProductsPage() {
                     className="input"
                     value={edit.name}
                     onChange={(event) => setEditField(product.id, "name", event.target.value)}
+                    onBlur={(event) => handleEditBlur(product, event)}
                     placeholder={t("createName")}
                   />
 
                   <div className="grid grid-cols-2 gap-1">
-                    <div className="relative">
-                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#4A4A4A]/60">
-                        {t("fieldSkuShort")}
-                      </span>
-                      <input
-                        className="input pl-12 pr-3"
-                        value={edit.sku}
-                        onChange={(event) => setEditField(product.id, "sku", event.target.value)}
-                        placeholder=""
-                      />
-                    </div>
+                    <CompactPrefixField
+                      prefix={t("fieldSkuShort")}
+                      value={edit.sku}
+                      onChange={(value) => setEditField(product.id, "sku", value)}
+                      onBlur={(event) => handleEditBlur(product, event)}
+                    />
 
-                    <div className="relative">
-                      <input
-                        className="input pr-9"
-                        value={edit.defaultPrice}
-                        onChange={(event) => setEditField(product.id, "defaultPrice", event.target.value)}
-                        placeholder=""
-                        inputMode="decimal"
-                      />
-                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#4A4A4A]/60">
-                        {"\u20AC"}
-                      </span>
-                    </div>
+                    <CompactSuffixField
+                      suffix={t("fieldPriceShort")}
+                      value={edit.defaultPrice}
+                      onChange={(value) => setEditField(product.id, "defaultPrice", value)}
+                      onBlur={(event) => handleEditBlur(product, event)}
+                      inputMode="decimal"
+                    />
                   </div>
 
                   <div className="rounded-2xl border border-[#E7D2A2] bg-[#FFF7E8] p-2">
@@ -515,6 +590,7 @@ export default function ProductsPage() {
                         onChange={(event) =>
                           setEditField(product.id, "licenseType", event.target.value as EditableLicenseType)
                         }
+                        onBlur={(event) => handleEditBlur(product, event)}
                       >
                         <option value="">-</option>
                         {LICENSE_TYPES.filter((licenseType) => licenseType !== "NONE").map((licenseType) => (
@@ -523,31 +599,23 @@ export default function ProductsPage() {
                           </option>
                         ))}
                       </select>
+                      <CompactSuffixField
+                        suffix={t("fieldWeightShort")}
+                        value={edit.licenseWeightKg}
+                        onChange={(value) => setEditField(product.id, "licenseWeightKg", value)}
+                        onBlur={(event) => handleEditBlur(product, event)}
+                        inputMode="decimal"
+                        className="!border-[#E1C989] !bg-[#FFFDF7]"
+                        suffixClassName="text-[#8A6A1E]"
+                      />
 
-                      <div className="relative">
-                        <input
-                          className="input !border-[#E1C989] !bg-[#FFFDF7] pr-10"
-                          value={edit.licenseWeightKg}
-                          onChange={(event) => setEditField(product.id, "licenseWeightKg", event.target.value)}
-                          placeholder=""
-                          inputMode="decimal"
-                        />
-                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#8A6A1E]">
-                          {t("fieldWeightShort")}
-                        </span>
-                      </div>
-
-                      <div className="relative">
-                        <input
-                          className="input !border-[#E1C989] !bg-[#FFFDF7] pr-9"
-                          value={toPriceInput(editCalculatedFeeCents)}
-                          readOnly
-                          placeholder=""
-                        />
-                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#8A6A1E]">
-                          {"\u20AC"}
-                        </span>
-                      </div>
+                      <CompactSuffixField
+                        suffix={t("fieldPriceShort")}
+                        value={toPriceInput(editCalculatedFeeCents)}
+                        readOnly
+                        className="!border-[#E1C989] !bg-[#FFFDF7]"
+                        suffixClassName="text-[#8A6A1E]"
+                      />
                     </div>
                   </div>
 
@@ -557,6 +625,7 @@ export default function ProductsPage() {
                         type="checkbox"
                         checked={edit.isActive}
                         onChange={(event) => setEditField(product.id, "isActive", event.target.checked)}
+                        onBlur={(event) => handleEditBlur(product, event)}
                       />
                       {t("active")}
                     </label>
@@ -566,6 +635,9 @@ export default function ProductsPage() {
                         <button
                           type="button"
                           className="primary-btn !w-auto !px-3 !py-2"
+                          data-save-product-id={product.id}
+                          onMouseDown={() => markSaveIntent(product.id)}
+                          onTouchStart={() => markSaveIntent(product.id)}
                           onClick={() => void onSave(product.id)}
                           disabled={isSaving || isDeleting}
                         >
