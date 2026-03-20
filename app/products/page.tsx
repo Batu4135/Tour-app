@@ -121,6 +121,7 @@ function CompactSuffixField({
   onChange,
   inputMode,
   readOnly = false,
+  disabled = false,
   className = "",
   suffixClassName = ""
 }: {
@@ -129,11 +130,16 @@ function CompactSuffixField({
   onChange?: (value: string) => void;
   inputMode?: InputHTMLAttributes<HTMLInputElement>["inputMode"];
   readOnly?: boolean;
+  disabled?: boolean;
   className?: string;
   suffixClassName?: string;
 }) {
   return (
-    <div className={`flex min-h-[52px] items-center gap-3 rounded-xl border border-[#E5E5E5] bg-white px-3 ${className}`}>
+    <div
+      className={`flex min-h-[52px] items-center gap-3 rounded-xl border border-[#E5E5E5] bg-white px-3 ${
+        disabled ? "opacity-60" : ""
+      } ${className}`}
+    >
       <input
         className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[#4A4A4A] outline-none placeholder:text-[#4A4A4A]/50"
         value={value}
@@ -141,6 +147,7 @@ function CompactSuffixField({
         placeholder=""
         inputMode={inputMode}
         readOnly={readOnly}
+        disabled={disabled}
       />
       <span className={`shrink-0 text-xs font-semibold text-[#4A4A4A]/60 ${suffixClassName}`}>{suffix}</span>
     </div>
@@ -294,6 +301,34 @@ export default function ProductsPage() {
     }));
   }
 
+  function setProductLicenseType(product: Product, nextType: EditableLicenseType) {
+    setSavedProductId((prev) => (prev === product.id ? null : prev));
+    setEdits((prev) => ({
+      ...prev,
+      [product.id]: {
+        ...(prev[product.id] ?? toEditFields(product)),
+        licenseType: nextType,
+        licenseWeightKg: nextType ? (prev[product.id]?.licenseWeightKg ?? toEditFields(product).licenseWeightKg) : ""
+      }
+    }));
+  }
+
+  function blurActiveField() {
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement) {
+      activeElement.blur();
+    }
+  }
+
+  function scrollProductIntoView(productId: number) {
+    window.setTimeout(() => {
+      productCardRefs.current[productId]?.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+    }, 180);
+  }
+
   async function onCreate(event: FormEvent) {
     event.preventDefault();
     if (!createForm.name.trim() || !createForm.sku.trim()) return;
@@ -339,6 +374,7 @@ export default function ProductsPage() {
       return;
     }
 
+    blurActiveField();
     setSavingId(productId);
     setSavedProductId(null);
     setError("");
@@ -362,6 +398,7 @@ export default function ProductsPage() {
       setSavedProductId(productId);
       setFlash({ type: "success", text: t("updateSuccess") });
       await loadProducts();
+      scrollProductIntoView(productId);
     } catch (saveError) {
       const message = saveError instanceof Error ? saveError.message : t("saveError");
       setError(message);
@@ -394,6 +431,7 @@ export default function ProductsPage() {
 
   const createWeightGrams = parseWeightInputToGrams(createForm.licenseWeightKg);
   const createCalculatedFeeCents = calculateLicenseFeeCents(createForm.licenseType, createWeightGrams);
+  const createHasLicense = Boolean(createForm.licenseType);
 
   return (
     <section className="space-y-4">
@@ -446,7 +484,14 @@ export default function ProductsPage() {
                   className="input !border-[#E1C989] !bg-[#FFFDF7] !px-3"
                   value={createForm.licenseType}
                   onChange={(event) =>
-                    setCreateForm((prev) => ({ ...prev, licenseType: event.target.value as EditableLicenseType }))
+                    setCreateForm((prev) => {
+                      const nextType = event.target.value as EditableLicenseType;
+                      return {
+                        ...prev,
+                        licenseType: nextType,
+                        licenseWeightKg: nextType ? prev.licenseWeightKg : ""
+                      };
+                    })
                   }
                 >
                   <option value="">-</option>
@@ -458,16 +503,18 @@ export default function ProductsPage() {
                 </select>
                 <CompactSuffixField
                   suffix={t("fieldWeightShort")}
-                  value={createForm.licenseWeightKg}
+                  value={createHasLicense ? createForm.licenseWeightKg : ""}
                   onChange={(value) => setCreateForm((prev) => ({ ...prev, licenseWeightKg: value }))}
                   inputMode="decimal"
+                  disabled={!createHasLicense}
                   className="!border-[#E1C989] !bg-[#FFFDF7]"
                   suffixClassName="text-[#8A6A1E]"
                 />
                 <CompactSuffixField
                   suffix={t("fieldPriceShort")}
-                  value={toPriceInput(createCalculatedFeeCents)}
+                  value={createHasLicense ? toPriceInput(createCalculatedFeeCents) : ""}
                   readOnly
+                  disabled={!createHasLicense}
                   className="!border-[#E1C989] !bg-[#FFFDF7]"
                   suffixClassName="text-[#8A6A1E]"
                 />
@@ -549,6 +596,7 @@ export default function ProductsPage() {
           const isDeleting = deletingId === product.id;
           const isDirty = hasProductChanges(product, edit);
           const showSavedHint = savedProductId === product.id && !isDirty && !isSaving;
+          const hasLicenseType = Boolean(edit.licenseType);
           const editWeightGrams = parseWeightInputToGrams(edit.licenseWeightKg);
           const editCalculatedFeeCents = calculateLicenseFeeCents(edit.licenseType, editWeightGrams);
 
@@ -612,9 +660,7 @@ export default function ProductsPage() {
                       <select
                         className="input !border-[#E1C989] !bg-[#FFFDF7] !px-3"
                         value={edit.licenseType}
-                        onChange={(event) =>
-                          setEditField(product.id, "licenseType", event.target.value as EditableLicenseType)
-                        }
+                        onChange={(event) => setProductLicenseType(product, event.target.value as EditableLicenseType)}
                       >
                         <option value="">-</option>
                         {LICENSE_TYPES.filter((licenseType) => licenseType !== "NONE").map((licenseType) => (
@@ -625,17 +671,19 @@ export default function ProductsPage() {
                       </select>
                       <CompactSuffixField
                         suffix={t("fieldWeightShort")}
-                        value={edit.licenseWeightKg}
+                        value={hasLicenseType ? edit.licenseWeightKg : ""}
                         onChange={(value) => setEditField(product.id, "licenseWeightKg", value)}
                         inputMode="decimal"
+                        disabled={!hasLicenseType}
                         className="!border-[#E1C989] !bg-[#FFFDF7]"
                         suffixClassName="text-[#8A6A1E]"
                       />
 
                       <CompactSuffixField
                         suffix={t("fieldPriceShort")}
-                        value={toPriceInput(editCalculatedFeeCents)}
+                        value={hasLicenseType ? toPriceInput(editCalculatedFeeCents) : ""}
                         readOnly
+                        disabled={!hasLicenseType}
                         className="!border-[#E1C989] !bg-[#FFFDF7]"
                         suffixClassName="text-[#8A6A1E]"
                       />
@@ -681,6 +729,14 @@ export default function ProductsPage() {
                       </button>
                     </div>
                   </div>
+                  {showSavedHint ? (
+                    <div className="rounded-2xl border border-[#B7E4C0] bg-[#F1FBF3] px-3 py-3 text-sm font-semibold text-[#246B35]">
+                      <span className="inline-flex items-center gap-2">
+                        <CheckCircle2 size={16} />
+                        {t("updateSuccess")}
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </article>
