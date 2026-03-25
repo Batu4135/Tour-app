@@ -7,6 +7,7 @@ type CustomerImportRow = {
   address: string | null;
   phone: string | null;
   routeDay: string;
+  fingerprint: string;
 };
 
 function normalizeHeader(value: string): string {
@@ -120,40 +121,37 @@ async function main() {
       name,
       address,
       phone,
-      routeDay
+      routeDay,
+      fingerprint: ""
     });
   }
 
   const dedupedByKey = new Map<string, CustomerImportRow>();
   for (const row of parsedRows) {
-    dedupedByKey.set(buildKey(row), row);
+    const fingerprint = buildKey(row);
+    dedupedByKey.set(fingerprint, {
+      ...row,
+      fingerprint
+    });
   }
   const dedupedRows = [...dedupedByKey.values()];
 
-  const existing = await prisma.customer.findMany({
+  const existing = await prisma.customerDirectoryEntry.findMany({
     select: {
       name: true,
       address: true,
       phone: true,
-      routeDay: true
+      routeDay: true,
+      fingerprint: true
     }
   });
-  const existingKeys = new Set(
-    existing.map((row) =>
-      buildKey({
-        name: row.name,
-        address: row.address,
-        phone: row.phone,
-        routeDay: row.routeDay ?? ""
-      })
-    )
-  );
+  const existingKeys = new Set(existing.map((row) => row.fingerprint));
 
   const toCreate = dedupedRows.filter((row) => !existingKeys.has(buildKey(row)));
   const chunkSize = 200;
   for (let index = 0; index < toCreate.length; index += chunkSize) {
     const chunk = toCreate.slice(index, index + chunkSize);
-    await prisma.customer.createMany({
+    await prisma.customerDirectoryEntry.createMany({
       data: chunk
     });
   }

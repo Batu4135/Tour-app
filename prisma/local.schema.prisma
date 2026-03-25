@@ -30,6 +30,20 @@ model Customer {
   @@index([name])
 }
 
+model CustomerDirectoryEntry {
+  id          Int      @id
+  routeDay    String
+  name        String
+  address     String?
+  phone       String?
+  fingerprint String   @unique
+  createdAt   DateTime
+  updatedAt   DateTime
+
+  @@index([routeDay])
+  @@index([name])
+}
+
 model Product {
   id                Int             @id
   sku               String          @unique
