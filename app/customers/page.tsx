@@ -50,7 +50,6 @@ export default function CustomersPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [routeSuggestions, setRouteSuggestions] = useState<string[]>([]);
   const [directorySuggestions, setDirectorySuggestions] = useState<CustomerDirectorySuggestion[]>([]);
-  const [routeLoading, setRouteLoading] = useState(false);
   const [directoryLoading, setDirectoryLoading] = useState(false);
 
   useEffect(() => {
@@ -110,7 +109,6 @@ export default function CustomersPage() {
 
     const controller = new AbortController();
     const timer = setTimeout(async () => {
-      setRouteLoading(true);
       try {
         const response = await fetch(`/api/customer-directory?mode=routes&q=${encodeURIComponent(routeQuery)}`, {
           signal: controller.signal
@@ -122,8 +120,6 @@ export default function CustomersPage() {
         if ((routeError as Error).name !== "AbortError") {
           setRouteSuggestions([]);
         }
-      } finally {
-        setRouteLoading(false);
       }
     }, 180);
 
@@ -259,59 +255,31 @@ export default function CustomersPage() {
                 <option key={routeDay} value={routeDay} />
               ))}
             </datalist>
-            {routeOptions.length > 0 ? (
-              <p className="rounded-xl border border-[#E5E5E5] bg-[#F8F9FA] px-3 py-2 text-xs text-[#4A4A4A]/70">
-                {t("routeDayHint")}
-              </p>
-            ) : null}
-            {form.routeDay.trim() ? (
-              <div className="space-y-2 rounded-xl border border-[#E5E5E5] bg-[#F8F9FA] px-3 py-2">
-                <p className="text-xs font-semibold text-[#4A4A4A]/70">{t("routeSuggestionsTitle")}</p>
-                {routeLoading ? <p className="text-xs text-[#4A4A4A]/60">{t("loading")}</p> : null}
-                {!routeLoading && suggestedRouteDays.length === 0 ? (
-                  <p className="text-xs text-[#4A4A4A]/60">{t("noRouteSuggestions")}</p>
-                ) : null}
-                <div className="flex flex-wrap gap-2">
-                  {suggestedRouteDays.map((routeDay) => (
-                    <button
-                      key={routeDay}
-                      type="button"
-                      className="secondary-btn !w-auto !px-3 !py-2 text-sm"
-                      onClick={() => setForm((prev) => ({ ...prev, routeDay }))}
-                    >
-                      {routeDay}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
             <input
               className="input"
               placeholder={t("name")}
               value={form.name}
               onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
             />
-            {form.routeDay.trim() && form.name.trim() ? (
-              <div className="space-y-2 rounded-xl border border-[#E5E5E5] bg-[#F8F9FA] px-3 py-2">
-                <p className="text-xs font-semibold text-[#4A4A4A]/70">{t("customerSuggestionsTitle")}</p>
-                {directoryLoading ? <p className="text-xs text-[#4A4A4A]/60">{t("loading")}</p> : null}
-                {!directoryLoading && directorySuggestions.length === 0 ? (
-                  <p className="text-xs text-[#4A4A4A]/60">{t("noCustomerSuggestions")}</p>
+            {form.routeDay.trim() && form.name.trim().length >= 2 ? (
+              <div className="space-y-1">
+                {directoryLoading ? <p className="px-1 text-xs text-[#4A4A4A]/60">{t("loading")}</p> : null}
+                {!directoryLoading && directorySuggestions.length > 0 ? (
+                  <div className="space-y-2 rounded-xl border border-[#E5E5E5] bg-white p-2">
+                    {directorySuggestions.map((suggestion) => (
+                      <button
+                        key={suggestion.id}
+                        type="button"
+                        className="w-full rounded-xl border border-[#E5E5E5] bg-[#FCFCFC] px-3 py-2 text-left transition-colors active:bg-[#F4F7F8]"
+                        onClick={() => applyDirectorySuggestion(suggestion)}
+                      >
+                        <p className="text-sm font-semibold text-[#4A4A4A]">{suggestion.name}</p>
+                        {suggestion.phone ? <p className="text-xs text-[#4A4A4A]/70">{suggestion.phone}</p> : null}
+                        {suggestion.address ? <p className="text-xs text-[#4A4A4A]/70">{suggestion.address}</p> : null}
+                      </button>
+                    ))}
+                  </div>
                 ) : null}
-                <div className="space-y-2">
-                  {directorySuggestions.map((suggestion) => (
-                    <button
-                      key={suggestion.id}
-                      type="button"
-                      className="secondary-btn w-full !py-2 text-left"
-                      onClick={() => applyDirectorySuggestion(suggestion)}
-                    >
-                      <p className="text-sm font-semibold">{suggestion.name}</p>
-                      {suggestion.phone ? <p className="text-xs text-[#4A4A4A]/70">{suggestion.phone}</p> : null}
-                      {suggestion.address ? <p className="text-xs text-[#4A4A4A]/70">{suggestion.address}</p> : null}
-                    </button>
-                  ))}
-                </div>
               </div>
             ) : null}
             <input

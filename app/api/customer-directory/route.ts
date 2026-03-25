@@ -5,6 +5,21 @@ import { unauthorized } from "@/lib/http";
 
 export const runtime = "nodejs";
 
+function normalizeSearch(value: string): string {
+  return value.trim().toLocaleLowerCase("tr-TR");
+}
+
+function rankMatch(haystack: string, query: string): number {
+  const normalizedHaystack = normalizeSearch(haystack);
+  const normalizedQuery = normalizeSearch(query);
+  if (!normalizedHaystack || !normalizedQuery) return Number.MAX_SAFE_INTEGER;
+  if (normalizedHaystack === normalizedQuery) return 0;
+  if (normalizedHaystack.startsWith(normalizedQuery)) return 1;
+  if (normalizedHaystack.split(/\s+/).some((part) => part.startsWith(normalizedQuery))) return 2;
+  if (normalizedHaystack.includes(normalizedQuery)) return 3;
+  return Number.MAX_SAFE_INTEGER;
+}
+
 export async function GET(request: Request) {
   const user = await requireAuth();
   if (!user) return unauthorized();
@@ -15,31 +30,40 @@ export async function GET(request: Request) {
   const routeDay = url.searchParams.get("routeDay")?.trim() ?? "";
 
   if (mode === "routes") {
+    if (!q) {
+      return NextResponse.json({ routeDays: [] });
+    }
+
     const routes = await prisma.customerDirectoryEntry.findMany({
-      where: q
-        ? {
-            routeDay: {
-              contains: q,
-              mode: "insensitive"
-            }
-          }
-        : undefined,
+      where: {
+        routeDay: {
+          contains: q,
+          mode: "insensitive"
+        }
+      },
       distinct: ["routeDay"],
       orderBy: { routeDay: "asc" },
       select: { routeDay: true },
-      take: 12
+      take: 20
     });
 
+    const rankedRoutes = routes
+      .map((entry) => ({ routeDay: entry.routeDay, score: rankMatch(entry.routeDay, q) }))
+      .filter((entry) => Number.isFinite(entry.score))
+      .sort((a, b) => a.score - b.score || a.routeDay.localeCompare(b.routeDay, "tr-TR"))
+      .slice(0, 6)
+      .map((entry) => entry.routeDay);
+
     return NextResponse.json({
-      routeDays: routes.map((entry) => entry.routeDay).filter(Boolean)
+      routeDays: rankedRoutes
     });
   }
 
-  if (!routeDay) {
+  if (!routeDay || q.trim().length < 2) {
     return NextResponse.json({ customers: [] });
   }
 
-  const customers = await prisma.customerDirectoryEntry.findMany({
+  const rawCustomers = await prisma.customerDirectoryEntry.findMany({
     where: {
       routeDay: {
         equals: routeDay,
@@ -63,8 +87,23 @@ export async function GET(request: Request) {
       phone: true,
       routeDay: true
     },
-    take: 8
+    take: 40
   });
+
+  const customers = rawCustomers
+    .map((customer) => {
+      const scores = [customer.name, customer.address ?? "", customer.phone ?? ""]
+        .map((value) => rankMatch(value, q))
+        .filter((value) => Number.isFinite(value));
+      return {
+        ...customer,
+        score: scores.length > 0 ? Math.min(...scores) : Number.MAX_SAFE_INTEGER
+      };
+    })
+    .filter((customer) => Number.isFinite(customer.score))
+    .sort((a, b) => a.score - b.score || a.name.localeCompare(b.name, "tr-TR"))
+    .slice(0, 5)
+    .map(({ score: _score, ...customer }) => customer);
 
   return NextResponse.json({ customers });
 }
