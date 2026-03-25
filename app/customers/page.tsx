@@ -64,6 +64,14 @@ export default function CustomersPage() {
     }
     return Array.from(entries.values()).sort((a, b) => a.localeCompare(b, "tr-TR"));
   }, [customers]);
+  const suggestedRouteDays = useMemo(() => {
+    const suggestions = [...routeOptions];
+    const currentRouteDay = form.routeDay.trim();
+    if (currentRouteDay && !suggestions.some((entry) => entry.toLocaleLowerCase("tr-TR") === currentRouteDay.toLocaleLowerCase("tr-TR"))) {
+      suggestions.unshift(currentRouteDay);
+    }
+    return suggestions;
+  }, [form.routeDay, routeOptions]);
   const filteredCustomers = useMemo(() => {
     if (selectedRouteDay === "all") return customers;
     return customers.filter((customer) => (customer.routeDay?.trim() ?? "") === selectedRouteDay);
@@ -139,6 +147,26 @@ export default function CustomersPage() {
           <form className="space-y-3" onSubmit={onCreate}>
             <input
               className="input"
+              placeholder={t("routeDayPlaceholder")}
+              value={form.routeDay}
+              onChange={(event) => setForm((prev) => ({ ...prev, routeDay: event.target.value }))}
+              list="customer-route-day-options"
+              autoFocus
+              autoComplete="off"
+              required
+            />
+            <datalist id="customer-route-day-options">
+              {suggestedRouteDays.map((routeDay) => (
+                <option key={routeDay} value={routeDay} />
+              ))}
+            </datalist>
+            {routeOptions.length > 0 ? (
+              <p className="rounded-xl border border-[#E5E5E5] bg-[#F8F9FA] px-3 py-2 text-xs text-[#4A4A4A]/70">
+                {t("routeDayHint")}
+              </p>
+            ) : null}
+            <input
+              className="input"
               placeholder={t("name")}
               value={form.name}
               onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
@@ -154,13 +182,6 @@ export default function CustomersPage() {
               placeholder={t("phone")}
               value={form.phone}
               onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
-            />
-            <input
-              className="input"
-              placeholder={t("routeDay")}
-              value={form.routeDay}
-              onChange={(event) => setForm((prev) => ({ ...prev, routeDay: event.target.value }))}
-              required
             />
             <button type="submit" className="primary-btn w-full" disabled={!canSubmit || saving}>
               {saving ? t("saving") : t("save")}

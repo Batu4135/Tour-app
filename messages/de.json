@@ -23,6 +23,8 @@
     "address": "Adresse",
     "phone": "Telefon",
     "routeDay": "Tour-Tag",
+    "routeDayPlaceholder": "Tour-Tag zuerst eingeben (z.B. Bremen)",
+    "routeDayHint": "Vorschlaege kommen aus bereits gespeicherten Tour-Tagen.",
     "save": "Speichern",
     "saving": "Speichern...",
     "loading": "Lade Kunden...",

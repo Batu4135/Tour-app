@@ -23,6 +23,8 @@
                       "address":  "Adres",
                       "phone":  "Telefon",
                       "routeDay":  "Rota günü",
+                      "routeDayPlaceholder":  "Önce rota günü girin (ör. Bremen)",
+                      "routeDayHint":  "Öneriler, kaydedilmiş rota günlerinden gelir.",
                       "save":  "Kaydet",
                       "saving":  "Kaydediliyor...",
                       "loading":  "Müşteriler yükleniyor...",
