@@ -56,6 +56,10 @@ export default function CustomersPage() {
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeFieldFocused, setRouteFieldFocused] = useState(false);
   const selectingDirectorySuggestionRef = useRef(false);
+  const routeInputRef = useRef<HTMLInputElement | null>(null);
+  const nameInputRef = useRef<HTMLInputElement | null>(null);
+  const addressInputRef = useRef<HTMLInputElement | null>(null);
+  const phoneInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(query), 260);
@@ -264,11 +268,38 @@ export default function CustomersPage() {
   }
 
   function onRouteDayKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (!topRouteSuggestion) return;
-    if (event.key === "Tab" || event.key === "ArrowRight" || event.key === "Enter") {
+    if (event.key === "Tab" || event.key === "ArrowRight") {
+      if (!topRouteSuggestion) return;
       event.preventDefault();
       applyRouteSuggestion();
+      return;
     }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      if (topRouteSuggestion) {
+        applyRouteSuggestion();
+      }
+      nameInputRef.current?.focus();
+    }
+  }
+
+  function onNameKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    addressInputRef.current?.focus();
+  }
+
+  function onAddressKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    phoneInputRef.current?.focus();
+  }
+
+  function onPhoneKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    phoneInputRef.current?.blur();
   }
 
   function onRouteDayBlur() {
@@ -324,10 +355,11 @@ export default function CustomersPage() {
                 </div>
               ) : null}
               <input
+                ref={routeInputRef}
                 className="input relative z-[1] bg-white text-[#4A4A4A]"
                 placeholder={t("routeDayPlaceholder")}
                 inputMode="search"
-                enterKeyHint="search"
+                enterKeyHint="next"
                 value={form.routeDay}
                 onChange={(event) => {
                   setDirectorySelectionLocked(false);
@@ -347,13 +379,16 @@ export default function CustomersPage() {
               <p className="px-1 text-xs text-[#4A4A4A]/55">{t("loading")}</p>
             ) : null}
             <input
+              ref={nameInputRef}
               className="input"
               placeholder={t("name")}
+              enterKeyHint="next"
               value={form.name}
               onChange={(event) => {
                 setDirectorySelectionLocked(false);
                 setForm((prev) => ({ ...prev, name: event.target.value }));
               }}
+              onKeyDown={onNameKeyDown}
               onFocus={() => setNameFieldFocused(true)}
               onBlur={onNameFieldBlur}
             />
@@ -380,16 +415,22 @@ export default function CustomersPage() {
               </div>
             ) : null}
             <input
+              ref={addressInputRef}
               className="input"
               placeholder={t("address")}
+              enterKeyHint="next"
               value={form.address}
               onChange={(event) => setForm((prev) => ({ ...prev, address: event.target.value }))}
+              onKeyDown={onAddressKeyDown}
             />
             <input
+              ref={phoneInputRef}
               className="input"
               placeholder={t("phone")}
+              enterKeyHint="done"
               value={form.phone}
               onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
+              onKeyDown={onPhoneKeyDown}
             />
             <button type="submit" className="primary-btn w-full" disabled={!canSubmit || saving}>
               {saving ? t("saving") : t("save")}
