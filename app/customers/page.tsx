@@ -48,7 +48,7 @@ export default function CustomersPage() {
   const [saving, setSaving] = useState(false);
   const [selectedRouteDay, setSelectedRouteDay] = useState<string>("all");
   const [createOpen, setCreateOpen] = useState(false);
-  const [routeSuggestions, setRouteSuggestions] = useState<string[]>([]);
+  const [routeCatalog, setRouteCatalog] = useState<string[]>([]);
   const [directorySuggestions, setDirectorySuggestions] = useState<CustomerDirectorySuggestion[]>([]);
   const [directoryLoading, setDirectoryLoading] = useState(false);
 
@@ -75,23 +75,15 @@ export default function CustomersPage() {
     }
     return Array.from(entries.values()).sort((a, b) => a.localeCompare(b, "tr-TR"));
   }, [customers]);
-  const suggestedRouteDays = useMemo(() => {
-    const suggestions = [...routeSuggestions];
-    const currentRouteDay = form.routeDay.trim();
-    if (currentRouteDay && !suggestions.some((entry) => entry.toLocaleLowerCase("tr-TR") === currentRouteDay.toLocaleLowerCase("tr-TR"))) {
-      suggestions.unshift(currentRouteDay);
-    }
-    return suggestions;
-  }, [form.routeDay, routeSuggestions]);
   const inlineRouteSuggestion = useMemo(() => {
     const typed = form.routeDay;
     if (!typed.trim()) return "";
     const normalizedTyped = typed.toLocaleLowerCase("tr-TR");
-    const bestMatch = suggestedRouteDays.find((entry) => entry.toLocaleLowerCase("tr-TR").startsWith(normalizedTyped));
+    const bestMatch = routeCatalog.find((entry) => entry.toLocaleLowerCase("tr-TR").startsWith(normalizedTyped));
     if (!bestMatch) return "";
     if (bestMatch.toLocaleLowerCase("tr-TR") === normalizedTyped) return "";
     return bestMatch.slice(typed.length);
-  }, [form.routeDay, suggestedRouteDays]);
+  }, [form.routeDay, routeCatalog]);
   const filteredCustomers = useMemo(() => {
     if (selectedRouteDay === "all") return customers;
     return customers.filter((customer) => (customer.routeDay?.trim() ?? "") === selectedRouteDay);
@@ -106,37 +98,32 @@ export default function CustomersPage() {
 
   useEffect(() => {
     if (!createOpen) {
-      setRouteSuggestions([]);
-      return;
-    }
-
-    const routeQuery = form.routeDay.trim();
-    if (!routeQuery) {
-      setRouteSuggestions([]);
+      setRouteCatalog([]);
       return;
     }
 
     const controller = new AbortController();
-    const timer = setTimeout(async () => {
+    const run = async () => {
       try {
-        const response = await fetch(`/api/customer-directory?mode=routes&q=${encodeURIComponent(routeQuery)}`, {
+        const response = await fetch(`/api/customer-directory?mode=routes`, {
           signal: controller.signal
         });
         const payload = (await response.json()) as { routeDays?: string[] };
         if (!response.ok) throw new Error(t("loadError"));
-        setRouteSuggestions(payload.routeDays ?? []);
+        setRouteCatalog(payload.routeDays ?? []);
       } catch (routeError) {
         if ((routeError as Error).name !== "AbortError") {
-          setRouteSuggestions([]);
+          setRouteCatalog([]);
         }
       }
-    }, 180);
+    };
+
+    void run();
 
     return () => {
       controller.abort();
-      clearTimeout(timer);
     };
-  }, [createOpen, form.routeDay, t]);
+  }, [createOpen, t]);
 
   useEffect(() => {
     if (!createOpen) {
@@ -264,7 +251,7 @@ export default function CustomersPage() {
           <form className="space-y-3" onSubmit={onCreate}>
             <div className="relative">
               {inlineRouteSuggestion ? (
-                <div className="pointer-events-none absolute inset-0 flex items-center px-4 py-3 text-[#4A4A4A]/28">
+                <div className="pointer-events-none absolute inset-0 flex items-center px-4 py-3 text-[#4A4A4A]/40">
                   <span className="opacity-0">{form.routeDay}</span>
                   <span>{inlineRouteSuggestion}</span>
                 </div>

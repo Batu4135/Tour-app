@@ -30,29 +30,29 @@ export async function GET(request: Request) {
   const routeDay = url.searchParams.get("routeDay")?.trim() ?? "";
 
   if (mode === "routes") {
-    if (!q) {
-      return NextResponse.json({ routeDays: [] });
-    }
-
     const routes = await prisma.customerDirectoryEntry.findMany({
-      where: {
-        routeDay: {
-          contains: q,
-          mode: "insensitive"
-        }
-      },
+      where: q
+        ? {
+            routeDay: {
+              contains: q,
+              mode: "insensitive"
+            }
+          }
+        : undefined,
       distinct: ["routeDay"],
       orderBy: { routeDay: "asc" },
       select: { routeDay: true },
       take: 20
     });
 
-    const rankedRoutes = routes
-      .map((entry) => ({ routeDay: entry.routeDay, score: rankMatch(entry.routeDay, q) }))
-      .filter((entry) => Number.isFinite(entry.score))
-      .sort((a, b) => a.score - b.score || a.routeDay.localeCompare(b.routeDay, "tr-TR"))
-      .slice(0, 6)
-      .map((entry) => entry.routeDay);
+    const rankedRoutes = (q
+      ? routes
+          .map((entry) => ({ routeDay: entry.routeDay, score: rankMatch(entry.routeDay, q) }))
+          .filter((entry) => Number.isFinite(entry.score))
+          .sort((a, b) => a.score - b.score || a.routeDay.localeCompare(b.routeDay, "tr-TR"))
+          .slice(0, 6)
+          .map((entry) => entry.routeDay)
+      : routes.map((entry) => entry.routeDay).filter(Boolean));
 
     return NextResponse.json({
       routeDays: rankedRoutes
