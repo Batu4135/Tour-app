@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, KeyboardEvent, PointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Plus, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -55,6 +55,7 @@ export default function CustomersPage() {
   const [nameFieldFocused, setNameFieldFocused] = useState(false);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeFieldFocused, setRouteFieldFocused] = useState(false);
+  const selectingDirectorySuggestionRef = useRef(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(query), 260);
@@ -248,6 +249,15 @@ export default function CustomersPage() {
     setDirectorySuggestions([]);
   }
 
+  function onDirectorySuggestionPointerDown(
+    event: PointerEvent<HTMLButtonElement>,
+    suggestion: CustomerDirectorySuggestion
+  ) {
+    event.preventDefault();
+    selectingDirectorySuggestionRef.current = true;
+    applyDirectorySuggestion(suggestion);
+  }
+
   function applyRouteSuggestion() {
     if (!topRouteSuggestion) return;
     setForm((prev) => ({ ...prev, routeDay: topRouteSuggestion }));
@@ -273,6 +283,14 @@ export default function CustomersPage() {
         routeDay: topRouteSuggestion
       };
     });
+  }
+
+  function onNameFieldBlur() {
+    if (selectingDirectorySuggestionRef.current) {
+      selectingDirectorySuggestionRef.current = false;
+      return;
+    }
+    setNameFieldFocused(false);
   }
 
   const showInlineRouteSuggestion = routeFieldFocused && Boolean(inlineRouteSuggestion);
@@ -302,14 +320,14 @@ export default function CustomersPage() {
               {showInlineRouteSuggestion ? (
                 <div className="pointer-events-none absolute inset-0 z-[2] flex items-center overflow-hidden rounded-xl px-4 py-3">
                   <span className="invisible whitespace-pre text-[#4A4A4A]">{form.routeDay}</span>
-                  <span className="inline-flex max-w-full items-center overflow-hidden rounded-md border border-[#0A84FF]/30 bg-[#0A84FF]/16 px-1.5 py-0.5 text-[#0A84FF]">
-                    <span className="truncate whitespace-nowrap font-medium">{inlineRouteSuggestion}</span>
-                  </span>
+                  <span className="truncate whitespace-nowrap font-medium text-[#0A84FF]">{inlineRouteSuggestion}</span>
                 </div>
               ) : null}
               <input
                 className="input relative z-[1] bg-white text-[#4A4A4A]"
                 placeholder={t("routeDayPlaceholder")}
+                inputMode="search"
+                enterKeyHint="search"
                 value={form.routeDay}
                 onChange={(event) => {
                   setDirectorySelectionLocked(false);
@@ -337,7 +355,7 @@ export default function CustomersPage() {
                 setForm((prev) => ({ ...prev, name: event.target.value }));
               }}
               onFocus={() => setNameFieldFocused(true)}
-              onBlur={() => setNameFieldFocused(false)}
+              onBlur={onNameFieldBlur}
             />
             {nameFieldFocused && form.routeDay.trim() && form.name.trim().length >= 2 && !directorySelectionLocked ? (
               <div className="space-y-1">
@@ -349,6 +367,7 @@ export default function CustomersPage() {
                         key={suggestion.id}
                         type="button"
                         className="w-full rounded-xl border border-[#E5E5E5] bg-[#FCFCFC] px-3 py-2 text-left transition-colors active:bg-[#F4F7F8]"
+                        onPointerDown={(event) => onDirectorySuggestionPointerDown(event, suggestion)}
                         onClick={() => applyDirectorySuggestion(suggestion)}
                       >
                         <p className="text-sm font-semibold text-[#4A4A4A]">{suggestion.name}</p>
