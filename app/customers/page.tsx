@@ -51,6 +51,7 @@ export default function CustomersPage() {
   const [routeCatalog, setRouteCatalog] = useState<string[]>([]);
   const [directorySuggestions, setDirectorySuggestions] = useState<CustomerDirectorySuggestion[]>([]);
   const [directoryLoading, setDirectoryLoading] = useState(false);
+  const [routeFieldFocused, setRouteFieldFocused] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(query), 260);
@@ -76,10 +77,10 @@ export default function CustomersPage() {
     return Array.from(entries.values()).sort((a, b) => a.localeCompare(b, "tr-TR"));
   }, [customers]);
   const inlineRouteSuggestion = useMemo(() => {
-    const typed = form.routeDay;
-    if (!typed.trim()) return "";
-    const normalizedTyped = typed.toLocaleLowerCase("tr-TR");
-    const bestMatch = routeCatalog.find((entry) => entry.toLocaleLowerCase("tr-TR").startsWith(normalizedTyped));
+      const typed = form.routeDay;
+      if (!typed.trim()) return "";
+      const normalizedTyped = typed.toLocaleLowerCase("tr-TR");
+      const bestMatch = routeCatalog.find((entry) => entry.toLocaleLowerCase("tr-TR").startsWith(normalizedTyped));
     if (!bestMatch) return "";
     if (bestMatch.toLocaleLowerCase("tr-TR") === normalizedTyped) return "";
     return bestMatch.slice(typed.length);
@@ -222,11 +223,13 @@ export default function CustomersPage() {
 
   function onRouteDayKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (!inlineRouteSuggestion) return;
-    if (event.key === "Tab" || event.key === "ArrowRight") {
+    if (event.key === "Tab" || event.key === "ArrowRight" || event.key === "Enter") {
       event.preventDefault();
       applyRouteSuggestion();
     }
   }
+
+  const showInlineRouteSuggestion = routeFieldFocused && Boolean(inlineRouteSuggestion);
 
   return (
     <section className="space-y-4">
@@ -250,20 +253,24 @@ export default function CustomersPage() {
         {createOpen ? (
           <form className="space-y-3" onSubmit={onCreate}>
             <div className="relative">
-              {inlineRouteSuggestion ? (
-                <div className="pointer-events-none absolute inset-0 flex items-center px-4 py-3 text-[#4A4A4A]/40">
-                  <span className="opacity-0">{form.routeDay}</span>
-                  <span>{inlineRouteSuggestion}</span>
+              {showInlineRouteSuggestion ? (
+                <div className="pointer-events-none absolute inset-0 z-0 flex items-center overflow-hidden rounded-xl px-4 py-3">
+                  <span className="truncate text-[#4A4A4A]">{form.routeDay}</span>
+                  <span className="truncate text-[#4A4A4A]/35">{inlineRouteSuggestion}</span>
                 </div>
               ) : null}
               <input
-                className="input relative z-[1] bg-transparent"
+                className={`input relative z-[1] ${showInlineRouteSuggestion ? "bg-transparent text-transparent caret-[#2F7EA1] placeholder:text-transparent" : "bg-white text-[#4A4A4A]"}`}
                 placeholder={t("routeDayPlaceholder")}
                 value={form.routeDay}
                 onChange={(event) => setForm((prev) => ({ ...prev, routeDay: event.target.value }))}
                 onKeyDown={onRouteDayKeyDown}
+                onFocus={() => setRouteFieldFocused(true)}
+                onBlur={() => setRouteFieldFocused(false)}
                 autoFocus
                 autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
                 required
               />
             </div>
