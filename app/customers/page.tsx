@@ -92,6 +92,12 @@ export default function CustomersPage() {
     if (bestMatch.toLocaleLowerCase("tr-TR") === form.routeDay.trim().toLocaleLowerCase("tr-TR")) return "";
     return bestMatch;
   }, [form.routeDay, routeSuggestions]);
+  const hasUniqueRouteSuggestion = useMemo(() => {
+    const typed = form.routeDay.trim().toLocaleLowerCase("tr-TR");
+    if (!typed) return false;
+    const matches = routeSuggestions.filter((entry) => entry.toLocaleLowerCase("tr-TR").startsWith(typed));
+    return matches.length === 1;
+  }, [form.routeDay, routeSuggestions]);
   const filteredCustomers = useMemo(() => {
     if (selectedRouteDay === "all") return customers;
     return customers.filter((customer) => (customer.routeDay?.trim() ?? "") === selectedRouteDay);
@@ -232,20 +238,34 @@ export default function CustomersPage() {
   }
 
   function applyRouteSuggestion() {
-    if (!inlineRouteSuggestion) return;
-    setForm((prev) => ({ ...prev, routeDay: `${prev.routeDay}${inlineRouteSuggestion}` }));
+    if (!topRouteSuggestion) return;
+    setForm((prev) => ({ ...prev, routeDay: topRouteSuggestion }));
     setRouteSuggestions([]);
   }
 
   function onRouteDayKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (!inlineRouteSuggestion) return;
+    if (!topRouteSuggestion) return;
     if (event.key === "Tab" || event.key === "ArrowRight" || event.key === "Enter") {
       event.preventDefault();
       applyRouteSuggestion();
     }
   }
 
-  const showInlineRouteSuggestion = routeFieldFocused && Boolean(inlineRouteSuggestion);
+  function onRouteDayBlur() {
+    setRouteFieldFocused(false);
+    if (!hasUniqueRouteSuggestion || !topRouteSuggestion) return;
+    setForm((prev) => {
+      if (prev.routeDay.trim().toLocaleLowerCase("tr-TR") === topRouteSuggestion.toLocaleLowerCase("tr-TR")) {
+        return prev;
+      }
+      return {
+        ...prev,
+        routeDay: topRouteSuggestion
+      };
+    });
+  }
+
+  const showInlineRouteSuggestion = routeFieldFocused && Boolean(topRouteSuggestion);
 
   return (
     <section className="space-y-4">
@@ -270,19 +290,22 @@ export default function CustomersPage() {
           <form className="space-y-3" onSubmit={onCreate}>
             <div className="relative">
               {showInlineRouteSuggestion ? (
-                <div className="pointer-events-none absolute inset-0 z-0 flex items-center overflow-hidden rounded-xl px-4 py-3">
-                  <span className="truncate text-[#4A4A4A]">{form.routeDay}</span>
-                  <span className="truncate text-[#4A4A4A]/35">{inlineRouteSuggestion}</span>
+                <div className="pointer-events-none absolute inset-0 z-[2] flex items-center overflow-hidden rounded-xl px-4 py-3">
+                  <span className="invisible whitespace-pre text-[#4A4A4A]">{form.routeDay}</span>
+                  <span className="truncate whitespace-nowrap text-[#2F7EA1]/78">
+                    {" — "}
+                    {topRouteSuggestion}
+                  </span>
                 </div>
               ) : null}
               <input
-                className={`input relative z-[1] ${showInlineRouteSuggestion ? "bg-transparent text-transparent caret-[#2F7EA1] placeholder:text-transparent" : "bg-white text-[#4A4A4A]"}`}
+                className="input relative z-[1] bg-white text-[#4A4A4A]"
                 placeholder={t("routeDayPlaceholder")}
                 value={form.routeDay}
                 onChange={(event) => setForm((prev) => ({ ...prev, routeDay: event.target.value }))}
                 onKeyDown={onRouteDayKeyDown}
                 onFocus={() => setRouteFieldFocused(true)}
-                onBlur={() => setRouteFieldFocused(false)}
+                onBlur={onRouteDayBlur}
                 autoFocus
                 autoComplete="off"
                 autoCorrect="off"
@@ -290,16 +313,6 @@ export default function CustomersPage() {
                 required
               />
             </div>
-            {routeFieldFocused && form.routeDay.trim().length >= 1 && topRouteSuggestion ? (
-              <button
-                type="button"
-                className="w-full rounded-xl border border-[#D6E8F0] bg-[#F7FBFD] px-4 py-2 text-left text-sm text-[#2F7EA1] transition-colors active:bg-[#EEF6FA]"
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={applyRouteSuggestion}
-              >
-                {topRouteSuggestion}
-              </button>
-            ) : null}
             {routeFieldFocused && form.routeDay.trim().length >= 1 && routeLoading && routeSuggestions.length === 0 ? (
               <p className="px-1 text-xs text-[#4A4A4A]/55">{t("loading")}</p>
             ) : null}
