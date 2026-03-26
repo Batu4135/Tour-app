@@ -5,8 +5,45 @@ import { unauthorized } from "@/lib/http";
 
 export const runtime = "nodejs";
 
+function compactWhitespace(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
 function normalizeSearch(value: string): string {
-  return value.trim().toLocaleLowerCase("tr-TR");
+  return compactWhitespace(value).toLocaleLowerCase("tr-TR");
+}
+
+function normalizeComparable(value: string): string {
+  return normalizeSearch(value).replace(/[^a-z0-9\u00c0-\u024f]+/g, "");
+}
+
+function normalizeAddress(name: string, address: string | null): string | null {
+  const compactAddress = compactWhitespace(address ?? "");
+  if (!compactAddress) return null;
+
+  const compactName = compactWhitespace(name);
+  if (!compactName) return compactAddress;
+
+  const nameTokens = compactName.split(/\s+/).map((token) => normalizeComparable(token)).filter(Boolean);
+  if (nameTokens.length === 0) return compactAddress;
+
+  let addressTokens = compactAddress.split(/\s+/);
+  let changed = false;
+
+  while (addressTokens.length >= nameTokens.length) {
+    const candidate = addressTokens
+      .slice(0, nameTokens.length)
+      .map((token) => normalizeComparable(token))
+      .filter(Boolean);
+    if (candidate.length !== nameTokens.length) break;
+    if (!candidate.every((token, index) => token === nameTokens[index])) break;
+    addressTokens = addressTokens.slice(nameTokens.length);
+    changed = true;
+  }
+
+  const stripped = compactWhitespace(addressTokens.join(" "));
+  if (changed && stripped) return stripped;
+  return compactAddress;
 }
 
 function rankMatch(haystack: string, query: string): number {
@@ -97,6 +134,7 @@ export async function GET(request: Request) {
         .filter((value) => Number.isFinite(value));
       return {
         ...customer,
+        address: normalizeAddress(customer.name, customer.address),
         score: scores.length > 0 ? Math.min(...scores) : Number.MAX_SAFE_INTEGER
       };
     })

@@ -48,9 +48,11 @@ export default function CustomersPage() {
   const [saving, setSaving] = useState(false);
   const [selectedRouteDay, setSelectedRouteDay] = useState<string>("all");
   const [createOpen, setCreateOpen] = useState(false);
-  const [routeSuggestions, setRouteSuggestions] = useState<string[]>([]);
+  const [routeCatalog, setRouteCatalog] = useState<string[]>([]);
   const [directorySuggestions, setDirectorySuggestions] = useState<CustomerDirectorySuggestion[]>([]);
   const [directoryLoading, setDirectoryLoading] = useState(false);
+  const [directorySelectionLocked, setDirectorySelectionLocked] = useState(false);
+  const [nameFieldFocused, setNameFieldFocused] = useState(false);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeFieldFocused, setRouteFieldFocused] = useState(false);
 
@@ -77,6 +79,14 @@ export default function CustomersPage() {
     }
     return Array.from(entries.values()).sort((a, b) => a.localeCompare(b, "tr-TR"));
   }, [customers]);
+  const routeSuggestions = useMemo(() => {
+    const typed = form.routeDay.trim().toLocaleLowerCase("tr-TR");
+    if (!typed) return [];
+    return routeCatalog
+      .filter((entry) => entry.toLocaleLowerCase("tr-TR").startsWith(typed))
+      .sort((a, b) => a.localeCompare(b, "tr-TR"))
+      .slice(0, 6);
+  }, [form.routeDay, routeCatalog]);
   const inlineRouteSuggestion = useMemo(() => {
     const typed = form.routeDay;
     if (!typed.trim()) return "";
@@ -112,50 +122,47 @@ export default function CustomersPage() {
 
   useEffect(() => {
     if (!createOpen) {
-      setRouteSuggestions([]);
-      return;
-    }
-
-    const routeQuery = form.routeDay.trim();
-    if (routeQuery.length < 1) {
-      setRouteSuggestions([]);
+      setRouteCatalog([]);
       return;
     }
 
     const controller = new AbortController();
-    const timer = setTimeout(async () => {
+    const run = async () => {
       setRouteLoading(true);
       try {
-        const response = await fetch(`/api/customer-directory?mode=routes&q=${encodeURIComponent(routeQuery)}`, {
+        const response = await fetch(`/api/customer-directory?mode=routes`, {
           signal: controller.signal
         });
         const payload = (await response.json()) as { routeDays?: string[] };
         if (!response.ok) throw new Error(t("loadError"));
-        setRouteSuggestions(payload.routeDays ?? []);
+        setRouteCatalog(payload.routeDays ?? []);
       } catch (suggestionError) {
         if ((suggestionError as Error).name !== "AbortError") {
-          setRouteSuggestions([]);
+          setRouteCatalog([]);
         }
       } finally {
         setRouteLoading(false);
       }
-    }, 120);
+    };
+
+    void run();
 
     return () => {
       controller.abort();
-      clearTimeout(timer);
     };
-  }, [createOpen, form.routeDay, t]);
+  }, [createOpen, t]);
 
   useEffect(() => {
     if (!createOpen) {
       setDirectorySuggestions([]);
+      setDirectorySelectionLocked(false);
+      setNameFieldFocused(false);
       return;
     }
 
     const routeDay = form.routeDay.trim();
     const nameQuery = form.name.trim();
-    if (!routeDay || nameQuery.length < 1) {
+    if (!routeDay || nameQuery.length < 1 || directorySelectionLocked || !nameFieldFocused) {
       setDirectorySuggestions([]);
       return;
     }
@@ -184,7 +191,7 @@ export default function CustomersPage() {
       controller.abort();
       clearTimeout(timer);
     };
-  }, [createOpen, form.name, form.routeDay, t]);
+  }, [createOpen, directorySelectionLocked, form.name, form.routeDay, nameFieldFocused, t]);
 
   async function loadCustomers() {
     setLoading(true);
@@ -218,6 +225,8 @@ export default function CustomersPage() {
       if (!data.customer?.id) throw new Error(t("createError"));
       setForm(emptyForm);
       setCreateOpen(false);
+      setDirectorySelectionLocked(false);
+      setNameFieldFocused(false);
       router.push(`/customers/${data.customer.id}?created=1`);
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : t("createError"));
@@ -234,13 +243,14 @@ export default function CustomersPage() {
       address: suggestion.address ?? "",
       phone: suggestion.phone ?? ""
     }));
+    setDirectorySelectionLocked(true);
+    setNameFieldFocused(false);
     setDirectorySuggestions([]);
   }
 
   function applyRouteSuggestion() {
     if (!topRouteSuggestion) return;
     setForm((prev) => ({ ...prev, routeDay: topRouteSuggestion }));
-    setRouteSuggestions([]);
   }
 
   function onRouteDayKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -292,8 +302,8 @@ export default function CustomersPage() {
               {showInlineRouteSuggestion ? (
                 <div className="pointer-events-none absolute inset-0 z-[2] flex items-center overflow-hidden rounded-xl px-4 py-3">
                   <span className="invisible whitespace-pre text-[#4A4A4A]">{form.routeDay}</span>
-                  <span className="inline-flex max-w-full items-center overflow-hidden rounded-md bg-[#0A84FF] px-1.5 py-0.5 text-white shadow-sm">
-                    <span className="truncate whitespace-nowrap">{inlineRouteSuggestion}</span>
+                  <span className="inline-flex max-w-full items-center overflow-hidden rounded-md border border-[#0A84FF]/30 bg-[#0A84FF]/16 px-1.5 py-0.5 text-[#0A84FF]">
+                    <span className="truncate whitespace-nowrap font-medium">{inlineRouteSuggestion}</span>
                   </span>
                 </div>
               ) : null}
@@ -301,7 +311,10 @@ export default function CustomersPage() {
                 className="input relative z-[1] bg-white text-[#4A4A4A]"
                 placeholder={t("routeDayPlaceholder")}
                 value={form.routeDay}
-                onChange={(event) => setForm((prev) => ({ ...prev, routeDay: event.target.value }))}
+                onChange={(event) => {
+                  setDirectorySelectionLocked(false);
+                  setForm((prev) => ({ ...prev, routeDay: event.target.value }));
+                }}
                 onKeyDown={onRouteDayKeyDown}
                 onFocus={() => setRouteFieldFocused(true)}
                 onBlur={onRouteDayBlur}
@@ -319,9 +332,14 @@ export default function CustomersPage() {
               className="input"
               placeholder={t("name")}
               value={form.name}
-              onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+              onChange={(event) => {
+                setDirectorySelectionLocked(false);
+                setForm((prev) => ({ ...prev, name: event.target.value }));
+              }}
+              onFocus={() => setNameFieldFocused(true)}
+              onBlur={() => setNameFieldFocused(false)}
             />
-            {form.routeDay.trim() && form.name.trim().length >= 2 ? (
+            {nameFieldFocused && form.routeDay.trim() && form.name.trim().length >= 2 && !directorySelectionLocked ? (
               <div className="space-y-1">
                 {directoryLoading ? <p className="px-1 text-xs text-[#4A4A4A]/60">{t("loading")}</p> : null}
                 {!directoryLoading && directorySuggestions.length > 0 ? (

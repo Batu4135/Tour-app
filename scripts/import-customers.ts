@@ -22,6 +22,12 @@ function compactWhitespace(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
+function normalizeComparable(value: string): string {
+  return compactWhitespace(value)
+    .toLocaleLowerCase("tr-TR")
+    .replace(/[^a-z0-9\u00c0-\u024f]+/g, "");
+}
+
 function parseArgs() {
   const [, , inputArg, routeDayArg] = process.argv;
   if (!inputArg) {
@@ -81,10 +87,6 @@ function normalizePhone(raw: string): string | null {
   return value || null;
 }
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 function normalizeAddress(name: string, raw: string): string | null {
   const value = compactWhitespace(raw);
   if (!value) return null;
@@ -92,8 +94,26 @@ function normalizeAddress(name: string, raw: string): string | null {
   const normalizedName = compactWhitespace(name);
   if (!normalizedName) return value;
 
-  const withoutPrefix = value.replace(new RegExp(`^${escapeRegExp(normalizedName)}\\s+`, "i"), "").trim();
-  return withoutPrefix || value;
+  const nameTokens = normalizedName.split(/\s+/).map((token) => normalizeComparable(token)).filter(Boolean);
+  if (nameTokens.length === 0) return value;
+
+  let addressTokens = value.split(/\s+/);
+  let changed = false;
+
+  while (addressTokens.length >= nameTokens.length) {
+    const candidate = addressTokens
+      .slice(0, nameTokens.length)
+      .map((token) => normalizeComparable(token))
+      .filter(Boolean);
+    if (candidate.length !== nameTokens.length) break;
+    if (!candidate.every((token, index) => token === nameTokens[index])) break;
+    addressTokens = addressTokens.slice(nameTokens.length);
+    changed = true;
+  }
+
+  const stripped = compactWhitespace(addressTokens.join(" "));
+  if (changed && stripped) return stripped;
+  return value;
 }
 
 function buildKey(row: CustomerImportRow): string {
