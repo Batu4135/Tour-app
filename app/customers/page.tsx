@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from "react";
 import { ChevronDown, Plus, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -83,6 +83,15 @@ export default function CustomersPage() {
     }
     return suggestions;
   }, [form.routeDay, routeSuggestions]);
+  const inlineRouteSuggestion = useMemo(() => {
+    const typed = form.routeDay;
+    if (!typed.trim()) return "";
+    const normalizedTyped = typed.toLocaleLowerCase("tr-TR");
+    const bestMatch = suggestedRouteDays.find((entry) => entry.toLocaleLowerCase("tr-TR").startsWith(normalizedTyped));
+    if (!bestMatch) return "";
+    if (bestMatch.toLocaleLowerCase("tr-TR") === normalizedTyped) return "";
+    return bestMatch.slice(typed.length);
+  }, [form.routeDay, suggestedRouteDays]);
   const filteredCustomers = useMemo(() => {
     if (selectedRouteDay === "all") return customers;
     return customers.filter((customer) => (customer.routeDay?.trim() ?? "") === selectedRouteDay);
@@ -219,6 +228,19 @@ export default function CustomersPage() {
     setDirectorySuggestions([]);
   }
 
+  function applyRouteSuggestion() {
+    if (!inlineRouteSuggestion) return;
+    setForm((prev) => ({ ...prev, routeDay: `${prev.routeDay}${inlineRouteSuggestion}` }));
+  }
+
+  function onRouteDayKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (!inlineRouteSuggestion) return;
+    if (event.key === "Tab" || event.key === "ArrowRight") {
+      event.preventDefault();
+      applyRouteSuggestion();
+    }
+  }
+
   return (
     <section className="space-y-4">
       <header className="space-y-1">
@@ -240,21 +262,24 @@ export default function CustomersPage() {
         </button>
         {createOpen ? (
           <form className="space-y-3" onSubmit={onCreate}>
-            <input
-              className="input"
-              placeholder={t("routeDayPlaceholder")}
-              value={form.routeDay}
-              onChange={(event) => setForm((prev) => ({ ...prev, routeDay: event.target.value }))}
-              list="customer-route-day-options"
-              autoFocus
-              autoComplete="off"
-              required
-            />
-            <datalist id="customer-route-day-options">
-              {suggestedRouteDays.map((routeDay) => (
-                <option key={routeDay} value={routeDay} />
-              ))}
-            </datalist>
+            <div className="relative">
+              {inlineRouteSuggestion ? (
+                <div className="pointer-events-none absolute inset-0 flex items-center px-4 py-3 text-[#4A4A4A]/28">
+                  <span className="opacity-0">{form.routeDay}</span>
+                  <span>{inlineRouteSuggestion}</span>
+                </div>
+              ) : null}
+              <input
+                className="input relative z-[1] bg-transparent"
+                placeholder={t("routeDayPlaceholder")}
+                value={form.routeDay}
+                onChange={(event) => setForm((prev) => ({ ...prev, routeDay: event.target.value }))}
+                onKeyDown={onRouteDayKeyDown}
+                autoFocus
+                autoComplete="off"
+                required
+              />
+            </div>
             <input
               className="input"
               placeholder={t("name")}

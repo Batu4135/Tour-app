@@ -81,9 +81,19 @@ function normalizePhone(raw: string): string | null {
   return value || null;
 }
 
-function normalizeAddress(raw: string): string | null {
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function normalizeAddress(name: string, raw: string): string | null {
   const value = compactWhitespace(raw);
-  return value || null;
+  if (!value) return null;
+
+  const normalizedName = compactWhitespace(name);
+  if (!normalizedName) return value;
+
+  const withoutPrefix = value.replace(new RegExp(`^${escapeRegExp(normalizedName)}\\s+`, "i"), "").trim();
+  return withoutPrefix || value;
 }
 
 function buildKey(row: CustomerImportRow): string {
@@ -111,7 +121,7 @@ async function main() {
   for (let index = rowIndex + 1; index < rows.length; index += 1) {
     const row = rows[index];
     const name = extractCustomerName(String(row[nameIndex] ?? ""));
-    const address = normalizeAddress(String(row[addressIndex] ?? ""));
+    const address = normalizeAddress(name, String(row[addressIndex] ?? ""));
     const phone = phoneIndex >= 0 ? normalizePhone(String(row[phoneIndex] ?? "")) : null;
 
     if (!name && !address && !phone) continue;
