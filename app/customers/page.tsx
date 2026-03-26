@@ -265,7 +265,7 @@ export default function CustomersPage() {
     });
   }
 
-  const showInlineRouteSuggestion = routeFieldFocused && Boolean(topRouteSuggestion);
+  const showInlineRouteSuggestion = routeFieldFocused && Boolean(inlineRouteSuggestion);
 
   return (
     <section className="space-y-4">
@@ -292,9 +292,8 @@ export default function CustomersPage() {
               {showInlineRouteSuggestion ? (
                 <div className="pointer-events-none absolute inset-0 z-[2] flex items-center overflow-hidden rounded-xl px-4 py-3">
                   <span className="invisible whitespace-pre text-[#4A4A4A]">{form.routeDay}</span>
-                  <span className="truncate whitespace-nowrap text-[#2F7EA1]/78">
-                    {" — "}
-                    {topRouteSuggestion}
+                  <span className="inline-flex max-w-full items-center overflow-hidden rounded-md bg-[#0A84FF] px-1.5 py-0.5 text-white shadow-sm">
+                    <span className="truncate whitespace-nowrap">{inlineRouteSuggestion}</span>
                   </span>
                 </div>
               ) : null}
