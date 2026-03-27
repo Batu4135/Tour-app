@@ -17,6 +17,62 @@ function normalizeComparable(value: string): string {
   return normalizeSearch(value).replace(/[^a-z0-9\u00c0-\u024f]+/g, "");
 }
 
+function looksLikeWordToken(token: string): boolean {
+  return /^[\p{L}.'-]+$/u.test(compactWhitespace(token));
+}
+
+function looksLikeHouseNumber(token: string): boolean {
+  return /^\d{1,4}[a-zA-Z]?$/.test(compactWhitespace(token).replace(/[.,]/g, ""));
+}
+
+function looksLikeZipCode(token: string): boolean {
+  return /^\d{5}$/.test(compactWhitespace(token).replace(/\D/g, ""));
+}
+
+function isStreetToken(token: string): boolean {
+  const normalized = normalizeComparable(token);
+  if (!normalized) return false;
+  const streetIndicators = [
+    "str",
+    "strasse",
+    "straße",
+    "weg",
+    "allee",
+    "platz",
+    "ring",
+    "gasse",
+    "ufer",
+    "damm",
+    "chaussee",
+    "markt",
+    "stieg",
+    "wall",
+    "deich",
+    "chaussee"
+  ];
+  return streetIndicators.some((indicator) => normalized === indicator || normalized.endsWith(indicator));
+}
+
+function trimLeadingContactName(tokens: string[]): string[] {
+  let result = [...tokens];
+
+  for (const prefixLength of [2, 1]) {
+    while (result.length >= prefixLength + 2) {
+      const prefix = result.slice(0, prefixLength);
+      const remainder = result.slice(prefixLength);
+      const prefixLooksLikeName = prefix.every((token) => looksLikeWordToken(token) && !isStreetToken(token));
+      const remainderLooksLikeAddress =
+        remainder.some((token) => looksLikeHouseNumber(token) || looksLikeZipCode(token)) &&
+        remainder.some((token) => isStreetToken(token));
+
+      if (!prefixLooksLikeName || !remainderLooksLikeAddress) break;
+      result = remainder;
+    }
+  }
+
+  return result;
+}
+
 function normalizeAddress(name: string, address: string | null): string | null {
   const compactAddress = compactWhitespace(address ?? "");
   if (!compactAddress) return null;
@@ -41,9 +97,11 @@ function normalizeAddress(name: string, address: string | null): string | null {
     changed = true;
   }
 
+  addressTokens = trimLeadingContactName(addressTokens);
+
   const stripped = compactWhitespace(addressTokens.join(" "));
   if (changed && stripped) return stripped;
-  return compactAddress;
+  return stripped || compactAddress;
 }
 
 function rankMatch(haystack: string, query: string): number {
