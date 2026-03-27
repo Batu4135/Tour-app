@@ -72,6 +72,7 @@ function trimLeadingContactName(tokens: string[]): string[] {
       const prefix = result.slice(0, prefixLength);
       const remainder = result.slice(prefixLength);
       const prefixLooksLikeName = prefix.every((token) => looksLikeWordToken(token) && !isStreetToken(token));
+      if (prefixLength === 1 && remainder[0] && isStreetToken(remainder[0])) break;
       const remainderLooksLikeAddress =
         remainder.some((token) => looksLikeHouseNumber(token) || looksLikeZipCode(token)) &&
         remainder.some((token) => isStreetToken(token));
@@ -130,7 +131,7 @@ function extractCustomerName(raw: string): string {
   const text = compactWhitespace(raw);
   if (!text) return "";
 
-  const parts = text.split("·").map((part) => compactWhitespace(part));
+  const parts = text.split(/Â·|·/).map((part) => compactWhitespace(part));
   if (parts.length >= 2 && parts[1]) {
     return parts.slice(1).join(" - ");
   }

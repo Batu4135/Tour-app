@@ -324,6 +324,20 @@ export default function CustomersPage() {
     setNameFieldFocused(false);
   }
 
+  function onNameFieldFocus() {
+    if (directorySelectionLocked) {
+      setForm((prev) => ({
+        ...prev,
+        name: "",
+        address: "",
+        phone: ""
+      }));
+      setDirectorySelectionLocked(false);
+      setDirectorySuggestions([]);
+    }
+    setNameFieldFocused(true);
+  }
+
   const showInlineRouteSuggestion = routeFieldFocused && Boolean(inlineRouteSuggestion);
 
   return (
@@ -389,7 +403,7 @@ export default function CustomersPage() {
                 setForm((prev) => ({ ...prev, name: event.target.value }));
               }}
               onKeyDown={onNameKeyDown}
-              onFocus={() => setNameFieldFocused(true)}
+              onFocus={onNameFieldFocus}
               onBlur={onNameFieldBlur}
             />
             {nameFieldFocused && form.routeDay.trim() && form.name.trim().length >= 2 && !directorySelectionLocked ? (

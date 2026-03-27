@@ -61,6 +61,7 @@ function trimLeadingContactName(tokens: string[]): string[] {
       const prefix = result.slice(0, prefixLength);
       const remainder = result.slice(prefixLength);
       const prefixLooksLikeName = prefix.every((token) => looksLikeWordToken(token) && !isStreetToken(token));
+      if (prefixLength === 1 && remainder[0] && isStreetToken(remainder[0])) break;
       const remainderLooksLikeAddress =
         remainder.some((token) => looksLikeHouseNumber(token) || looksLikeZipCode(token)) &&
         remainder.some((token) => isStreetToken(token));
