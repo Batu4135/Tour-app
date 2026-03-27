@@ -33,6 +33,8 @@ const updateDraftSchema = z.object({
     .default([]),
   note: z.string().nullable().optional(),
   includeLicenseFee: z.boolean().optional(),
+  discountCents: z.number().int().min(0).optional(),
+  subtractVat: z.boolean().optional(),
   paymentMethod: z.enum(["CASH", "BANK", "DIRECT_DEBIT"]).optional()
 });
 
@@ -125,6 +127,8 @@ export async function GET(_: Request, { params }: RouteContext) {
       date: draft.date.toISOString(),
       note: draft.note ?? null,
       includeLicenseFee: draft.includeLicenseFee ?? false,
+      discountCents: draft.discountCents ?? 0,
+      subtractVat: draft.subtractVat ?? false,
       paymentMethod: draft.paymentMethod,
       tourClosedAt: draft.tourClosedAt ? draft.tourClosedAt.toISOString() : null,
       updatedAt: draft.updatedAt.toISOString(),
@@ -173,7 +177,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 
   const existing = await prisma.draft.findUnique({
     where: { id },
-    select: { id: true, includeLicenseFee: true, paymentMethod: true }
+    select: { id: true, includeLicenseFee: true, discountCents: true, subtractVat: true, paymentMethod: true }
   });
   if (!existing) return notFound("Vordruck nicht gefunden.");
 
@@ -183,6 +187,8 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       data: {
         note: body.note?.trim() || null,
         includeLicenseFee: body.includeLicenseFee ?? existing.includeLicenseFee,
+        discountCents: body.discountCents ?? existing.discountCents,
+        subtractVat: body.subtractVat ?? existing.subtractVat,
         paymentMethod: body.paymentMethod ?? existing.paymentMethod
       }
     });
@@ -193,6 +199,8 @@ export async function PATCH(request: Request, { params }: RouteContext) {
           lines: sanitized,
           note: body.note?.trim() || null,
           includeLicenseFee: body.includeLicenseFee ?? existing.includeLicenseFee,
+          discountCents: body.discountCents ?? existing.discountCents,
+          subtractVat: body.subtractVat ?? existing.subtractVat,
           paymentMethod: body.paymentMethod ?? existing.paymentMethod
         },
         createdBy: user.id
@@ -223,6 +231,8 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       date: draft.date.toISOString(),
       note: draft.note ?? null,
       includeLicenseFee: draft.includeLicenseFee ?? false,
+      discountCents: draft.discountCents ?? 0,
+      subtractVat: draft.subtractVat ?? false,
       paymentMethod: draft.paymentMethod,
       tourClosedAt: draft.tourClosedAt ? draft.tourClosedAt.toISOString() : null,
       updatedAt: draft.updatedAt.toISOString(),

@@ -8771,11 +8771,13 @@ export namespace Prisma {
   export type DraftAvgAggregateOutputType = {
     id: number | null
     customerId: number | null
+    discountCents: number | null
   }
 
   export type DraftSumAggregateOutputType = {
     id: number | null
     customerId: number | null
+    discountCents: number | null
   }
 
   export type DraftMinAggregateOutputType = {
@@ -8784,6 +8786,8 @@ export namespace Prisma {
     date: Date | null
     note: string | null
     includeLicenseFee: boolean | null
+    discountCents: number | null
+    subtractVat: boolean | null
     paymentMethod: string | null
     tourClosedAt: Date | null
     createdAt: Date | null
@@ -8796,6 +8800,8 @@ export namespace Prisma {
     date: Date | null
     note: string | null
     includeLicenseFee: boolean | null
+    discountCents: number | null
+    subtractVat: boolean | null
     paymentMethod: string | null
     tourClosedAt: Date | null
     createdAt: Date | null
@@ -8808,6 +8814,8 @@ export namespace Prisma {
     date: number
     note: number
     includeLicenseFee: number
+    discountCents: number
+    subtractVat: number
     paymentMethod: number
     tourClosedAt: number
     createdAt: number
@@ -8819,11 +8827,13 @@ export namespace Prisma {
   export type DraftAvgAggregateInputType = {
     id?: true
     customerId?: true
+    discountCents?: true
   }
 
   export type DraftSumAggregateInputType = {
     id?: true
     customerId?: true
+    discountCents?: true
   }
 
   export type DraftMinAggregateInputType = {
@@ -8832,6 +8842,8 @@ export namespace Prisma {
     date?: true
     note?: true
     includeLicenseFee?: true
+    discountCents?: true
+    subtractVat?: true
     paymentMethod?: true
     tourClosedAt?: true
     createdAt?: true
@@ -8844,6 +8856,8 @@ export namespace Prisma {
     date?: true
     note?: true
     includeLicenseFee?: true
+    discountCents?: true
+    subtractVat?: true
     paymentMethod?: true
     tourClosedAt?: true
     createdAt?: true
@@ -8856,6 +8870,8 @@ export namespace Prisma {
     date?: true
     note?: true
     includeLicenseFee?: true
+    discountCents?: true
+    subtractVat?: true
     paymentMethod?: true
     tourClosedAt?: true
     createdAt?: true
@@ -8955,6 +8971,8 @@ export namespace Prisma {
     date: Date
     note: string | null
     includeLicenseFee: boolean
+    discountCents: number
+    subtractVat: boolean
     paymentMethod: string
     tourClosedAt: Date | null
     createdAt: Date
@@ -8986,6 +9004,8 @@ export namespace Prisma {
     date?: boolean
     note?: boolean
     includeLicenseFee?: boolean
+    discountCents?: boolean
+    subtractVat?: boolean
     paymentMethod?: boolean
     tourClosedAt?: boolean
     createdAt?: boolean
@@ -9002,6 +9022,8 @@ export namespace Prisma {
     date?: boolean
     note?: boolean
     includeLicenseFee?: boolean
+    discountCents?: boolean
+    subtractVat?: boolean
     paymentMethod?: boolean
     tourClosedAt?: boolean
     createdAt?: boolean
@@ -9015,6 +9037,8 @@ export namespace Prisma {
     date?: boolean
     note?: boolean
     includeLicenseFee?: boolean
+    discountCents?: boolean
+    subtractVat?: boolean
     paymentMethod?: boolean
     tourClosedAt?: boolean
     createdAt?: boolean
@@ -9044,6 +9068,8 @@ export namespace Prisma {
       date: Date
       note: string | null
       includeLicenseFee: boolean
+      discountCents: number
+      subtractVat: boolean
       paymentMethod: string
       tourClosedAt: Date | null
       createdAt: Date
@@ -9449,6 +9475,8 @@ export namespace Prisma {
     readonly date: FieldRef<"Draft", 'DateTime'>
     readonly note: FieldRef<"Draft", 'String'>
     readonly includeLicenseFee: FieldRef<"Draft", 'Boolean'>
+    readonly discountCents: FieldRef<"Draft", 'Int'>
+    readonly subtractVat: FieldRef<"Draft", 'Boolean'>
     readonly paymentMethod: FieldRef<"Draft", 'String'>
     readonly tourClosedAt: FieldRef<"Draft", 'DateTime'>
     readonly createdAt: FieldRef<"Draft", 'DateTime'>
@@ -11949,6 +11977,8 @@ export namespace Prisma {
     date: 'date',
     note: 'note',
     includeLicenseFee: 'includeLicenseFee',
+    discountCents: 'discountCents',
+    subtractVat: 'subtractVat',
     paymentMethod: 'paymentMethod',
     tourClosedAt: 'tourClosedAt',
     createdAt: 'createdAt',
@@ -12533,6 +12563,8 @@ export namespace Prisma {
     date?: DateTimeFilter<"Draft"> | Date | string
     note?: StringNullableFilter<"Draft"> | string | null
     includeLicenseFee?: BoolFilter<"Draft"> | boolean
+    discountCents?: IntFilter<"Draft"> | number
+    subtractVat?: BoolFilter<"Draft"> | boolean
     paymentMethod?: StringFilter<"Draft"> | string
     tourClosedAt?: DateTimeNullableFilter<"Draft"> | Date | string | null
     createdAt?: DateTimeFilter<"Draft"> | Date | string
@@ -12548,6 +12580,8 @@ export namespace Prisma {
     date?: SortOrder
     note?: SortOrderInput | SortOrder
     includeLicenseFee?: SortOrder
+    discountCents?: SortOrder
+    subtractVat?: SortOrder
     paymentMethod?: SortOrder
     tourClosedAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
@@ -12566,6 +12600,8 @@ export namespace Prisma {
     date?: DateTimeFilter<"Draft"> | Date | string
     note?: StringNullableFilter<"Draft"> | string | null
     includeLicenseFee?: BoolFilter<"Draft"> | boolean
+    discountCents?: IntFilter<"Draft"> | number
+    subtractVat?: BoolFilter<"Draft"> | boolean
     paymentMethod?: StringFilter<"Draft"> | string
     tourClosedAt?: DateTimeNullableFilter<"Draft"> | Date | string | null
     createdAt?: DateTimeFilter<"Draft"> | Date | string
@@ -12581,6 +12617,8 @@ export namespace Prisma {
     date?: SortOrder
     note?: SortOrderInput | SortOrder
     includeLicenseFee?: SortOrder
+    discountCents?: SortOrder
+    subtractVat?: SortOrder
     paymentMethod?: SortOrder
     tourClosedAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
@@ -12601,6 +12639,8 @@ export namespace Prisma {
     date?: DateTimeWithAggregatesFilter<"Draft"> | Date | string
     note?: StringNullableWithAggregatesFilter<"Draft"> | string | null
     includeLicenseFee?: BoolWithAggregatesFilter<"Draft"> | boolean
+    discountCents?: IntWithAggregatesFilter<"Draft"> | number
+    subtractVat?: BoolWithAggregatesFilter<"Draft"> | boolean
     paymentMethod?: StringWithAggregatesFilter<"Draft"> | string
     tourClosedAt?: DateTimeNullableWithAggregatesFilter<"Draft"> | Date | string | null
     createdAt?: DateTimeWithAggregatesFilter<"Draft"> | Date | string
@@ -13265,6 +13305,8 @@ export namespace Prisma {
     date: Date | string
     note?: string | null
     includeLicenseFee: boolean
+    discountCents?: number
+    subtractVat?: boolean
     paymentMethod?: string
     tourClosedAt?: Date | string | null
     createdAt: Date | string
@@ -13280,6 +13322,8 @@ export namespace Prisma {
     date: Date | string
     note?: string | null
     includeLicenseFee: boolean
+    discountCents?: number
+    subtractVat?: boolean
     paymentMethod?: string
     tourClosedAt?: Date | string | null
     createdAt: Date | string
@@ -13293,6 +13337,8 @@ export namespace Prisma {
     date?: DateTimeFieldUpdateOperationsInput | Date | string
     note?: NullableStringFieldUpdateOperationsInput | string | null
     includeLicenseFee?: BoolFieldUpdateOperationsInput | boolean
+    discountCents?: IntFieldUpdateOperationsInput | number
+    subtractVat?: BoolFieldUpdateOperationsInput | boolean
     paymentMethod?: StringFieldUpdateOperationsInput | string
     tourClosedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -13308,6 +13354,8 @@ export namespace Prisma {
     date?: DateTimeFieldUpdateOperationsInput | Date | string
     note?: NullableStringFieldUpdateOperationsInput | string | null
     includeLicenseFee?: BoolFieldUpdateOperationsInput | boolean
+    discountCents?: IntFieldUpdateOperationsInput | number
+    subtractVat?: BoolFieldUpdateOperationsInput | boolean
     paymentMethod?: StringFieldUpdateOperationsInput | string
     tourClosedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -13322,6 +13370,8 @@ export namespace Prisma {
     date: Date | string
     note?: string | null
     includeLicenseFee: boolean
+    discountCents?: number
+    subtractVat?: boolean
     paymentMethod?: string
     tourClosedAt?: Date | string | null
     createdAt: Date | string
@@ -13333,6 +13383,8 @@ export namespace Prisma {
     date?: DateTimeFieldUpdateOperationsInput | Date | string
     note?: NullableStringFieldUpdateOperationsInput | string | null
     includeLicenseFee?: BoolFieldUpdateOperationsInput | boolean
+    discountCents?: IntFieldUpdateOperationsInput | number
+    subtractVat?: BoolFieldUpdateOperationsInput | boolean
     paymentMethod?: StringFieldUpdateOperationsInput | string
     tourClosedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -13345,6 +13397,8 @@ export namespace Prisma {
     date?: DateTimeFieldUpdateOperationsInput | Date | string
     note?: NullableStringFieldUpdateOperationsInput | string | null
     includeLicenseFee?: BoolFieldUpdateOperationsInput | boolean
+    discountCents?: IntFieldUpdateOperationsInput | number
+    subtractVat?: BoolFieldUpdateOperationsInput | boolean
     paymentMethod?: StringFieldUpdateOperationsInput | string
     tourClosedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -14011,6 +14065,8 @@ export namespace Prisma {
     date?: SortOrder
     note?: SortOrder
     includeLicenseFee?: SortOrder
+    discountCents?: SortOrder
+    subtractVat?: SortOrder
     paymentMethod?: SortOrder
     tourClosedAt?: SortOrder
     createdAt?: SortOrder
@@ -14020,6 +14076,7 @@ export namespace Prisma {
   export type DraftAvgOrderByAggregateInput = {
     id?: SortOrder
     customerId?: SortOrder
+    discountCents?: SortOrder
   }
 
   export type DraftMaxOrderByAggregateInput = {
@@ -14028,6 +14085,8 @@ export namespace Prisma {
     date?: SortOrder
     note?: SortOrder
     includeLicenseFee?: SortOrder
+    discountCents?: SortOrder
+    subtractVat?: SortOrder
     paymentMethod?: SortOrder
     tourClosedAt?: SortOrder
     createdAt?: SortOrder
@@ -14040,6 +14099,8 @@ export namespace Prisma {
     date?: SortOrder
     note?: SortOrder
     includeLicenseFee?: SortOrder
+    discountCents?: SortOrder
+    subtractVat?: SortOrder
     paymentMethod?: SortOrder
     tourClosedAt?: SortOrder
     createdAt?: SortOrder
@@ -14049,6 +14110,7 @@ export namespace Prisma {
   export type DraftSumOrderByAggregateInput = {
     id?: SortOrder
     customerId?: SortOrder
+    discountCents?: SortOrder
   }
 
   export type DateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -14930,6 +14992,8 @@ export namespace Prisma {
     date: Date | string
     note?: string | null
     includeLicenseFee: boolean
+    discountCents?: number
+    subtractVat?: boolean
     paymentMethod?: string
     tourClosedAt?: Date | string | null
     createdAt: Date | string
@@ -14943,6 +15007,8 @@ export namespace Prisma {
     date: Date | string
     note?: string | null
     includeLicenseFee: boolean
+    discountCents?: number
+    subtractVat?: boolean
     paymentMethod?: string
     tourClosedAt?: Date | string | null
     createdAt: Date | string
@@ -15013,6 +15079,8 @@ export namespace Prisma {
     date?: DateTimeFilter<"Draft"> | Date | string
     note?: StringNullableFilter<"Draft"> | string | null
     includeLicenseFee?: BoolFilter<"Draft"> | boolean
+    discountCents?: IntFilter<"Draft"> | number
+    subtractVat?: BoolFilter<"Draft"> | boolean
     paymentMethod?: StringFilter<"Draft"> | string
     tourClosedAt?: DateTimeNullableFilter<"Draft"> | Date | string | null
     createdAt?: DateTimeFilter<"Draft"> | Date | string
@@ -15527,6 +15595,8 @@ export namespace Prisma {
     date: Date | string
     note?: string | null
     includeLicenseFee: boolean
+    discountCents?: number
+    subtractVat?: boolean
     paymentMethod?: string
     tourClosedAt?: Date | string | null
     createdAt: Date | string
@@ -15541,6 +15611,8 @@ export namespace Prisma {
     date: Date | string
     note?: string | null
     includeLicenseFee: boolean
+    discountCents?: number
+    subtractVat?: boolean
     paymentMethod?: string
     tourClosedAt?: Date | string | null
     createdAt: Date | string
@@ -15604,6 +15676,8 @@ export namespace Prisma {
     date?: DateTimeFieldUpdateOperationsInput | Date | string
     note?: NullableStringFieldUpdateOperationsInput | string | null
     includeLicenseFee?: BoolFieldUpdateOperationsInput | boolean
+    discountCents?: IntFieldUpdateOperationsInput | number
+    subtractVat?: BoolFieldUpdateOperationsInput | boolean
     paymentMethod?: StringFieldUpdateOperationsInput | string
     tourClosedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -15618,6 +15692,8 @@ export namespace Prisma {
     date?: DateTimeFieldUpdateOperationsInput | Date | string
     note?: NullableStringFieldUpdateOperationsInput | string | null
     includeLicenseFee?: BoolFieldUpdateOperationsInput | boolean
+    discountCents?: IntFieldUpdateOperationsInput | number
+    subtractVat?: BoolFieldUpdateOperationsInput | boolean
     paymentMethod?: StringFieldUpdateOperationsInput | string
     tourClosedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -15671,6 +15747,8 @@ export namespace Prisma {
     date: Date | string
     note?: string | null
     includeLicenseFee: boolean
+    discountCents?: number
+    subtractVat?: boolean
     paymentMethod?: string
     tourClosedAt?: Date | string | null
     createdAt: Date | string
@@ -15685,6 +15763,8 @@ export namespace Prisma {
     date: Date | string
     note?: string | null
     includeLicenseFee: boolean
+    discountCents?: number
+    subtractVat?: boolean
     paymentMethod?: string
     tourClosedAt?: Date | string | null
     createdAt: Date | string
@@ -15732,6 +15812,8 @@ export namespace Prisma {
     date?: DateTimeFieldUpdateOperationsInput | Date | string
     note?: NullableStringFieldUpdateOperationsInput | string | null
     includeLicenseFee?: BoolFieldUpdateOperationsInput | boolean
+    discountCents?: IntFieldUpdateOperationsInput | number
+    subtractVat?: BoolFieldUpdateOperationsInput | boolean
     paymentMethod?: StringFieldUpdateOperationsInput | string
     tourClosedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -15746,6 +15828,8 @@ export namespace Prisma {
     date?: DateTimeFieldUpdateOperationsInput | Date | string
     note?: NullableStringFieldUpdateOperationsInput | string | null
     includeLicenseFee?: BoolFieldUpdateOperationsInput | boolean
+    discountCents?: IntFieldUpdateOperationsInput | number
+    subtractVat?: BoolFieldUpdateOperationsInput | boolean
     paymentMethod?: StringFieldUpdateOperationsInput | string
     tourClosedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -15823,6 +15907,8 @@ export namespace Prisma {
     date: Date | string
     note?: string | null
     includeLicenseFee: boolean
+    discountCents?: number
+    subtractVat?: boolean
     paymentMethod?: string
     tourClosedAt?: Date | string | null
     createdAt: Date | string
@@ -15858,6 +15944,8 @@ export namespace Prisma {
     date?: DateTimeFieldUpdateOperationsInput | Date | string
     note?: NullableStringFieldUpdateOperationsInput | string | null
     includeLicenseFee?: BoolFieldUpdateOperationsInput | boolean
+    discountCents?: IntFieldUpdateOperationsInput | number
+    subtractVat?: BoolFieldUpdateOperationsInput | boolean
     paymentMethod?: StringFieldUpdateOperationsInput | string
     tourClosedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -15871,6 +15959,8 @@ export namespace Prisma {
     date?: DateTimeFieldUpdateOperationsInput | Date | string
     note?: NullableStringFieldUpdateOperationsInput | string | null
     includeLicenseFee?: BoolFieldUpdateOperationsInput | boolean
+    discountCents?: IntFieldUpdateOperationsInput | number
+    subtractVat?: BoolFieldUpdateOperationsInput | boolean
     paymentMethod?: StringFieldUpdateOperationsInput | string
     tourClosedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -15884,6 +15974,8 @@ export namespace Prisma {
     date?: DateTimeFieldUpdateOperationsInput | Date | string
     note?: NullableStringFieldUpdateOperationsInput | string | null
     includeLicenseFee?: BoolFieldUpdateOperationsInput | boolean
+    discountCents?: IntFieldUpdateOperationsInput | number
+    subtractVat?: BoolFieldUpdateOperationsInput | boolean
     paymentMethod?: StringFieldUpdateOperationsInput | string
     tourClosedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string

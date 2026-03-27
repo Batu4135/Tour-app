@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { Banknote, CheckCircle2, CreditCard, Landmark, Loader2, Printer } from "lucide-react";
 import { useTranslations } from "next-intl";
 import ProductPicker, { ProductOption, SelectedProductItem } from "@/components/ProductPicker";
-import { formatCents } from "@/lib/formatCents";
-import { LicenseType, getLineLicenseTotals } from "@/lib/license";
+import { formatCents, parseEuroToCents } from "@/lib/formatCents";
+import { LicenseType } from "@/lib/license";
+import { calculateDraftTotals } from "@/lib/draftTotals";
 import {
   DraftWritePayload,
   enqueueLatestPendingWrite,
@@ -32,6 +33,8 @@ type DraftData = {
   date: string;
   note: string | null;
   includeLicenseFee?: boolean;
+  discountCents?: number;
+  subtractVat?: boolean;
   paymentMethod?: "CASH" | "BANK" | "DIRECT_DEBIT";
   tourClosedAt?: string | null;
   updatedAt?: string;
@@ -66,6 +69,24 @@ function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function formatEuroInput(cents: number | null | undefined): string {
+  if (!cents) return "";
+  return new Intl.NumberFormat("de-DE", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(cents / 100);
+}
+
+function normalizeDraftData(value: DraftData): DraftData {
+  return {
+    ...value,
+    includeLicenseFee: Boolean(value.includeLicenseFee),
+    discountCents: Math.max(0, Math.round(value.discountCents ?? 0)),
+    subtractVat: Boolean(value.subtractVat),
+    paymentMethod: value.paymentMethod ?? "CASH"
+  };
+}
+
 export default function DraftEditor({ draftId }: DraftEditorProps) {
   const t = useTranslations("draftEditor");
   const router = useRouter();
@@ -75,6 +96,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
   const [productLicenseTypeMap, setProductLicenseTypeMap] = useState<Record<number, LicenseType>>({});
   const [productLicenseWeightGramsMap, setProductLicenseWeightGramsMap] = useState<Record<number, number>>({});
   const [customerSuggestedProducts, setCustomerSuggestedProducts] = useState<ProductOption[]>([]);
+  const [discountInput, setDiscountInput] = useState("");
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [syncState, setSyncState] = useState<"ok" | "pending" | "error">("ok");
   const [isPrinting, setIsPrinting] = useState(false);
@@ -87,35 +109,26 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
   const localVersionRef = useRef(0);
   const snapshotKey = `nord-pack:draft:${draftId}`;
 
-  const licenseTotalCents = useMemo(
-    () =>
-      draft
-        ? draft.lines.reduce((sum, line) => {
-            const { lineFeeCents } = getLineLicenseTotals(line.quantity, {
-              licenseFeeCents: productLicenseFeeMap[line.productId] ?? 0,
-              licenseType: productLicenseTypeMap[line.productId],
-              licenseWeightGrams: productLicenseWeightGramsMap[line.productId]
-            });
-            return sum + lineFeeCents;
-          }, 0)
-        : 0,
-    [draft, productLicenseFeeMap, productLicenseTypeMap, productLicenseWeightGramsMap]
-  );
+  const totals = useMemo(() => {
+    if (!draft) {
+      return calculateDraftTotals({ lines: [] });
+    }
 
-  const totalCents = useMemo(
-    () =>
-      draft
-        ? draft.lines.reduce((sum, line) => {
-            const { lineFeeCents } = getLineLicenseTotals(line.quantity, {
-              licenseFeeCents: productLicenseFeeMap[line.productId] ?? 0,
-              licenseType: productLicenseTypeMap[line.productId],
-              licenseWeightGrams: productLicenseWeightGramsMap[line.productId]
-            });
-            return sum + line.quantity * line.unitPriceCents + (draft.includeLicenseFee ? lineFeeCents : 0);
-          }, 0)
-        : 0,
-    [draft, productLicenseFeeMap, productLicenseTypeMap, productLicenseWeightGramsMap]
-  );
+    return calculateDraftTotals({
+      lines: draft.lines.map((line) => ({
+        quantity: line.quantity,
+        unitPriceCents: line.unitPriceCents,
+        product: {
+          licenseFeeCents: productLicenseFeeMap[line.productId] ?? 0,
+          licenseType: productLicenseTypeMap[line.productId],
+          licenseWeightGrams: productLicenseWeightGramsMap[line.productId]
+        }
+      })),
+      includeLicenseFee: draft.includeLicenseFee,
+      discountCents: draft.discountCents,
+      subtractVat: draft.subtractVat
+    });
+  }, [draft, productLicenseFeeMap, productLicenseTypeMap, productLicenseWeightGramsMap]);
 
   const writeSnapshot = useCallback(
     (value: DraftData | null) => {
@@ -142,11 +155,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       if (!raw) return null;
       const parsed = JSON.parse(raw) as { draft?: DraftData };
       if (!parsed.draft) return null;
-      return {
-        ...parsed.draft,
-        includeLicenseFee: Boolean(parsed.draft.includeLicenseFee),
-        paymentMethod: parsed.draft.paymentMethod ?? "CASH"
-      };
+      return normalizeDraftData(parsed.draft);
     } catch {
       return null;
     }
@@ -181,6 +190,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
     const snapshot = loadSnapshot();
     if (snapshot) {
       setDraft(snapshot);
+      setDiscountInput(formatEuroInput(snapshot.discountCents));
       setStatus("saved");
     }
 
@@ -199,12 +209,9 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       const hasPendingForDraft = pendingWrites.some((entry) => entry.draftId === draftId);
 
       if (!snapshot || !hasPendingForDraft) {
-        const normalizedDraft = {
-          ...payload.draft,
-          includeLicenseFee: Boolean(payload.draft.includeLicenseFee),
-          paymentMethod: payload.draft.paymentMethod ?? "CASH"
-        };
+        const normalizedDraft = normalizeDraftData(payload.draft);
         setDraft(normalizedDraft);
+        setDiscountInput(formatEuroInput(normalizedDraft.discountCents));
         writeSnapshot(normalizedDraft);
         setStatus("saved");
       } else {
@@ -239,12 +246,9 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
           try {
             const updated = await sendDraftPatch(entry.draftId, entry.payload);
             if (entry.draftId === draftId) {
-              const normalizedDraft = {
-                ...updated,
-                includeLicenseFee: Boolean(updated.includeLicenseFee),
-                paymentMethod: updated.paymentMethod ?? "CASH"
-              };
+              const normalizedDraft = normalizeDraftData(updated);
               setDraft(normalizedDraft);
+              setDiscountInput(formatEuroInput(normalizedDraft.discountCents));
               writeSnapshot(normalizedDraft);
             }
             await removePendingWrite(entry.id);
@@ -296,6 +300,8 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
           unitPriceCents: line.unitPriceCents
         })),
         includeLicenseFee: Boolean(draft.includeLicenseFee),
+        discountCents: Math.max(0, Math.round(draft.discountCents ?? 0)),
+        subtractVat: Boolean(draft.subtractVat),
         paymentMethod: draft.paymentMethod ?? "CASH",
         note: normalizedNote ? normalizedNote : undefined
       };
@@ -335,14 +341,11 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       try {
         const updated = await sendDraftPatch(draft.id, payload, controller.signal);
         if (saveSeq !== saveSeqRef.current) return true;
-        const normalizedDraft = {
-          ...updated,
-          includeLicenseFee: Boolean(updated.includeLicenseFee),
-          paymentMethod: updated.paymentMethod ?? "CASH"
-        };
+        const normalizedDraft = normalizeDraftData(updated);
 
         if (localVersionAtStart === localVersionRef.current) {
           setDraft(normalizedDraft);
+          setDiscountInput(formatEuroInput(normalizedDraft.discountCents));
           writeSnapshot(normalizedDraft);
           setStatus("saved");
           setDirty(false);
@@ -536,6 +539,18 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
     updateDraft((prev) => ({ ...prev, includeLicenseFee: next }));
   }
 
+  function onDiscountChange(raw: string) {
+    setDiscountInput(raw);
+    updateDraft((prev) => ({
+      ...prev,
+      discountCents: raw.trim().length > 0 ? parseEuroToCents(raw) : 0
+    }));
+  }
+
+  function onSubtractVatChange(next: boolean) {
+    updateDraft((prev) => ({ ...prev, subtractVat: next }));
+  }
+
   function onPaymentMethodChange(next: "CASH" | "BANK" | "DIRECT_DEBIT") {
     updateDraft((prev) => ({ ...prev, paymentMethod: next }));
   }
@@ -695,7 +710,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
             checked={Boolean(draft.includeLicenseFee)}
             onChange={() => onIncludeLicenseFeeChange(true)}
           />
-          <span>{t("withLicense", { licenseTotal: formatCents(licenseTotalCents) })}</span>
+          <span>{t("withLicense", { licenseTotal: formatCents(totals.licenseTotalCents) })}</span>
         </label>
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -706,6 +721,62 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
           />
           <span>{t("withoutLicense")}</span>
         </label>
+      </div>
+
+      <div className="card space-y-3">
+        <p className="text-sm font-semibold">{t("adjustmentsTitle")}</p>
+        <label className="space-y-2">
+          <span className="text-sm font-medium">{t("discountLabel")}</span>
+          <div className="relative">
+            <input
+              type="text"
+              inputMode="decimal"
+              className="input pr-10"
+              placeholder={t("discountPlaceholder")}
+              value={discountInput}
+              onChange={(event) => onDiscountChange(event.target.value)}
+            />
+            <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-[#4A4A4A]/60">
+              €
+            </span>
+          </div>
+        </label>
+        <label className="flex items-center justify-between gap-3 rounded-xl border border-[#E5E5E5] px-4 py-3 text-sm">
+          <div>
+            <p className="font-medium">{t("subtractVatTitle")}</p>
+            <p className="text-xs text-[#4A4A4A]/65">{t("subtractVatHint")}</p>
+          </div>
+          <input
+            type="checkbox"
+            checked={Boolean(draft.subtractVat)}
+            onChange={(event) => onSubtractVatChange(event.target.checked)}
+          />
+        </label>
+      </div>
+
+      <div className="card space-y-2">
+        <div className="flex items-center justify-between text-sm text-[#4A4A4A]/75">
+          <span>{t("subtotalLabel")}</span>
+          <span>{formatCents(totals.subtotalCents)}</span>
+        </div>
+        <div className="flex items-center justify-between text-sm text-[#4A4A4A]/75">
+          <span>{t("discountSummaryLabel")}</span>
+          <span>
+            {totals.discountAppliedCents > 0
+              ? `- ${formatCents(totals.discountAppliedCents)}`
+              : formatCents(0)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between text-sm text-[#4A4A4A]/75">
+          <span>{t("vatSummaryLabel")}</span>
+          <span>
+            {totals.vatDeductionCents > 0 ? `- ${formatCents(totals.vatDeductionCents)}` : formatCents(0)}
+          </span>
+        </div>
+        <div className="mt-1 flex items-center justify-between border-t border-[#E5E5E5] pt-3 text-base font-semibold text-[#2F7EA1]">
+          <span>{t("total")}</span>
+          <span>{formatCents(totals.totalCents)}</span>
+        </div>
       </div>
 
       <div className="card space-y-2">
@@ -729,7 +800,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       >
         <div>
           <p className="text-xs text-white/80">{t("total")}</p>
-          <p className="text-xl font-bold">{formatCents(totalCents)}</p>
+          <p className="text-xl font-bold">{formatCents(totals.totalCents)}</p>
         </div>
         <div className="flex gap-2">
           <button

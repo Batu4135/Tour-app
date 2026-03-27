@@ -1,5 +1,6 @@
 import { PDFDocument, PDFFont, StandardFonts, rgb } from "pdf-lib";
 import { getLineLicenseTotals, summarizeLicenseByType } from "@/lib/license";
+import { calculateDraftTotals } from "@/lib/draftTotals";
 
 export type DraftVoucherFonts = {
   regular: PDFFont;
@@ -204,10 +205,12 @@ export function drawDraftVoucherPage(
       : [];
   const noteBlockHeight = noteLines.length > 0 ? s(16 + noteLines.length * 8) : 0;
 
-  const subtotal = lines.reduce((sum: number, line: any) => {
-    const { lineFeeCents } = getLineLicenseTotals(line.quantity, line.product ?? {});
-    return sum + line.quantity * line.unitPriceCents + (draft.includeLicenseFee ? lineFeeCents : 0);
-  }, 0);
+  const totals = calculateDraftTotals({
+    lines,
+    includeLicenseFee: draft.includeLicenseFee,
+    discountCents: draft.discountCents,
+    subtractVat: draft.subtractVat
+  });
 
   if (lines.length === 0) {
     page.drawText("Keine Positionen", {
@@ -280,8 +283,6 @@ export function drawDraftVoucherPage(
     });
   });
 
-  const vat = Math.round(subtotal * 0.19);
-  const total = subtotal + vat;
   const licenseSummary = draft.includeLicenseFee
     ? summarizeLicenseByType(lines as Array<{ quantity: number; product?: unknown }>, (line) => line.product ?? {})
     : [];
@@ -335,7 +336,7 @@ export function drawDraftVoucherPage(
   page.drawText("Zwischensumme", { x: s(384), y: summaryTop, size: summaryLabelSize, font: regular, color: muted });
   drawRightText({
     page,
-    text: money(subtotal),
+    text: money(totals.subtotalCents),
     x: lineTotalRight,
     y: summaryTop,
     size: summaryValueSize,
@@ -343,10 +344,10 @@ export function drawDraftVoucherPage(
     color: textColor
   });
 
-  page.drawText("MWSt 19%", { x: s(384), y: summaryTop - s(20) * summaryScale, size: summaryLabelSize, font: regular, color: muted });
+  page.drawText("Rabatt", { x: s(384), y: summaryTop - s(20) * summaryScale, size: summaryLabelSize, font: regular, color: muted });
   drawRightText({
     page,
-    text: money(vat),
+    text: totals.discountAppliedCents > 0 ? `- ${money(totals.discountAppliedCents)}` : money(0),
     x: lineTotalRight,
     y: summaryTop - s(20) * summaryScale,
     size: summaryValueSize,
@@ -354,7 +355,18 @@ export function drawDraftVoucherPage(
     color: textColor
   });
 
-  const ruleY = summaryTop - s(28) * summaryScale;
+  page.drawText("MWSt 19%", { x: s(384), y: summaryTop - s(36) * summaryScale, size: summaryLabelSize, font: regular, color: muted });
+  drawRightText({
+    page,
+    text: totals.vatDeductionCents > 0 ? `- ${money(totals.vatDeductionCents)}` : money(0),
+    x: lineTotalRight,
+    y: summaryTop - s(36) * summaryScale,
+    size: summaryValueSize,
+    font: regular,
+    color: textColor
+  });
+
+  const ruleY = summaryTop - s(46) * summaryScale;
   page.drawLine({
     start: { x: s(372), y: ruleY },
     end: { x: lineTotalRight, y: ruleY },
@@ -362,12 +374,12 @@ export function drawDraftVoucherPage(
     color: accent
   });
 
-  page.drawText("Gesamt", { x: s(384), y: summaryTop - s(50) * summaryScale, size: summaryLabelSize, font: regular, color: muted });
+  page.drawText("Gesamt", { x: s(384), y: summaryTop - s(68) * summaryScale, size: summaryLabelSize, font: regular, color: muted });
   drawRightText({
     page,
-    text: money(total),
+    text: money(totals.totalCents),
     x: lineTotalRight,
-    y: summaryTop - s(56) * summaryScale,
+    y: summaryTop - s(74) * summaryScale,
     size: summaryTotalSize,
     font: bold,
     color: textColor

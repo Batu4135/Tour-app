@@ -3,9 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { badRequest, notFound, unauthorized } from "@/lib/http";
 import { z } from "zod";
-import { LicenseType, getLicenseDetails, getLineLicenseTotals } from "@/lib/license";
+import { LicenseType, getLicenseDetails } from "@/lib/license";
 import { getProductPopularityMap } from "@/lib/productPopularity";
 import { rankProductsBySearch } from "@/lib/productSearch";
+import { calculateDraftTotals } from "@/lib/draftTotals";
 
 export const runtime = "nodejs";
 
@@ -41,16 +42,17 @@ export async function GET() {
       date: draft.date.toISOString(),
       note: draft.note ?? null,
       includeLicenseFee: draft.includeLicenseFee ?? false,
+      discountCents: draft.discountCents ?? 0,
+      subtractVat: draft.subtractVat ?? false,
       paymentMethod: draft.paymentMethod,
       tourClosedAt: draft.tourClosedAt ? draft.tourClosedAt.toISOString() : null,
       updatedAt: draft.updatedAt.toISOString(),
-      totalCents: draft.lines.reduce(
-        (sum: number, line: any) => {
-          const { lineFeeCents } = getLineLicenseTotals(line.quantity, line.product ?? {});
-          return sum + line.quantity * line.unitPriceCents + (draft.includeLicenseFee ? lineFeeCents : 0);
-        },
-        0
-      )
+      totalCents: calculateDraftTotals({
+        lines: draft.lines,
+        includeLicenseFee: draft.includeLicenseFee,
+        discountCents: draft.discountCents,
+        subtractVat: draft.subtractVat
+      }).totalCents
     }))
   });
 }
@@ -91,7 +93,9 @@ export async function POST(request: Request) {
     const draft = await tx.draft.create({
       data: {
         customerId: customer.id,
-        paymentMethod: "CASH"
+        paymentMethod: "CASH",
+        discountCents: 0,
+        subtractVat: false
       }
     });
 
@@ -149,6 +153,8 @@ export async function POST(request: Request) {
       date: draft.date.toISOString(),
       note: draft.note ?? null,
       includeLicenseFee: draft.includeLicenseFee ?? false,
+      discountCents: draft.discountCents ?? 0,
+      subtractVat: draft.subtractVat ?? false,
       paymentMethod: draft.paymentMethod,
       tourClosedAt: draft.tourClosedAt ? draft.tourClosedAt.toISOString() : null,
       updatedAt: draft.updatedAt.toISOString(),

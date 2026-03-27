@@ -196,6 +196,8 @@ exports.Prisma.DraftScalarFieldEnum = {
   date: 'date',
   note: 'note',
   includeLicenseFee: 'includeLicenseFee',
+  discountCents: 'discountCents',
+  subtractVat: 'subtractVat',
   paymentMethod: 'paymentMethod',
   tourClosedAt: 'tourClosedAt',
   createdAt: 'createdAt',

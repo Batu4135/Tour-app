@@ -110,6 +110,8 @@ model Draft {
   date      DateTime          @default(now())
   note      String?
   includeLicenseFee Boolean   @default(false)
+  discountCents Int           @default(0)
+  subtractVat Boolean         @default(false)
   paymentMethod PaymentMethod @default(CASH)
   tourClosedAt DateTime?
   createdAt DateTime          @default(now())

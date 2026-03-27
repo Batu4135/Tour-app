@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { badRequest, unauthorized } from "@/lib/http";
 import { getLineLicenseTotals } from "@/lib/license";
+import { calculateDraftTotals } from "@/lib/draftTotals";
 
 export const runtime = "nodejs";
 
@@ -95,12 +96,13 @@ export async function GET(request: Request) {
   drawHeader();
 
   for (const draft of drafts) {
-    const subtotal = draft.lines.reduce((sum, line) => {
-      const { lineFeeCents } = getLineLicenseTotals(line.quantity, line.product ?? {});
-      return sum + line.quantity * line.unitPriceCents + (draft.includeLicenseFee ? lineFeeCents : 0);
-    }, 0);
-    const vat = Math.round(subtotal * 0.19);
-    const total = subtotal + vat;
+    const totals = calculateDraftTotals({
+      lines: draft.lines,
+      includeLicenseFee: draft.includeLicenseFee,
+      discountCents: draft.discountCents,
+      subtractVat: draft.subtractVat
+    });
+    const total = totals.totalCents;
 
     const estimatedHeight = 96 + draft.lines.length * (draft.includeLicenseFee ? 22 : 16);
     ensureSpace(estimatedHeight);
