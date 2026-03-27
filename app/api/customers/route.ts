@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { badRequest, unauthorized } from "@/lib/http";
+import { attachImportedCustomerPrices } from "@/lib/customerPriceDirectory";
 import { z } from "zod";
 
 export const runtime = "nodejs";
@@ -51,15 +52,26 @@ export async function POST(request: Request) {
   const parsed = createCustomerSchema.safeParse(await request.json());
   if (!parsed.success) return badRequest("Ungueltige Anfrage.");
   const name = parsed.data.name.trim();
+  const routeDay = parsed.data.routeDay.trim();
 
-  const customer = await prisma.customer.create({
-    data: {
-      name,
-      address: parsed.data.address?.trim() || null,
-      phone: parsed.data.phone?.trim() || null,
-      routeDay: parsed.data.routeDay.trim()
-    }
+  const result = await prisma.$transaction(async (tx) => {
+    const customer = await tx.customer.create({
+      data: {
+        name,
+        address: parsed.data.address?.trim() || null,
+        phone: parsed.data.phone?.trim() || null,
+        routeDay
+      }
+    });
+
+    const importedPrices = await attachImportedCustomerPrices(tx as any, {
+      id: customer.id,
+      name: customer.name,
+      routeDay: customer.routeDay
+    });
+
+    return { customer, importedPrices };
   });
 
-  return NextResponse.json({ customer }, { status: 201 });
+  return NextResponse.json(result, { status: 201 });
 }

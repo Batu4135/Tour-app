@@ -9,6 +9,8 @@ type BackupPayload = {
     createdAt: string;
     version: string;
   };
+  customerDirectoryEntries: unknown[];
+  customerPriceDirectoryEntries: unknown[];
   products: unknown[];
   productAliases: unknown[];
   customers: unknown[];
@@ -70,8 +72,12 @@ async function main() {
 
   await ensureDir(dayDir);
 
-  const [products, productAliases, customers, customerPrices, drafts, draftLines, invoiceRevisions] =
+  const [customerDirectoryEntries, customerPriceDirectoryEntries, products, productAliases, customers, customerPrices, drafts, draftLines, invoiceRevisions] =
     await Promise.all([
+      prisma.customerDirectoryEntry.findMany({ orderBy: { id: "asc" } }),
+      (prisma as any).customerPriceDirectoryEntry
+        ? (prisma as any).customerPriceDirectoryEntry.findMany({ orderBy: { id: "asc" } })
+        : Promise.resolve([]),
       prisma.product.findMany({ orderBy: { id: "asc" } }),
       prisma.productAlias.findMany({ orderBy: { id: "asc" } }),
       prisma.customer.findMany({ orderBy: { id: "asc" } }),
@@ -88,6 +94,8 @@ async function main() {
       createdAt: now.toISOString(),
       version: "1"
     },
+    customerDirectoryEntries,
+    customerPriceDirectoryEntries,
     products,
     productAliases,
     customers,
@@ -109,7 +117,7 @@ async function main() {
   console.log(`[backup] Datei: ${filePath}`);
   console.log(`[backup] Groesse: ${bytesToMb(stats.size)}`);
   console.log(
-    `[backup] Datensaetze: products=${products.length}, aliases=${productAliases.length}, customers=${customers.length}, drafts=${drafts.length}, draftLines=${draftLines.length}, revisions=${invoiceRevisions.length}`
+    `[backup] Datensaetze: customerDirectory=${customerDirectoryEntries.length}, customerPriceDirectory=${customerPriceDirectoryEntries.length}, products=${products.length}, aliases=${productAliases.length}, customers=${customers.length}, drafts=${drafts.length}, draftLines=${draftLines.length}, revisions=${invoiceRevisions.length}`
   );
   console.log(`[backup] Rotation: ${retentionDays} Tage`);
 }

@@ -29,6 +29,11 @@ export type Customer = $Result.DefaultSelection<Prisma.$CustomerPayload>
  */
 export type CustomerDirectoryEntry = $Result.DefaultSelection<Prisma.$CustomerDirectoryEntryPayload>
 /**
+ * Model CustomerPriceDirectoryEntry
+ * 
+ */
+export type CustomerPriceDirectoryEntry = $Result.DefaultSelection<Prisma.$CustomerPriceDirectoryEntryPayload>
+/**
  * Model Product
  * 
  */
@@ -211,6 +216,16 @@ export class PrismaClient<
     * ```
     */
   get customerDirectoryEntry(): Prisma.CustomerDirectoryEntryDelegate<ExtArgs>;
+
+  /**
+   * `prisma.customerPriceDirectoryEntry`: Exposes CRUD operations for the **CustomerPriceDirectoryEntry** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more CustomerPriceDirectoryEntries
+    * const customerPriceDirectoryEntries = await prisma.customerPriceDirectoryEntry.findMany()
+    * ```
+    */
+  get customerPriceDirectoryEntry(): Prisma.CustomerPriceDirectoryEntryDelegate<ExtArgs>;
 
   /**
    * `prisma.product`: Exposes CRUD operations for the **Product** model.
@@ -715,6 +730,7 @@ export namespace Prisma {
     User: 'User',
     Customer: 'Customer',
     CustomerDirectoryEntry: 'CustomerDirectoryEntry',
+    CustomerPriceDirectoryEntry: 'CustomerPriceDirectoryEntry',
     Product: 'Product',
     ProductAlias: 'ProductAlias',
     CustomerPrice: 'CustomerPrice',
@@ -736,7 +752,7 @@ export namespace Prisma {
 
   export type TypeMap<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, ClientOptions = {}> = {
     meta: {
-      modelProps: "user" | "customer" | "customerDirectoryEntry" | "product" | "productAlias" | "customerPrice" | "draft" | "draftLine" | "invoiceRevision"
+      modelProps: "user" | "customer" | "customerDirectoryEntry" | "customerPriceDirectoryEntry" | "product" | "productAlias" | "customerPrice" | "draft" | "draftLine" | "invoiceRevision"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -947,6 +963,76 @@ export namespace Prisma {
           count: {
             args: Prisma.CustomerDirectoryEntryCountArgs<ExtArgs>
             result: $Utils.Optional<CustomerDirectoryEntryCountAggregateOutputType> | number
+          }
+        }
+      }
+      CustomerPriceDirectoryEntry: {
+        payload: Prisma.$CustomerPriceDirectoryEntryPayload<ExtArgs>
+        fields: Prisma.CustomerPriceDirectoryEntryFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.CustomerPriceDirectoryEntryFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CustomerPriceDirectoryEntryPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.CustomerPriceDirectoryEntryFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CustomerPriceDirectoryEntryPayload>
+          }
+          findFirst: {
+            args: Prisma.CustomerPriceDirectoryEntryFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CustomerPriceDirectoryEntryPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.CustomerPriceDirectoryEntryFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CustomerPriceDirectoryEntryPayload>
+          }
+          findMany: {
+            args: Prisma.CustomerPriceDirectoryEntryFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CustomerPriceDirectoryEntryPayload>[]
+          }
+          create: {
+            args: Prisma.CustomerPriceDirectoryEntryCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CustomerPriceDirectoryEntryPayload>
+          }
+          createMany: {
+            args: Prisma.CustomerPriceDirectoryEntryCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.CustomerPriceDirectoryEntryCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CustomerPriceDirectoryEntryPayload>[]
+          }
+          delete: {
+            args: Prisma.CustomerPriceDirectoryEntryDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CustomerPriceDirectoryEntryPayload>
+          }
+          update: {
+            args: Prisma.CustomerPriceDirectoryEntryUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CustomerPriceDirectoryEntryPayload>
+          }
+          deleteMany: {
+            args: Prisma.CustomerPriceDirectoryEntryDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.CustomerPriceDirectoryEntryUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.CustomerPriceDirectoryEntryUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CustomerPriceDirectoryEntryPayload>
+          }
+          aggregate: {
+            args: Prisma.CustomerPriceDirectoryEntryAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateCustomerPriceDirectoryEntry>
+          }
+          groupBy: {
+            args: Prisma.CustomerPriceDirectoryEntryGroupByArgs<ExtArgs>
+            result: $Utils.Optional<CustomerPriceDirectoryEntryGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.CustomerPriceDirectoryEntryCountArgs<ExtArgs>
+            result: $Utils.Optional<CustomerPriceDirectoryEntryCountAggregateOutputType> | number
           }
         }
       }
@@ -4629,6 +4715,980 @@ export namespace Prisma {
      * Select specific fields to fetch from the CustomerDirectoryEntry
      */
     select?: CustomerDirectoryEntrySelect<ExtArgs> | null
+  }
+
+
+  /**
+   * Model CustomerPriceDirectoryEntry
+   */
+
+  export type AggregateCustomerPriceDirectoryEntry = {
+    _count: CustomerPriceDirectoryEntryCountAggregateOutputType | null
+    _avg: CustomerPriceDirectoryEntryAvgAggregateOutputType | null
+    _sum: CustomerPriceDirectoryEntrySumAggregateOutputType | null
+    _min: CustomerPriceDirectoryEntryMinAggregateOutputType | null
+    _max: CustomerPriceDirectoryEntryMaxAggregateOutputType | null
+  }
+
+  export type CustomerPriceDirectoryEntryAvgAggregateOutputType = {
+    id: number | null
+    priceCents: number | null
+  }
+
+  export type CustomerPriceDirectoryEntrySumAggregateOutputType = {
+    id: number | null
+    priceCents: number | null
+  }
+
+  export type CustomerPriceDirectoryEntryMinAggregateOutputType = {
+    id: number | null
+    routeDay: string | null
+    customerName: string | null
+    normalizedCustomerName: string | null
+    productSku: string | null
+    productLabel: string | null
+    priceCents: number | null
+    fingerprint: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CustomerPriceDirectoryEntryMaxAggregateOutputType = {
+    id: number | null
+    routeDay: string | null
+    customerName: string | null
+    normalizedCustomerName: string | null
+    productSku: string | null
+    productLabel: string | null
+    priceCents: number | null
+    fingerprint: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CustomerPriceDirectoryEntryCountAggregateOutputType = {
+    id: number
+    routeDay: number
+    customerName: number
+    normalizedCustomerName: number
+    productSku: number
+    productLabel: number
+    priceCents: number
+    fingerprint: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type CustomerPriceDirectoryEntryAvgAggregateInputType = {
+    id?: true
+    priceCents?: true
+  }
+
+  export type CustomerPriceDirectoryEntrySumAggregateInputType = {
+    id?: true
+    priceCents?: true
+  }
+
+  export type CustomerPriceDirectoryEntryMinAggregateInputType = {
+    id?: true
+    routeDay?: true
+    customerName?: true
+    normalizedCustomerName?: true
+    productSku?: true
+    productLabel?: true
+    priceCents?: true
+    fingerprint?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CustomerPriceDirectoryEntryMaxAggregateInputType = {
+    id?: true
+    routeDay?: true
+    customerName?: true
+    normalizedCustomerName?: true
+    productSku?: true
+    productLabel?: true
+    priceCents?: true
+    fingerprint?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CustomerPriceDirectoryEntryCountAggregateInputType = {
+    id?: true
+    routeDay?: true
+    customerName?: true
+    normalizedCustomerName?: true
+    productSku?: true
+    productLabel?: true
+    priceCents?: true
+    fingerprint?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type CustomerPriceDirectoryEntryAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CustomerPriceDirectoryEntry to aggregate.
+     */
+    where?: CustomerPriceDirectoryEntryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CustomerPriceDirectoryEntries to fetch.
+     */
+    orderBy?: CustomerPriceDirectoryEntryOrderByWithRelationInput | CustomerPriceDirectoryEntryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: CustomerPriceDirectoryEntryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CustomerPriceDirectoryEntries from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CustomerPriceDirectoryEntries.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned CustomerPriceDirectoryEntries
+    **/
+    _count?: true | CustomerPriceDirectoryEntryCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: CustomerPriceDirectoryEntryAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: CustomerPriceDirectoryEntrySumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: CustomerPriceDirectoryEntryMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: CustomerPriceDirectoryEntryMaxAggregateInputType
+  }
+
+  export type GetCustomerPriceDirectoryEntryAggregateType<T extends CustomerPriceDirectoryEntryAggregateArgs> = {
+        [P in keyof T & keyof AggregateCustomerPriceDirectoryEntry]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateCustomerPriceDirectoryEntry[P]>
+      : GetScalarType<T[P], AggregateCustomerPriceDirectoryEntry[P]>
+  }
+
+
+
+
+  export type CustomerPriceDirectoryEntryGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CustomerPriceDirectoryEntryWhereInput
+    orderBy?: CustomerPriceDirectoryEntryOrderByWithAggregationInput | CustomerPriceDirectoryEntryOrderByWithAggregationInput[]
+    by: CustomerPriceDirectoryEntryScalarFieldEnum[] | CustomerPriceDirectoryEntryScalarFieldEnum
+    having?: CustomerPriceDirectoryEntryScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: CustomerPriceDirectoryEntryCountAggregateInputType | true
+    _avg?: CustomerPriceDirectoryEntryAvgAggregateInputType
+    _sum?: CustomerPriceDirectoryEntrySumAggregateInputType
+    _min?: CustomerPriceDirectoryEntryMinAggregateInputType
+    _max?: CustomerPriceDirectoryEntryMaxAggregateInputType
+  }
+
+  export type CustomerPriceDirectoryEntryGroupByOutputType = {
+    id: number
+    routeDay: string | null
+    customerName: string
+    normalizedCustomerName: string
+    productSku: string
+    productLabel: string | null
+    priceCents: number
+    fingerprint: string
+    createdAt: Date
+    updatedAt: Date
+    _count: CustomerPriceDirectoryEntryCountAggregateOutputType | null
+    _avg: CustomerPriceDirectoryEntryAvgAggregateOutputType | null
+    _sum: CustomerPriceDirectoryEntrySumAggregateOutputType | null
+    _min: CustomerPriceDirectoryEntryMinAggregateOutputType | null
+    _max: CustomerPriceDirectoryEntryMaxAggregateOutputType | null
+  }
+
+  type GetCustomerPriceDirectoryEntryGroupByPayload<T extends CustomerPriceDirectoryEntryGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<CustomerPriceDirectoryEntryGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof CustomerPriceDirectoryEntryGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], CustomerPriceDirectoryEntryGroupByOutputType[P]>
+            : GetScalarType<T[P], CustomerPriceDirectoryEntryGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type CustomerPriceDirectoryEntrySelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    routeDay?: boolean
+    customerName?: boolean
+    normalizedCustomerName?: boolean
+    productSku?: boolean
+    productLabel?: boolean
+    priceCents?: boolean
+    fingerprint?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["customerPriceDirectoryEntry"]>
+
+  export type CustomerPriceDirectoryEntrySelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    routeDay?: boolean
+    customerName?: boolean
+    normalizedCustomerName?: boolean
+    productSku?: boolean
+    productLabel?: boolean
+    priceCents?: boolean
+    fingerprint?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["customerPriceDirectoryEntry"]>
+
+  export type CustomerPriceDirectoryEntrySelectScalar = {
+    id?: boolean
+    routeDay?: boolean
+    customerName?: boolean
+    normalizedCustomerName?: boolean
+    productSku?: boolean
+    productLabel?: boolean
+    priceCents?: boolean
+    fingerprint?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+
+  export type $CustomerPriceDirectoryEntryPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "CustomerPriceDirectoryEntry"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: number
+      routeDay: string | null
+      customerName: string
+      normalizedCustomerName: string
+      productSku: string
+      productLabel: string | null
+      priceCents: number
+      fingerprint: string
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["customerPriceDirectoryEntry"]>
+    composites: {}
+  }
+
+  type CustomerPriceDirectoryEntryGetPayload<S extends boolean | null | undefined | CustomerPriceDirectoryEntryDefaultArgs> = $Result.GetResult<Prisma.$CustomerPriceDirectoryEntryPayload, S>
+
+  type CustomerPriceDirectoryEntryCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<CustomerPriceDirectoryEntryFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: CustomerPriceDirectoryEntryCountAggregateInputType | true
+    }
+
+  export interface CustomerPriceDirectoryEntryDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['CustomerPriceDirectoryEntry'], meta: { name: 'CustomerPriceDirectoryEntry' } }
+    /**
+     * Find zero or one CustomerPriceDirectoryEntry that matches the filter.
+     * @param {CustomerPriceDirectoryEntryFindUniqueArgs} args - Arguments to find a CustomerPriceDirectoryEntry
+     * @example
+     * // Get one CustomerPriceDirectoryEntry
+     * const customerPriceDirectoryEntry = await prisma.customerPriceDirectoryEntry.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends CustomerPriceDirectoryEntryFindUniqueArgs>(args: SelectSubset<T, CustomerPriceDirectoryEntryFindUniqueArgs<ExtArgs>>): Prisma__CustomerPriceDirectoryEntryClient<$Result.GetResult<Prisma.$CustomerPriceDirectoryEntryPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one CustomerPriceDirectoryEntry that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {CustomerPriceDirectoryEntryFindUniqueOrThrowArgs} args - Arguments to find a CustomerPriceDirectoryEntry
+     * @example
+     * // Get one CustomerPriceDirectoryEntry
+     * const customerPriceDirectoryEntry = await prisma.customerPriceDirectoryEntry.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends CustomerPriceDirectoryEntryFindUniqueOrThrowArgs>(args: SelectSubset<T, CustomerPriceDirectoryEntryFindUniqueOrThrowArgs<ExtArgs>>): Prisma__CustomerPriceDirectoryEntryClient<$Result.GetResult<Prisma.$CustomerPriceDirectoryEntryPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first CustomerPriceDirectoryEntry that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CustomerPriceDirectoryEntryFindFirstArgs} args - Arguments to find a CustomerPriceDirectoryEntry
+     * @example
+     * // Get one CustomerPriceDirectoryEntry
+     * const customerPriceDirectoryEntry = await prisma.customerPriceDirectoryEntry.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends CustomerPriceDirectoryEntryFindFirstArgs>(args?: SelectSubset<T, CustomerPriceDirectoryEntryFindFirstArgs<ExtArgs>>): Prisma__CustomerPriceDirectoryEntryClient<$Result.GetResult<Prisma.$CustomerPriceDirectoryEntryPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first CustomerPriceDirectoryEntry that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CustomerPriceDirectoryEntryFindFirstOrThrowArgs} args - Arguments to find a CustomerPriceDirectoryEntry
+     * @example
+     * // Get one CustomerPriceDirectoryEntry
+     * const customerPriceDirectoryEntry = await prisma.customerPriceDirectoryEntry.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends CustomerPriceDirectoryEntryFindFirstOrThrowArgs>(args?: SelectSubset<T, CustomerPriceDirectoryEntryFindFirstOrThrowArgs<ExtArgs>>): Prisma__CustomerPriceDirectoryEntryClient<$Result.GetResult<Prisma.$CustomerPriceDirectoryEntryPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more CustomerPriceDirectoryEntries that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CustomerPriceDirectoryEntryFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all CustomerPriceDirectoryEntries
+     * const customerPriceDirectoryEntries = await prisma.customerPriceDirectoryEntry.findMany()
+     * 
+     * // Get first 10 CustomerPriceDirectoryEntries
+     * const customerPriceDirectoryEntries = await prisma.customerPriceDirectoryEntry.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const customerPriceDirectoryEntryWithIdOnly = await prisma.customerPriceDirectoryEntry.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends CustomerPriceDirectoryEntryFindManyArgs>(args?: SelectSubset<T, CustomerPriceDirectoryEntryFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CustomerPriceDirectoryEntryPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a CustomerPriceDirectoryEntry.
+     * @param {CustomerPriceDirectoryEntryCreateArgs} args - Arguments to create a CustomerPriceDirectoryEntry.
+     * @example
+     * // Create one CustomerPriceDirectoryEntry
+     * const CustomerPriceDirectoryEntry = await prisma.customerPriceDirectoryEntry.create({
+     *   data: {
+     *     // ... data to create a CustomerPriceDirectoryEntry
+     *   }
+     * })
+     * 
+     */
+    create<T extends CustomerPriceDirectoryEntryCreateArgs>(args: SelectSubset<T, CustomerPriceDirectoryEntryCreateArgs<ExtArgs>>): Prisma__CustomerPriceDirectoryEntryClient<$Result.GetResult<Prisma.$CustomerPriceDirectoryEntryPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many CustomerPriceDirectoryEntries.
+     * @param {CustomerPriceDirectoryEntryCreateManyArgs} args - Arguments to create many CustomerPriceDirectoryEntries.
+     * @example
+     * // Create many CustomerPriceDirectoryEntries
+     * const customerPriceDirectoryEntry = await prisma.customerPriceDirectoryEntry.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends CustomerPriceDirectoryEntryCreateManyArgs>(args?: SelectSubset<T, CustomerPriceDirectoryEntryCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many CustomerPriceDirectoryEntries and returns the data saved in the database.
+     * @param {CustomerPriceDirectoryEntryCreateManyAndReturnArgs} args - Arguments to create many CustomerPriceDirectoryEntries.
+     * @example
+     * // Create many CustomerPriceDirectoryEntries
+     * const customerPriceDirectoryEntry = await prisma.customerPriceDirectoryEntry.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many CustomerPriceDirectoryEntries and only return the `id`
+     * const customerPriceDirectoryEntryWithIdOnly = await prisma.customerPriceDirectoryEntry.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends CustomerPriceDirectoryEntryCreateManyAndReturnArgs>(args?: SelectSubset<T, CustomerPriceDirectoryEntryCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CustomerPriceDirectoryEntryPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a CustomerPriceDirectoryEntry.
+     * @param {CustomerPriceDirectoryEntryDeleteArgs} args - Arguments to delete one CustomerPriceDirectoryEntry.
+     * @example
+     * // Delete one CustomerPriceDirectoryEntry
+     * const CustomerPriceDirectoryEntry = await prisma.customerPriceDirectoryEntry.delete({
+     *   where: {
+     *     // ... filter to delete one CustomerPriceDirectoryEntry
+     *   }
+     * })
+     * 
+     */
+    delete<T extends CustomerPriceDirectoryEntryDeleteArgs>(args: SelectSubset<T, CustomerPriceDirectoryEntryDeleteArgs<ExtArgs>>): Prisma__CustomerPriceDirectoryEntryClient<$Result.GetResult<Prisma.$CustomerPriceDirectoryEntryPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one CustomerPriceDirectoryEntry.
+     * @param {CustomerPriceDirectoryEntryUpdateArgs} args - Arguments to update one CustomerPriceDirectoryEntry.
+     * @example
+     * // Update one CustomerPriceDirectoryEntry
+     * const customerPriceDirectoryEntry = await prisma.customerPriceDirectoryEntry.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends CustomerPriceDirectoryEntryUpdateArgs>(args: SelectSubset<T, CustomerPriceDirectoryEntryUpdateArgs<ExtArgs>>): Prisma__CustomerPriceDirectoryEntryClient<$Result.GetResult<Prisma.$CustomerPriceDirectoryEntryPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more CustomerPriceDirectoryEntries.
+     * @param {CustomerPriceDirectoryEntryDeleteManyArgs} args - Arguments to filter CustomerPriceDirectoryEntries to delete.
+     * @example
+     * // Delete a few CustomerPriceDirectoryEntries
+     * const { count } = await prisma.customerPriceDirectoryEntry.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends CustomerPriceDirectoryEntryDeleteManyArgs>(args?: SelectSubset<T, CustomerPriceDirectoryEntryDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more CustomerPriceDirectoryEntries.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CustomerPriceDirectoryEntryUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many CustomerPriceDirectoryEntries
+     * const customerPriceDirectoryEntry = await prisma.customerPriceDirectoryEntry.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends CustomerPriceDirectoryEntryUpdateManyArgs>(args: SelectSubset<T, CustomerPriceDirectoryEntryUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one CustomerPriceDirectoryEntry.
+     * @param {CustomerPriceDirectoryEntryUpsertArgs} args - Arguments to update or create a CustomerPriceDirectoryEntry.
+     * @example
+     * // Update or create a CustomerPriceDirectoryEntry
+     * const customerPriceDirectoryEntry = await prisma.customerPriceDirectoryEntry.upsert({
+     *   create: {
+     *     // ... data to create a CustomerPriceDirectoryEntry
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the CustomerPriceDirectoryEntry we want to update
+     *   }
+     * })
+     */
+    upsert<T extends CustomerPriceDirectoryEntryUpsertArgs>(args: SelectSubset<T, CustomerPriceDirectoryEntryUpsertArgs<ExtArgs>>): Prisma__CustomerPriceDirectoryEntryClient<$Result.GetResult<Prisma.$CustomerPriceDirectoryEntryPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of CustomerPriceDirectoryEntries.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CustomerPriceDirectoryEntryCountArgs} args - Arguments to filter CustomerPriceDirectoryEntries to count.
+     * @example
+     * // Count the number of CustomerPriceDirectoryEntries
+     * const count = await prisma.customerPriceDirectoryEntry.count({
+     *   where: {
+     *     // ... the filter for the CustomerPriceDirectoryEntries we want to count
+     *   }
+     * })
+    **/
+    count<T extends CustomerPriceDirectoryEntryCountArgs>(
+      args?: Subset<T, CustomerPriceDirectoryEntryCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], CustomerPriceDirectoryEntryCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a CustomerPriceDirectoryEntry.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CustomerPriceDirectoryEntryAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends CustomerPriceDirectoryEntryAggregateArgs>(args: Subset<T, CustomerPriceDirectoryEntryAggregateArgs>): Prisma.PrismaPromise<GetCustomerPriceDirectoryEntryAggregateType<T>>
+
+    /**
+     * Group by CustomerPriceDirectoryEntry.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CustomerPriceDirectoryEntryGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends CustomerPriceDirectoryEntryGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: CustomerPriceDirectoryEntryGroupByArgs['orderBy'] }
+        : { orderBy?: CustomerPriceDirectoryEntryGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, CustomerPriceDirectoryEntryGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetCustomerPriceDirectoryEntryGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the CustomerPriceDirectoryEntry model
+   */
+  readonly fields: CustomerPriceDirectoryEntryFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for CustomerPriceDirectoryEntry.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__CustomerPriceDirectoryEntryClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the CustomerPriceDirectoryEntry model
+   */ 
+  interface CustomerPriceDirectoryEntryFieldRefs {
+    readonly id: FieldRef<"CustomerPriceDirectoryEntry", 'Int'>
+    readonly routeDay: FieldRef<"CustomerPriceDirectoryEntry", 'String'>
+    readonly customerName: FieldRef<"CustomerPriceDirectoryEntry", 'String'>
+    readonly normalizedCustomerName: FieldRef<"CustomerPriceDirectoryEntry", 'String'>
+    readonly productSku: FieldRef<"CustomerPriceDirectoryEntry", 'String'>
+    readonly productLabel: FieldRef<"CustomerPriceDirectoryEntry", 'String'>
+    readonly priceCents: FieldRef<"CustomerPriceDirectoryEntry", 'Int'>
+    readonly fingerprint: FieldRef<"CustomerPriceDirectoryEntry", 'String'>
+    readonly createdAt: FieldRef<"CustomerPriceDirectoryEntry", 'DateTime'>
+    readonly updatedAt: FieldRef<"CustomerPriceDirectoryEntry", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * CustomerPriceDirectoryEntry findUnique
+   */
+  export type CustomerPriceDirectoryEntryFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CustomerPriceDirectoryEntry
+     */
+    select?: CustomerPriceDirectoryEntrySelect<ExtArgs> | null
+    /**
+     * Filter, which CustomerPriceDirectoryEntry to fetch.
+     */
+    where: CustomerPriceDirectoryEntryWhereUniqueInput
+  }
+
+  /**
+   * CustomerPriceDirectoryEntry findUniqueOrThrow
+   */
+  export type CustomerPriceDirectoryEntryFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CustomerPriceDirectoryEntry
+     */
+    select?: CustomerPriceDirectoryEntrySelect<ExtArgs> | null
+    /**
+     * Filter, which CustomerPriceDirectoryEntry to fetch.
+     */
+    where: CustomerPriceDirectoryEntryWhereUniqueInput
+  }
+
+  /**
+   * CustomerPriceDirectoryEntry findFirst
+   */
+  export type CustomerPriceDirectoryEntryFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CustomerPriceDirectoryEntry
+     */
+    select?: CustomerPriceDirectoryEntrySelect<ExtArgs> | null
+    /**
+     * Filter, which CustomerPriceDirectoryEntry to fetch.
+     */
+    where?: CustomerPriceDirectoryEntryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CustomerPriceDirectoryEntries to fetch.
+     */
+    orderBy?: CustomerPriceDirectoryEntryOrderByWithRelationInput | CustomerPriceDirectoryEntryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CustomerPriceDirectoryEntries.
+     */
+    cursor?: CustomerPriceDirectoryEntryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CustomerPriceDirectoryEntries from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CustomerPriceDirectoryEntries.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CustomerPriceDirectoryEntries.
+     */
+    distinct?: CustomerPriceDirectoryEntryScalarFieldEnum | CustomerPriceDirectoryEntryScalarFieldEnum[]
+  }
+
+  /**
+   * CustomerPriceDirectoryEntry findFirstOrThrow
+   */
+  export type CustomerPriceDirectoryEntryFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CustomerPriceDirectoryEntry
+     */
+    select?: CustomerPriceDirectoryEntrySelect<ExtArgs> | null
+    /**
+     * Filter, which CustomerPriceDirectoryEntry to fetch.
+     */
+    where?: CustomerPriceDirectoryEntryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CustomerPriceDirectoryEntries to fetch.
+     */
+    orderBy?: CustomerPriceDirectoryEntryOrderByWithRelationInput | CustomerPriceDirectoryEntryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CustomerPriceDirectoryEntries.
+     */
+    cursor?: CustomerPriceDirectoryEntryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CustomerPriceDirectoryEntries from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CustomerPriceDirectoryEntries.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CustomerPriceDirectoryEntries.
+     */
+    distinct?: CustomerPriceDirectoryEntryScalarFieldEnum | CustomerPriceDirectoryEntryScalarFieldEnum[]
+  }
+
+  /**
+   * CustomerPriceDirectoryEntry findMany
+   */
+  export type CustomerPriceDirectoryEntryFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CustomerPriceDirectoryEntry
+     */
+    select?: CustomerPriceDirectoryEntrySelect<ExtArgs> | null
+    /**
+     * Filter, which CustomerPriceDirectoryEntries to fetch.
+     */
+    where?: CustomerPriceDirectoryEntryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CustomerPriceDirectoryEntries to fetch.
+     */
+    orderBy?: CustomerPriceDirectoryEntryOrderByWithRelationInput | CustomerPriceDirectoryEntryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing CustomerPriceDirectoryEntries.
+     */
+    cursor?: CustomerPriceDirectoryEntryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CustomerPriceDirectoryEntries from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CustomerPriceDirectoryEntries.
+     */
+    skip?: number
+    distinct?: CustomerPriceDirectoryEntryScalarFieldEnum | CustomerPriceDirectoryEntryScalarFieldEnum[]
+  }
+
+  /**
+   * CustomerPriceDirectoryEntry create
+   */
+  export type CustomerPriceDirectoryEntryCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CustomerPriceDirectoryEntry
+     */
+    select?: CustomerPriceDirectoryEntrySelect<ExtArgs> | null
+    /**
+     * The data needed to create a CustomerPriceDirectoryEntry.
+     */
+    data: XOR<CustomerPriceDirectoryEntryCreateInput, CustomerPriceDirectoryEntryUncheckedCreateInput>
+  }
+
+  /**
+   * CustomerPriceDirectoryEntry createMany
+   */
+  export type CustomerPriceDirectoryEntryCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many CustomerPriceDirectoryEntries.
+     */
+    data: CustomerPriceDirectoryEntryCreateManyInput | CustomerPriceDirectoryEntryCreateManyInput[]
+  }
+
+  /**
+   * CustomerPriceDirectoryEntry createManyAndReturn
+   */
+  export type CustomerPriceDirectoryEntryCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CustomerPriceDirectoryEntry
+     */
+    select?: CustomerPriceDirectoryEntrySelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many CustomerPriceDirectoryEntries.
+     */
+    data: CustomerPriceDirectoryEntryCreateManyInput | CustomerPriceDirectoryEntryCreateManyInput[]
+  }
+
+  /**
+   * CustomerPriceDirectoryEntry update
+   */
+  export type CustomerPriceDirectoryEntryUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CustomerPriceDirectoryEntry
+     */
+    select?: CustomerPriceDirectoryEntrySelect<ExtArgs> | null
+    /**
+     * The data needed to update a CustomerPriceDirectoryEntry.
+     */
+    data: XOR<CustomerPriceDirectoryEntryUpdateInput, CustomerPriceDirectoryEntryUncheckedUpdateInput>
+    /**
+     * Choose, which CustomerPriceDirectoryEntry to update.
+     */
+    where: CustomerPriceDirectoryEntryWhereUniqueInput
+  }
+
+  /**
+   * CustomerPriceDirectoryEntry updateMany
+   */
+  export type CustomerPriceDirectoryEntryUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update CustomerPriceDirectoryEntries.
+     */
+    data: XOR<CustomerPriceDirectoryEntryUpdateManyMutationInput, CustomerPriceDirectoryEntryUncheckedUpdateManyInput>
+    /**
+     * Filter which CustomerPriceDirectoryEntries to update
+     */
+    where?: CustomerPriceDirectoryEntryWhereInput
+  }
+
+  /**
+   * CustomerPriceDirectoryEntry upsert
+   */
+  export type CustomerPriceDirectoryEntryUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CustomerPriceDirectoryEntry
+     */
+    select?: CustomerPriceDirectoryEntrySelect<ExtArgs> | null
+    /**
+     * The filter to search for the CustomerPriceDirectoryEntry to update in case it exists.
+     */
+    where: CustomerPriceDirectoryEntryWhereUniqueInput
+    /**
+     * In case the CustomerPriceDirectoryEntry found by the `where` argument doesn't exist, create a new CustomerPriceDirectoryEntry with this data.
+     */
+    create: XOR<CustomerPriceDirectoryEntryCreateInput, CustomerPriceDirectoryEntryUncheckedCreateInput>
+    /**
+     * In case the CustomerPriceDirectoryEntry was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<CustomerPriceDirectoryEntryUpdateInput, CustomerPriceDirectoryEntryUncheckedUpdateInput>
+  }
+
+  /**
+   * CustomerPriceDirectoryEntry delete
+   */
+  export type CustomerPriceDirectoryEntryDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CustomerPriceDirectoryEntry
+     */
+    select?: CustomerPriceDirectoryEntrySelect<ExtArgs> | null
+    /**
+     * Filter which CustomerPriceDirectoryEntry to delete.
+     */
+    where: CustomerPriceDirectoryEntryWhereUniqueInput
+  }
+
+  /**
+   * CustomerPriceDirectoryEntry deleteMany
+   */
+  export type CustomerPriceDirectoryEntryDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CustomerPriceDirectoryEntries to delete
+     */
+    where?: CustomerPriceDirectoryEntryWhereInput
+  }
+
+  /**
+   * CustomerPriceDirectoryEntry without action
+   */
+  export type CustomerPriceDirectoryEntryDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CustomerPriceDirectoryEntry
+     */
+    select?: CustomerPriceDirectoryEntrySelect<ExtArgs> | null
   }
 
 
@@ -10828,6 +11888,22 @@ export namespace Prisma {
   export type CustomerDirectoryEntryScalarFieldEnum = (typeof CustomerDirectoryEntryScalarFieldEnum)[keyof typeof CustomerDirectoryEntryScalarFieldEnum]
 
 
+  export const CustomerPriceDirectoryEntryScalarFieldEnum: {
+    id: 'id',
+    routeDay: 'routeDay',
+    customerName: 'customerName',
+    normalizedCustomerName: 'normalizedCustomerName',
+    productSku: 'productSku',
+    productLabel: 'productLabel',
+    priceCents: 'priceCents',
+    fingerprint: 'fingerprint',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type CustomerPriceDirectoryEntryScalarFieldEnum = (typeof CustomerPriceDirectoryEntryScalarFieldEnum)[keyof typeof CustomerPriceDirectoryEntryScalarFieldEnum]
+
+
   export const ProductScalarFieldEnum: {
     id: 'id',
     sku: 'sku',
@@ -11155,6 +12231,85 @@ export namespace Prisma {
     fingerprint?: StringWithAggregatesFilter<"CustomerDirectoryEntry"> | string
     createdAt?: DateTimeWithAggregatesFilter<"CustomerDirectoryEntry"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"CustomerDirectoryEntry"> | Date | string
+  }
+
+  export type CustomerPriceDirectoryEntryWhereInput = {
+    AND?: CustomerPriceDirectoryEntryWhereInput | CustomerPriceDirectoryEntryWhereInput[]
+    OR?: CustomerPriceDirectoryEntryWhereInput[]
+    NOT?: CustomerPriceDirectoryEntryWhereInput | CustomerPriceDirectoryEntryWhereInput[]
+    id?: IntFilter<"CustomerPriceDirectoryEntry"> | number
+    routeDay?: StringNullableFilter<"CustomerPriceDirectoryEntry"> | string | null
+    customerName?: StringFilter<"CustomerPriceDirectoryEntry"> | string
+    normalizedCustomerName?: StringFilter<"CustomerPriceDirectoryEntry"> | string
+    productSku?: StringFilter<"CustomerPriceDirectoryEntry"> | string
+    productLabel?: StringNullableFilter<"CustomerPriceDirectoryEntry"> | string | null
+    priceCents?: IntFilter<"CustomerPriceDirectoryEntry"> | number
+    fingerprint?: StringFilter<"CustomerPriceDirectoryEntry"> | string
+    createdAt?: DateTimeFilter<"CustomerPriceDirectoryEntry"> | Date | string
+    updatedAt?: DateTimeFilter<"CustomerPriceDirectoryEntry"> | Date | string
+  }
+
+  export type CustomerPriceDirectoryEntryOrderByWithRelationInput = {
+    id?: SortOrder
+    routeDay?: SortOrderInput | SortOrder
+    customerName?: SortOrder
+    normalizedCustomerName?: SortOrder
+    productSku?: SortOrder
+    productLabel?: SortOrderInput | SortOrder
+    priceCents?: SortOrder
+    fingerprint?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CustomerPriceDirectoryEntryWhereUniqueInput = Prisma.AtLeast<{
+    id?: number
+    fingerprint?: string
+    AND?: CustomerPriceDirectoryEntryWhereInput | CustomerPriceDirectoryEntryWhereInput[]
+    OR?: CustomerPriceDirectoryEntryWhereInput[]
+    NOT?: CustomerPriceDirectoryEntryWhereInput | CustomerPriceDirectoryEntryWhereInput[]
+    routeDay?: StringNullableFilter<"CustomerPriceDirectoryEntry"> | string | null
+    customerName?: StringFilter<"CustomerPriceDirectoryEntry"> | string
+    normalizedCustomerName?: StringFilter<"CustomerPriceDirectoryEntry"> | string
+    productSku?: StringFilter<"CustomerPriceDirectoryEntry"> | string
+    productLabel?: StringNullableFilter<"CustomerPriceDirectoryEntry"> | string | null
+    priceCents?: IntFilter<"CustomerPriceDirectoryEntry"> | number
+    createdAt?: DateTimeFilter<"CustomerPriceDirectoryEntry"> | Date | string
+    updatedAt?: DateTimeFilter<"CustomerPriceDirectoryEntry"> | Date | string
+  }, "id" | "fingerprint">
+
+  export type CustomerPriceDirectoryEntryOrderByWithAggregationInput = {
+    id?: SortOrder
+    routeDay?: SortOrderInput | SortOrder
+    customerName?: SortOrder
+    normalizedCustomerName?: SortOrder
+    productSku?: SortOrder
+    productLabel?: SortOrderInput | SortOrder
+    priceCents?: SortOrder
+    fingerprint?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: CustomerPriceDirectoryEntryCountOrderByAggregateInput
+    _avg?: CustomerPriceDirectoryEntryAvgOrderByAggregateInput
+    _max?: CustomerPriceDirectoryEntryMaxOrderByAggregateInput
+    _min?: CustomerPriceDirectoryEntryMinOrderByAggregateInput
+    _sum?: CustomerPriceDirectoryEntrySumOrderByAggregateInput
+  }
+
+  export type CustomerPriceDirectoryEntryScalarWhereWithAggregatesInput = {
+    AND?: CustomerPriceDirectoryEntryScalarWhereWithAggregatesInput | CustomerPriceDirectoryEntryScalarWhereWithAggregatesInput[]
+    OR?: CustomerPriceDirectoryEntryScalarWhereWithAggregatesInput[]
+    NOT?: CustomerPriceDirectoryEntryScalarWhereWithAggregatesInput | CustomerPriceDirectoryEntryScalarWhereWithAggregatesInput[]
+    id?: IntWithAggregatesFilter<"CustomerPriceDirectoryEntry"> | number
+    routeDay?: StringNullableWithAggregatesFilter<"CustomerPriceDirectoryEntry"> | string | null
+    customerName?: StringWithAggregatesFilter<"CustomerPriceDirectoryEntry"> | string
+    normalizedCustomerName?: StringWithAggregatesFilter<"CustomerPriceDirectoryEntry"> | string
+    productSku?: StringWithAggregatesFilter<"CustomerPriceDirectoryEntry"> | string
+    productLabel?: StringNullableWithAggregatesFilter<"CustomerPriceDirectoryEntry"> | string | null
+    priceCents?: IntWithAggregatesFilter<"CustomerPriceDirectoryEntry"> | number
+    fingerprint?: StringWithAggregatesFilter<"CustomerPriceDirectoryEntry"> | string
+    createdAt?: DateTimeWithAggregatesFilter<"CustomerPriceDirectoryEntry"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"CustomerPriceDirectoryEntry"> | Date | string
   }
 
   export type ProductWhereInput = {
@@ -11790,6 +12945,97 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     address?: NullableStringFieldUpdateOperationsInput | string | null
     phone?: NullableStringFieldUpdateOperationsInput | string | null
+    fingerprint?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CustomerPriceDirectoryEntryCreateInput = {
+    id: number
+    routeDay?: string | null
+    customerName: string
+    normalizedCustomerName: string
+    productSku: string
+    productLabel?: string | null
+    priceCents: number
+    fingerprint: string
+    createdAt: Date | string
+    updatedAt: Date | string
+  }
+
+  export type CustomerPriceDirectoryEntryUncheckedCreateInput = {
+    id: number
+    routeDay?: string | null
+    customerName: string
+    normalizedCustomerName: string
+    productSku: string
+    productLabel?: string | null
+    priceCents: number
+    fingerprint: string
+    createdAt: Date | string
+    updatedAt: Date | string
+  }
+
+  export type CustomerPriceDirectoryEntryUpdateInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    routeDay?: NullableStringFieldUpdateOperationsInput | string | null
+    customerName?: StringFieldUpdateOperationsInput | string
+    normalizedCustomerName?: StringFieldUpdateOperationsInput | string
+    productSku?: StringFieldUpdateOperationsInput | string
+    productLabel?: NullableStringFieldUpdateOperationsInput | string | null
+    priceCents?: IntFieldUpdateOperationsInput | number
+    fingerprint?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CustomerPriceDirectoryEntryUncheckedUpdateInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    routeDay?: NullableStringFieldUpdateOperationsInput | string | null
+    customerName?: StringFieldUpdateOperationsInput | string
+    normalizedCustomerName?: StringFieldUpdateOperationsInput | string
+    productSku?: StringFieldUpdateOperationsInput | string
+    productLabel?: NullableStringFieldUpdateOperationsInput | string | null
+    priceCents?: IntFieldUpdateOperationsInput | number
+    fingerprint?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CustomerPriceDirectoryEntryCreateManyInput = {
+    id: number
+    routeDay?: string | null
+    customerName: string
+    normalizedCustomerName: string
+    productSku: string
+    productLabel?: string | null
+    priceCents: number
+    fingerprint: string
+    createdAt: Date | string
+    updatedAt: Date | string
+  }
+
+  export type CustomerPriceDirectoryEntryUpdateManyMutationInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    routeDay?: NullableStringFieldUpdateOperationsInput | string | null
+    customerName?: StringFieldUpdateOperationsInput | string
+    normalizedCustomerName?: StringFieldUpdateOperationsInput | string
+    productSku?: StringFieldUpdateOperationsInput | string
+    productLabel?: NullableStringFieldUpdateOperationsInput | string | null
+    priceCents?: IntFieldUpdateOperationsInput | number
+    fingerprint?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CustomerPriceDirectoryEntryUncheckedUpdateManyInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    routeDay?: NullableStringFieldUpdateOperationsInput | string | null
+    customerName?: StringFieldUpdateOperationsInput | string
+    normalizedCustomerName?: StringFieldUpdateOperationsInput | string
+    productSku?: StringFieldUpdateOperationsInput | string
+    productLabel?: NullableStringFieldUpdateOperationsInput | string | null
+    priceCents?: IntFieldUpdateOperationsInput | number
     fingerprint?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -12489,6 +13735,55 @@ export namespace Prisma {
 
   export type CustomerDirectoryEntrySumOrderByAggregateInput = {
     id?: SortOrder
+  }
+
+  export type CustomerPriceDirectoryEntryCountOrderByAggregateInput = {
+    id?: SortOrder
+    routeDay?: SortOrder
+    customerName?: SortOrder
+    normalizedCustomerName?: SortOrder
+    productSku?: SortOrder
+    productLabel?: SortOrder
+    priceCents?: SortOrder
+    fingerprint?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CustomerPriceDirectoryEntryAvgOrderByAggregateInput = {
+    id?: SortOrder
+    priceCents?: SortOrder
+  }
+
+  export type CustomerPriceDirectoryEntryMaxOrderByAggregateInput = {
+    id?: SortOrder
+    routeDay?: SortOrder
+    customerName?: SortOrder
+    normalizedCustomerName?: SortOrder
+    productSku?: SortOrder
+    productLabel?: SortOrder
+    priceCents?: SortOrder
+    fingerprint?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CustomerPriceDirectoryEntryMinOrderByAggregateInput = {
+    id?: SortOrder
+    routeDay?: SortOrder
+    customerName?: SortOrder
+    normalizedCustomerName?: SortOrder
+    productSku?: SortOrder
+    productLabel?: SortOrder
+    priceCents?: SortOrder
+    fingerprint?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CustomerPriceDirectoryEntrySumOrderByAggregateInput = {
+    id?: SortOrder
+    priceCents?: SortOrder
   }
 
   export type IntNullableFilter<$PrismaModel = never> = {
@@ -14792,6 +16087,10 @@ export namespace Prisma {
      * @deprecated Use CustomerDirectoryEntryDefaultArgs instead
      */
     export type CustomerDirectoryEntryArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CustomerDirectoryEntryDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CustomerPriceDirectoryEntryDefaultArgs instead
+     */
+    export type CustomerPriceDirectoryEntryArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CustomerPriceDirectoryEntryDefaultArgs<ExtArgs>
     /**
      * @deprecated Use ProductDefaultArgs instead
      */

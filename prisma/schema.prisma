@@ -44,6 +44,23 @@ model CustomerDirectoryEntry {
   @@index([name])
 }
 
+model CustomerPriceDirectoryEntry {
+  id                     Int      @id @default(autoincrement())
+  routeDay               String?
+  customerName           String
+  normalizedCustomerName String
+  productSku             String
+  productLabel           String?
+  priceCents             Int
+  fingerprint            String   @unique
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @default(now()) @updatedAt
+
+  @@index([normalizedCustomerName])
+  @@index([routeDay, normalizedCustomerName])
+  @@index([productSku])
+}
+
 model Product {
   id                Int             @id @default(autoincrement())
   sku               String          @unique

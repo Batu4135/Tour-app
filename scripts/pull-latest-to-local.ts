@@ -2,7 +2,6 @@ import { PrismaClient as CloudPrismaClient } from "@prisma/client";
 if (!process.env.LOCAL_DATABASE_URL) {
   process.env.LOCAL_DATABASE_URL = "file:./local.db";
 }
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { PrismaClient: LocalPrismaClient } = require("../prisma/generated/local-client");
 
 const cloud: any = new CloudPrismaClient();
@@ -56,6 +55,40 @@ async function ensureLocalSchema() {
       "updatedAt" DATETIME NOT NULL
     );
   `);
+
+  await local.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "CustomerDirectoryEntry" (
+      "id" INTEGER NOT NULL PRIMARY KEY,
+      "routeDay" TEXT NOT NULL,
+      "name" TEXT NOT NULL,
+      "address" TEXT,
+      "phone" TEXT,
+      "fingerprint" TEXT NOT NULL,
+      "createdAt" DATETIME NOT NULL,
+      "updatedAt" DATETIME NOT NULL
+    );
+  `);
+  await local.$executeRawUnsafe(
+    `CREATE UNIQUE INDEX IF NOT EXISTS "CustomerDirectoryEntry_fingerprint_key" ON "CustomerDirectoryEntry"("fingerprint");`
+  );
+
+  await local.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "CustomerPriceDirectoryEntry" (
+      "id" INTEGER NOT NULL PRIMARY KEY,
+      "routeDay" TEXT,
+      "customerName" TEXT NOT NULL,
+      "normalizedCustomerName" TEXT NOT NULL,
+      "productSku" TEXT NOT NULL,
+      "productLabel" TEXT,
+      "priceCents" INTEGER NOT NULL,
+      "fingerprint" TEXT NOT NULL,
+      "createdAt" DATETIME NOT NULL,
+      "updatedAt" DATETIME NOT NULL
+    );
+  `);
+  await local.$executeRawUnsafe(
+    `CREATE UNIQUE INDEX IF NOT EXISTS "CustomerPriceDirectoryEntry_fingerprint_key" ON "CustomerPriceDirectoryEntry"("fingerprint");`
+  );
   await local.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN "licenseType" TEXT NOT NULL DEFAULT 'NONE';`).catch(() => undefined);
   await local.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN "licenseWeightGrams" INTEGER NOT NULL DEFAULT 0;`).catch(() => undefined);
   await local.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "Product_sku_key" ON "Product"("sku");`);
@@ -139,10 +172,16 @@ async function main() {
   assertCloudDatabaseUrl();
   await ensureLocalSchema();
 
-  const [users, customers, products, productAliases, customerPrices, drafts, draftLines, invoiceRevisions] =
+  const [users, customers, customerDirectoryEntries, customerPriceDirectoryEntries, products, productAliases, customerPrices, drafts, draftLines, invoiceRevisions] =
     await Promise.all([
       cloud.user.findMany({ orderBy: { id: "asc" } }),
       cloud.customer.findMany({ orderBy: { id: "asc" } }),
+      (cloud as any).customerDirectoryEntry
+        ? (cloud as any).customerDirectoryEntry.findMany({ orderBy: { id: "asc" } })
+        : Promise.resolve([]),
+      (cloud as any).customerPriceDirectoryEntry
+        ? (cloud as any).customerPriceDirectoryEntry.findMany({ orderBy: { id: "asc" } })
+        : Promise.resolve([]),
       cloud.product.findMany({ orderBy: { id: "asc" } }),
       cloud.productAlias.findMany({ orderBy: { id: "asc" } }),
       cloud.customerPrice.findMany({ orderBy: { id: "asc" } }),
@@ -158,6 +197,8 @@ async function main() {
     await tx.draftLine.deleteMany();
     await tx.draft.deleteMany();
     await tx.customerPrice.deleteMany();
+    await tx.customerPriceDirectoryEntry.deleteMany();
+    await tx.customerDirectoryEntry.deleteMany();
     await tx.productAlias.deleteMany();
     await tx.product.deleteMany();
     await tx.customer.deleteMany();
@@ -182,6 +223,38 @@ async function main() {
           address: item.address,
           phone: item.phone,
           routeDay: item.routeDay,
+          createdAt: item.createdAt ?? new Date(0),
+          updatedAt: item.updatedAt ?? item.createdAt ?? new Date(0)
+        }))
+      });
+    }
+
+    if (customerDirectoryEntries.length) {
+      await tx.customerDirectoryEntry.createMany({
+        data: customerDirectoryEntries.map((item: any) => ({
+          id: item.id,
+          routeDay: item.routeDay,
+          name: item.name,
+          address: item.address,
+          phone: item.phone,
+          fingerprint: item.fingerprint,
+          createdAt: item.createdAt ?? new Date(0),
+          updatedAt: item.updatedAt ?? item.createdAt ?? new Date(0)
+        }))
+      });
+    }
+
+    if (customerPriceDirectoryEntries.length) {
+      await tx.customerPriceDirectoryEntry.createMany({
+        data: customerPriceDirectoryEntries.map((item: any) => ({
+          id: item.id,
+          routeDay: item.routeDay,
+          customerName: item.customerName,
+          normalizedCustomerName: item.normalizedCustomerName,
+          productSku: item.productSku,
+          productLabel: item.productLabel,
+          priceCents: item.priceCents,
+          fingerprint: item.fingerprint,
           createdAt: item.createdAt ?? new Date(0),
           updatedAt: item.updatedAt ?? item.createdAt ?? new Date(0)
         }))
@@ -276,7 +349,7 @@ async function main() {
 
   console.log("[pull:local] Synchronisierung abgeschlossen.");
   console.log(
-    `[pull:local] users=${users.length}, customers=${customers.length}, products=${products.length}, drafts=${drafts.length}, draftLines=${draftLines.length}, revisions=${invoiceRevisions.length}`
+    `[pull:local] users=${users.length}, customers=${customers.length}, customerDirectory=${customerDirectoryEntries.length}, customerPriceDirectory=${customerPriceDirectoryEntries.length}, products=${products.length}, drafts=${drafts.length}, draftLines=${draftLines.length}, revisions=${invoiceRevisions.length}`
   );
 }
 

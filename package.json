@@ -24,6 +24,7 @@
     "db:restore": "tsx scripts/db-restore.ts",
     "import:products": "tsx scripts/import-products.ts",
     "import:customers": "tsx scripts/import-customers.ts",
+    "import:customer-prices": "tsx scripts/import-customer-prices.ts",
     "backup": "tsx scripts/backup-db.ts",
     "pull:local": "prisma generate --schema prisma/local.schema.prisma && tsx scripts/pull-latest-to-local.ts"
   },

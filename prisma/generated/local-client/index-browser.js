@@ -147,6 +147,19 @@ exports.Prisma.CustomerDirectoryEntryScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.CustomerPriceDirectoryEntryScalarFieldEnum = {
+  id: 'id',
+  routeDay: 'routeDay',
+  customerName: 'customerName',
+  normalizedCustomerName: 'normalizedCustomerName',
+  productSku: 'productSku',
+  productLabel: 'productLabel',
+  priceCents: 'priceCents',
+  fingerprint: 'fingerprint',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.ProductScalarFieldEnum = {
   id: 'id',
   sku: 'sku',
@@ -223,6 +236,7 @@ exports.Prisma.ModelName = {
   User: 'User',
   Customer: 'Customer',
   CustomerDirectoryEntry: 'CustomerDirectoryEntry',
+  CustomerPriceDirectoryEntry: 'CustomerPriceDirectoryEntry',
   Product: 'Product',
   ProductAlias: 'ProductAlias',
   CustomerPrice: 'CustomerPrice',
