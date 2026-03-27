@@ -2,7 +2,6 @@
 
 import { FormEvent, KeyboardEvent, PointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Plus, Search } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import CustomerCard from "@/components/CustomerCard";
 
@@ -38,7 +37,6 @@ const emptyForm: NewCustomerForm = {
 
 export default function CustomersPage() {
   const t = useTranslations("customers");
-  const router = useRouter();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -232,7 +230,10 @@ export default function CustomersPage() {
       setCreateOpen(false);
       setDirectorySelectionLocked(false);
       setNameFieldFocused(false);
-      router.push(`/customers/${data.customer.id}?created=1`);
+      setQuery("");
+      setDebouncedQuery("");
+      setSelectedRouteDay("all");
+      await loadCustomers();
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : t("createError"));
     } finally {
