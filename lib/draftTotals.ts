@@ -33,8 +33,8 @@ export function calculateDraftTotals(input: DraftTotalsInput) {
 
   const subtotalCents =
     productSubtotalCents + (input.includeLicenseFee ? licenseTotalCents : 0);
-  const requestedDiscountCents = normalizeCents(input.discountCents);
-  const discountAppliedCents = Math.min(requestedDiscountCents, subtotalCents);
+  const requestedDiscountCents = 0;
+  const discountAppliedCents = 0;
   const afterDiscountCents = Math.max(0, subtotalCents - discountAppliedCents);
   const vatDeductionCents = input.subtractVat ? Math.round(afterDiscountCents * VAT_RATE) : 0;
   const totalCents = Math.max(0, afterDiscountCents - vatDeductionCents);

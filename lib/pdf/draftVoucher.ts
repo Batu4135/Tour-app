@@ -344,10 +344,10 @@ export function drawDraftVoucherPage(
     color: textColor
   });
 
-  page.drawText("Rabatt", { x: s(384), y: summaryTop - s(20) * summaryScale, size: summaryLabelSize, font: regular, color: muted });
+  page.drawText("MWSt 19%", { x: s(384), y: summaryTop - s(20) * summaryScale, size: summaryLabelSize, font: regular, color: muted });
   drawRightText({
     page,
-    text: totals.discountAppliedCents > 0 ? `- ${money(totals.discountAppliedCents)}` : money(0),
+    text: totals.vatDeductionCents > 0 ? `- ${money(totals.vatDeductionCents)}` : money(0),
     x: lineTotalRight,
     y: summaryTop - s(20) * summaryScale,
     size: summaryValueSize,
@@ -355,18 +355,7 @@ export function drawDraftVoucherPage(
     color: textColor
   });
 
-  page.drawText("MWSt 19%", { x: s(384), y: summaryTop - s(36) * summaryScale, size: summaryLabelSize, font: regular, color: muted });
-  drawRightText({
-    page,
-    text: totals.vatDeductionCents > 0 ? `- ${money(totals.vatDeductionCents)}` : money(0),
-    x: lineTotalRight,
-    y: summaryTop - s(36) * summaryScale,
-    size: summaryValueSize,
-    font: regular,
-    color: textColor
-  });
-
-  const ruleY = summaryTop - s(46) * summaryScale;
+  const ruleY = summaryTop - s(30) * summaryScale;
   page.drawLine({
     start: { x: s(372), y: ruleY },
     end: { x: lineTotalRight, y: ruleY },
@@ -374,12 +363,12 @@ export function drawDraftVoucherPage(
     color: accent
   });
 
-  page.drawText("Gesamt", { x: s(384), y: summaryTop - s(68) * summaryScale, size: summaryLabelSize, font: regular, color: muted });
+  page.drawText("Gesamt", { x: s(384), y: summaryTop - s(52) * summaryScale, size: summaryLabelSize, font: regular, color: muted });
   drawRightText({
     page,
     text: money(totals.totalCents),
     x: lineTotalRight,
-    y: summaryTop - s(74) * summaryScale,
+    y: summaryTop - s(58) * summaryScale,
     size: summaryTotalSize,
     font: bold,
     color: textColor
