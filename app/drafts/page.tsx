@@ -97,7 +97,11 @@ export default function DraftsPage() {
     void loadRecentDrafts();
   }, []);
 
-  const selectedResults = useMemo(() => customers.slice(0, 10), [customers]);
+  const hasCustomerSearch = debounced.trim().length > 0;
+  const selectedResults = useMemo(() => {
+    if (!hasCustomerSearch) return [];
+    return customers.slice(0, 10);
+  }, [customers, hasCustomerSearch]);
   const todayKey = useMemo(() => dayKey(new Date()), []);
 
   const groupedDrafts = useMemo<DraftGroup[]>(() => {
@@ -177,6 +181,11 @@ export default function DraftsPage() {
   );
 
   async function loadCustomers() {
+    if (!debounced.trim()) {
+      setCustomers([]);
+      return;
+    }
+
     const response = await fetch(`/api/customers?q=${encodeURIComponent(debounced)}`);
     const data = await response.json();
     if (response.ok) setCustomers(data.customers as Customer[]);
@@ -421,7 +430,9 @@ export default function DraftsPage() {
               <span className="ml-3 truncate text-xs text-[#4A4A4A]/60">{customer.address ?? ""}</span>
             </Link>
           ))}
-          {selectedResults.length === 0 ? <p className="text-sm text-[#4A4A4A]/60">{t("noCustomers")}</p> : null}
+          {hasCustomerSearch && selectedResults.length === 0 ? (
+            <p className="text-sm text-[#4A4A4A]/60">{t("noCustomers")}</p>
+          ) : null}
         </div>
       </div>
 

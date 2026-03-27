@@ -32,7 +32,7 @@ export async function GET(request: Request) {
           ]
         }
       : undefined,
-    orderBy: { name: "asc" },
+    orderBy: { createdAt: "desc" },
     select: {
       id: true,
       name: true,
