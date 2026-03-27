@@ -2,6 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import { prisma } from "../lib/prisma";
 import { buildLicensePersistence } from "../lib/license";
+import { attachImportedCustomerPrices } from "../lib/customerPriceDirectory";
 import xlsx from "xlsx";
 
 type HeaderIndexes = {
@@ -383,43 +384,52 @@ async function main() {
   const uniqueRows = [...lastBySku.values()];
   const licenseFeesBySku = await loadLicenseFeesBySku();
 
-  const existing = await prisma.product.findMany({
-    where: { sku: { in: uniqueRows.map((row) => normalizeSku(row.sku)) } },
-    select: { sku: true }
+  const customers = await prisma.customer.findMany({
+    select: {
+      id: true,
+      name: true,
+      routeDay: true
+    },
+    orderBy: { id: "asc" }
   });
-  const existingSet = new Set(existing.map((item) => item.sku));
 
-  let created = 0;
-  let updated = 0;
+  await prisma.$transaction(async (tx: any) => {
+    await tx.draftLine.deleteMany();
+    await tx.customerPrice.deleteMany();
+    await tx.productAlias.deleteMany();
+    await tx.product.deleteMany();
 
-  for (const row of uniqueRows) {
-    const normalizedSku = normalizeSku(row.sku);
-    const existed = existingSet.has(normalizedSku);
-    const license = resolveLicenseForSku(normalizedSku, licenseFeesBySku);
+    if (uniqueRows.length === 0) return;
 
-    await prisma.product.upsert({
-      where: { sku: normalizedSku },
-      create: {
-        name: row.name,
-        sku: normalizedSku,
-        defaultPriceCents: row.defaultPriceCents,
-        licenseFeeCents: license.licenseFeeCents,
-        licenseType: license.licenseType,
-        licenseWeightGrams: license.licenseWeightGrams,
-        isActive: true
-      },
-      update: {
-        name: row.name,
-        defaultPriceCents: row.defaultPriceCents,
-        licenseFeeCents: license.licenseFeeCents,
-        licenseType: license.licenseType,
-        licenseWeightGrams: license.licenseWeightGrams,
-        isActive: true
-      }
-    });
+    const chunkSize = 250;
+    for (let index = 0; index < uniqueRows.length; index += chunkSize) {
+      const chunk = uniqueRows.slice(index, index + chunkSize);
+      await tx.product.createMany({
+        data: chunk.map((row) => {
+          const normalizedSku = normalizeSku(row.sku);
+          const license = resolveLicenseForSku(normalizedSku, licenseFeesBySku);
+          return {
+            name: row.name,
+            sku: normalizedSku,
+            defaultPriceCents: row.defaultPriceCents,
+            licenseFeeCents: license.licenseFeeCents,
+            licenseType: license.licenseType,
+            licenseWeightGrams: license.licenseWeightGrams,
+            isActive: true
+          };
+        })
+      });
+    }
+  });
 
-    if (existed) updated += 1;
-    else created += 1;
+  let restoredCustomerPrices = 0;
+  let customersWithPrices = 0;
+  for (const customer of customers) {
+    const result = await attachImportedCustomerPrices(prisma as any, customer);
+    restoredCustomerPrices += result.attachedRows;
+    if (result.attachedRows > 0) {
+      customersWithPrices += 1;
+    }
   }
 
   if (invalidRows.length > 0) {
@@ -433,7 +443,7 @@ async function main() {
   }
 
   console.log(
-    `[import:products] Import abgeschlossen. importiert=${uniqueRows.length}, neu=${created}, aktualisiert=${updated}, fehlerhaft=${invalidRows.length}`
+    `[import:products] Import abgeschlossen. importiert=${uniqueRows.length}, ersetzt=ja, kundenpreise_wiederhergestellt=${restoredCustomerPrices}, kunden_mit_preisen=${customersWithPrices}, fehlerhaft=${invalidRows.length}`
   );
 }
 
