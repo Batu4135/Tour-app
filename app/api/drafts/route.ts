@@ -4,6 +4,8 @@ import { requireAuth } from "@/lib/requireAuth";
 import { badRequest, notFound, unauthorized } from "@/lib/http";
 import { z } from "zod";
 import { LicenseType, getLicenseDetails, getLineLicenseTotals } from "@/lib/license";
+import { getProductPopularityMap } from "@/lib/productPopularity";
+import { rankProductsBySearch } from "@/lib/productSearch";
 
 export const runtime = "nodejs";
 
@@ -99,7 +101,7 @@ export async function POST(request: Request) {
   if (!result) return notFound("Kunde wurde nicht gefunden.");
   const { customer, draft } = result;
 
-  const customerSuggestedProducts = customer.customerPrice
+  const rawSuggestedProducts = customer.customerPrice
     .filter((price: any) => price.product?.isActive)
     .map((price: any) => {
       const details = getLicenseDetails(price.product ?? {});
@@ -112,8 +114,15 @@ export async function POST(request: Request) {
         licenseWeightGrams: details.licenseWeightGrams,
         licenseFeeCents: details.unitFeeCents
       };
-    })
-    .sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, "de-DE"));
+    });
+  const popularityMap = await getProductPopularityMap(prisma as any, rawSuggestedProducts);
+  const customerSuggestedProducts = rankProductsBySearch(
+    rawSuggestedProducts.map((product: (typeof rawSuggestedProducts)[number]) => ({
+      ...product,
+      popularityCount: popularityMap[product.id] ?? 0
+    })),
+    ""
+  );
 
   const customerPriceMap = Object.fromEntries(
     customer.customerPrice.map((price: any) => [price.productId, price.priceCents])

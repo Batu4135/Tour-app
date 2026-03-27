@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
+import { rankProductsBySearch } from "@/lib/productSearch";
 
 type Product = {
   id: number;
@@ -9,6 +10,7 @@ type Product = {
   sku: string;
   unit?: string | null;
   defaultPriceCents?: number | null;
+  popularityCount?: number | null;
 };
 
 type ProductSearchProps = {
@@ -21,7 +23,7 @@ type ProductSearchProps = {
 export default function ProductSearch({ products, onSelect, placeholder, emptyLabel = "Keine Treffer" }: ProductSearchProps) {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [results, setResults] = useState<Product[]>(products.slice(0, 8));
+  const [results, setResults] = useState<Product[]>(rankProductsBySearch(products, "").slice(0, 8));
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -31,15 +33,13 @@ export default function ProductSearch({ products, onSelect, placeholder, emptyLa
 
   useEffect(() => {
     if (!debouncedQuery) {
-      setResults(products.slice(0, 8));
+      setResults(rankProductsBySearch(products, "").slice(0, 8));
       setLoading(false);
       return;
     }
 
     const controller = new AbortController();
-    const fallback = products
-      .filter((product) => `${product.name} ${product.sku}`.toLowerCase().includes(debouncedQuery.toLowerCase()))
-      .slice(0, 20);
+    const fallback = rankProductsBySearch(products, debouncedQuery).slice(0, 20);
 
     const run = async () => {
       setLoading(true);

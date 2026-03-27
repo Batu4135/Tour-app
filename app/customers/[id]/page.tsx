@@ -6,11 +6,13 @@ import { Search, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { centsToEuro, euroToCents } from "@/lib/money";
 import Toast from "@/components/Toast";
+import { rankProductsBySearch } from "@/lib/productSearch";
 
 type Product = {
   id: number;
   name: string;
   sku: string;
+  popularityCount?: number;
 };
 
 type CustomerPrice = {
@@ -29,44 +31,6 @@ type CustomerDetail = {
   prices: CustomerPrice[];
   products: Product[];
 };
-
-function normalizeSearchValue(value: string): string {
-  return value
-    .toLocaleLowerCase("de-DE")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim();
-}
-
-function getProductSearchScore(product: Product, query: string): number | null {
-  const normalizedQuery = normalizeSearchValue(query);
-  if (!normalizedQuery) return 1000;
-
-  const normalizedName = normalizeSearchValue(product.name);
-  const normalizedSku = normalizeSearchValue(product.sku);
-
-  if (normalizedName === normalizedQuery || normalizedSku === normalizedQuery) return 0;
-  if (normalizedName.startsWith(normalizedQuery)) return 10;
-  if (normalizedSku.startsWith(normalizedQuery)) return 15;
-
-  const wordPrefixIndex = normalizedName
-    .split(/\s+/)
-    .findIndex((word) => word.startsWith(normalizedQuery));
-  if (wordPrefixIndex >= 0) return 20 + wordPrefixIndex;
-
-  const nameIndex = normalizedName.indexOf(normalizedQuery);
-  if (nameIndex >= 0) return 40 + nameIndex;
-
-  const skuIndex = normalizedSku.indexOf(normalizedQuery);
-  if (skuIndex >= 0) return 55 + skuIndex;
-
-  const queryParts = normalizedQuery.split(/\s+/).filter(Boolean);
-  if (queryParts.length > 1 && queryParts.every((part) => normalizedName.includes(part))) {
-    return 70 + queryParts.reduce((score, part) => score + normalizedName.indexOf(part), 0);
-  }
-
-  return null;
-}
 
 export default function CustomerDetailPage() {
   const t = useTranslations("customerDetail");
@@ -100,15 +64,7 @@ export default function CustomerDetailPage() {
     if (availableProducts.length === 0) return [];
     if (!productQuery.trim()) return [];
 
-    return availableProducts
-      .map((product) => ({
-        product,
-        score: getProductSearchScore(product, productQuery)
-      }))
-      .filter((entry): entry is { product: Product; score: number } => entry.score !== null)
-      .sort((a, b) => a.score - b.score || a.product.name.localeCompare(b.product.name, "de"))
-      .slice(0, 12)
-      .map((entry) => entry.product);
+    return rankProductsBySearch(availableProducts, productQuery).slice(0, 12);
   }, [availableProducts, productQuery]);
 
   const showSuggestions = isProductSearchFocused && productQuery.trim().length >= 1;

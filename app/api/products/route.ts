@@ -4,6 +4,8 @@ import { requireAuth } from "@/lib/requireAuth";
 import { badRequest, unauthorized } from "@/lib/http";
 import { z } from "zod";
 import { buildLicensePersistence, getLicenseDetails, normalizeLicenseType } from "@/lib/license";
+import { getProductPopularityMap } from "@/lib/productPopularity";
+import { rankProductsBySearch } from "@/lib/productSearch";
 
 export const runtime = "nodejs";
 
@@ -26,6 +28,7 @@ export async function GET(request: Request) {
   const includeInactive = url.searchParams.get("includeInactive") === "1";
   const limitParam = Number.parseInt(url.searchParams.get("limit") ?? "", 10);
   const take = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 500) : q ? 100 : 100;
+  const candidateTake = q ? Math.max(take, 250) : take;
 
   const rawProducts = await prisma.product.findMany({
     where: {
@@ -40,7 +43,7 @@ export async function GET(request: Request) {
         : {})
     },
     orderBy: [{ name: "asc" }],
-    take,
+    take: candidateTake,
     select: {
       id: true,
       sku: true,
@@ -53,17 +56,22 @@ export async function GET(request: Request) {
     }
   });
 
+  const popularityMap = await getProductPopularityMap(prisma as any, rawProducts);
+
   const products = rawProducts.map((product) => {
     const details = getLicenseDetails(product);
     return {
       ...product,
       licenseType: details.licenseType,
       licenseWeightGrams: details.licenseWeightGrams,
-      licenseFeeCents: details.unitFeeCents
+      licenseFeeCents: details.unitFeeCents,
+      popularityCount: popularityMap[product.id] ?? 0
     };
   });
 
-  return NextResponse.json({ products, total: products.length });
+  const rankedProducts = rankProductsBySearch(products, q).slice(0, take);
+
+  return NextResponse.json({ products: rankedProducts, total: rankedProducts.length });
 }
 
 export async function POST(request: Request) {

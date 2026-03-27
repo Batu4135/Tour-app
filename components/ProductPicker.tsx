@@ -5,12 +5,14 @@ import { Search, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { formatCents, parseEuroToCents } from "@/lib/formatCents";
 import { LicenseType, getLineLicenseTotals } from "@/lib/license";
+import { rankProductsBySearch } from "@/lib/productSearch";
 
 export type ProductOption = {
   id: number;
   sku: string;
   name: string;
   defaultPriceCents: number | null;
+  popularityCount?: number;
   licenseType?: LicenseType;
   licenseWeightGrams?: number;
   licenseFeeCents?: number;
@@ -85,10 +87,7 @@ export default function ProductPicker({
     }
 
     if (searchMode === "suggestedOnly" && suggestedProducts.length > 0) {
-      const q = clean.toLowerCase();
-      const localMatches = suggestedProducts
-        .filter((product) => `${product.name} ${product.sku}`.toLowerCase().includes(q))
-        .slice(0, 30);
+      const localMatches = rankProductsBySearch(suggestedProducts, clean).slice(0, 30);
       if (localMatches.length > 0) {
         setSuggestions(localMatches);
         return;

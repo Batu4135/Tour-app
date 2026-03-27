@@ -4,6 +4,8 @@ import { requireAuth } from "@/lib/requireAuth";
 import { badRequest, notFound, unauthorized } from "@/lib/http";
 import { z } from "zod";
 import { LicenseType, getLicenseDetails } from "@/lib/license";
+import { getProductPopularityMap } from "@/lib/productPopularity";
+import { rankProductsBySearch } from "@/lib/productSearch";
 
 export const runtime = "nodejs";
 
@@ -92,6 +94,29 @@ export async function GET(_: Request, { params }: RouteContext) {
     productLicenseWeightGramsMap[price.productId] = details.licenseWeightGrams;
   }
 
+  const rawSuggestedProducts = draft.customer.customerPrice
+    .filter((price: any) => price.product?.isActive)
+    .map((price: any) => {
+      const details = getLicenseDetails(price.product ?? {});
+      return {
+        id: price.product.id,
+        sku: price.product.sku,
+        name: price.product.name,
+        defaultPriceCents: price.product.defaultPriceCents,
+        licenseType: details.licenseType,
+        licenseWeightGrams: details.licenseWeightGrams,
+        licenseFeeCents: details.unitFeeCents
+      };
+    });
+  const popularityMap = await getProductPopularityMap(prisma as any, rawSuggestedProducts);
+  const customerSuggestedProducts = rankProductsBySearch(
+    rawSuggestedProducts.map((product: (typeof rawSuggestedProducts)[number]) => ({
+      ...product,
+      popularityCount: popularityMap[product.id] ?? 0
+    })),
+    ""
+  );
+
   return NextResponse.json({
     draft: {
       id: draft.id,
@@ -118,21 +143,7 @@ export async function GET(_: Request, { params }: RouteContext) {
     productLicenseFeeMap,
     productLicenseTypeMap,
     productLicenseWeightGramsMap,
-    customerSuggestedProducts: draft.customer.customerPrice
-      .filter((price: any) => price.product?.isActive)
-      .map((price: any) => {
-        const details = getLicenseDetails(price.product ?? {});
-        return {
-          id: price.product.id,
-          sku: price.product.sku,
-          name: price.product.name,
-          defaultPriceCents: price.product.defaultPriceCents,
-          licenseType: details.licenseType,
-          licenseWeightGrams: details.licenseWeightGrams,
-          licenseFeeCents: details.unitFeeCents
-        };
-      })
-      .sort((a: any, b: any) => a.name.localeCompare(b.name, "de-DE"))
+    customerSuggestedProducts
   });
 }
 

@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { badRequest, notFound, unauthorized } from "@/lib/http";
 import { z } from "zod";
+import { getProductPopularityMap } from "@/lib/productPopularity";
+import { rankProductsBySearch } from "@/lib/productSearch";
 
 export const runtime = "nodejs";
 
@@ -38,10 +40,18 @@ export async function GET(_: Request, { params }: RouteContext) {
 
   if (!customer) return notFound("Kunde wurde nicht gefunden.");
 
-  const products = await prisma.product.findMany({
+  const rawProducts = await prisma.product.findMany({
     select: { id: true, name: true, sku: true },
     orderBy: { name: "asc" }
   });
+  const popularityMap = await getProductPopularityMap(prisma as any, rawProducts);
+  const products = rankProductsBySearch(
+    rawProducts.map((product) => ({
+      ...product,
+      popularityCount: popularityMap[product.id] ?? 0
+    })),
+    ""
+  );
 
   return NextResponse.json({
     customer: {
