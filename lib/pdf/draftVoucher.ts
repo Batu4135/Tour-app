@@ -333,22 +333,26 @@ export function drawDraftVoucherPage(
     });
   }
 
-  page.drawText("Zwischensumme", { x: s(384), y: summaryTop, size: summaryLabelSize, font: regular, color: muted });
-  drawRightText({
-    page,
-    text: money(totals.subtotalCents),
-    x: lineTotalRight,
-    y: summaryTop,
-    size: summaryValueSize,
-    font: regular,
-    color: textColor
-  });
-
   let ruleY = summaryTop - s(10) * summaryScale;
   let totalLabelY = summaryTop - s(32) * summaryScale;
   let totalValueY = summaryTop - s(38) * summaryScale;
 
-  if (!draft.subtractVat) {
+  if (draft.subtractVat) {
+    ruleY = summaryTop;
+    totalLabelY = summaryTop - s(22) * summaryScale;
+    totalValueY = summaryTop - s(28) * summaryScale;
+  } else {
+    page.drawText("Zwischensumme", { x: s(384), y: summaryTop, size: summaryLabelSize, font: regular, color: muted });
+    drawRightText({
+      page,
+      text: money(totals.subtotalCents),
+      x: lineTotalRight,
+      y: summaryTop,
+      size: summaryValueSize,
+      font: regular,
+      color: textColor
+    });
+
     page.drawText("MWSt 19%", {
       x: s(384),
       y: summaryTop - s(20) * summaryScale,

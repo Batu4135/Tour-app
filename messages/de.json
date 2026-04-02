@@ -151,7 +151,8 @@
     "withLicense": "Inkl. Lizenzierung (Lizenzsumme: {licenseTotal})",
     "withoutLicense": "Ohne Lizenzierung",
     "vatTitle": "Mehrwertsteuer",
-    "subtractVatTitle": "MwSt. 19% abziehen",
+    "subtractVatTitle": "Ohne MwSt. berechnen",
+    "subtractVatHint": "Nur Netto anzeigen, keine 19% MwSt. ausweisen",
     "syncing": "Synchronisierung laeuft...",
     "synced": "Synchronisiert",
     "syncError": "Synchronisierung fehlgeschlagen"

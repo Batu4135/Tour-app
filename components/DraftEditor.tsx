@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Banknote, CheckCircle2, CreditCard, Landmark, Loader2, Percent, Printer } from "lucide-react";
+import { Banknote, CheckCircle2, CreditCard, Landmark, Loader2, Printer, Receipt } from "lucide-react";
 import { useTranslations } from "next-intl";
 import ProductPicker, { ProductOption, SelectedProductItem } from "@/components/ProductPicker";
 import { formatCents } from "@/lib/formatCents";
@@ -701,9 +701,8 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
         </label>
       </div>
 
-      <div className="card space-y-2">
-        <p className="text-sm font-semibold">{t("vatTitle")}</p>
-        <label className="flex items-center gap-2 text-sm">
+      <div className="card">
+        <label className="flex items-start gap-3 text-sm">
           <input
             type="checkbox"
             className="sr-only"
@@ -711,15 +710,20 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
             onChange={(event) => onSubtractVatChange(event.target.checked)}
           />
           <span
-            className={`inline-flex h-4 w-4 items-center justify-center rounded-full border ${
+            className={`mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
               draft.subtractVat ? "border-[#2F7EA1] bg-[#2F7EA1]" : "border-[#BFC8CE] bg-white"
             }`}
             aria-hidden="true"
           >
             {draft.subtractVat ? <CheckCircle2 size={10} className="text-white" /> : null}
           </span>
-          <Percent size={14} className="text-[#2F7EA1]" />
-          <span>{t("subtractVatTitle")}</span>
+          <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#E8F4F8] text-[#2F7EA1]">
+            <Receipt size={15} />
+          </span>
+          <span className="space-y-0.5">
+            <span className="block font-medium text-[#4A4A4A]">{t("subtractVatTitle")}</span>
+            <span className="block text-xs text-[#4A4A4A]/65">{t("subtractVatHint")}</span>
+          </span>
         </label>
       </div>
 

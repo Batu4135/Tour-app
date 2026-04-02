@@ -14,6 +14,42 @@ const createCustomerSchema = z.object({
   routeDay: z.string().trim().min(1)
 });
 
+function normalizeText(value?: string | null) {
+  return (value ?? "")
+    .trim()
+    .toLocaleLowerCase("tr-TR")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+function normalizePhone(value?: string | null) {
+  return (value ?? "").replace(/\D+/g, "");
+}
+
+function isDuplicateCustomer(
+  existing: { name: string; routeDay: string | null; address: string | null; phone: string | null },
+  incoming: { name: string; routeDay: string; address?: string; phone?: string }
+) {
+  const existingRouteDay = normalizeText(existing.routeDay);
+  const incomingRouteDay = normalizeText(incoming.routeDay);
+  if (!existingRouteDay || existingRouteDay !== incomingRouteDay) return false;
+
+  const existingName = normalizeText(existing.name);
+  const incomingName = normalizeText(incoming.name);
+  if (!existingName || existingName !== incomingName) return false;
+
+  const existingPhone = normalizePhone(existing.phone);
+  const incomingPhone = normalizePhone(incoming.phone);
+  if (existingPhone && incomingPhone && existingPhone === incomingPhone) return true;
+
+  const existingAddress = normalizeText(existing.address);
+  const incomingAddress = normalizeText(incoming.address);
+  if (existingAddress && incomingAddress && existingAddress === incomingAddress) return true;
+
+  return !incomingPhone && !incomingAddress;
+}
+
 export async function GET(request: Request) {
   const user = await requireAuth();
   if (!user) return unauthorized();
@@ -53,13 +89,48 @@ export async function POST(request: Request) {
   if (!parsed.success) return badRequest("Ungueltige Anfrage.");
   const name = parsed.data.name.trim();
   const routeDay = parsed.data.routeDay.trim();
+  const address = parsed.data.address?.trim() || null;
+  const phone = parsed.data.phone?.trim() || null;
+
+  const potentialDuplicates = await prisma.customer.findMany({
+    where: {
+      routeDay: {
+        equals: routeDay,
+        mode: "insensitive"
+      },
+      name: {
+        equals: name,
+        mode: "insensitive"
+      }
+    },
+    select: {
+      id: true,
+      name: true,
+      routeDay: true,
+      address: true,
+      phone: true
+    }
+  });
+
+  const duplicateCustomer = potentialDuplicates.find((customer) =>
+    isDuplicateCustomer(customer, {
+      name,
+      routeDay,
+      address: address ?? undefined,
+      phone: phone ?? undefined
+    })
+  );
+
+  if (duplicateCustomer) {
+    return badRequest("Dieser Kunde ist bereits gespeichert.");
+  }
 
   const result = await prisma.$transaction(async (tx) => {
     const customer = await tx.customer.create({
       data: {
         name,
-        address: parsed.data.address?.trim() || null,
-        phone: parsed.data.phone?.trim() || null,
+        address,
+        phone,
         routeDay
       }
     });
