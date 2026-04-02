@@ -704,7 +704,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
         ref={paymentSectionRef}
         className={`card space-y-2 transition-all ${
           activeWalkthroughTarget === "payment"
-            ? "border-[#0A84FF] bg-[#F2FAFF] ring-4 ring-[#0A84FF]/20 shadow-[0_14px_34px_rgba(10,132,255,0.18)]"
+            ? "border-[#0A84FF] bg-[#DFF3FF] ring-2 ring-[#0A84FF]/18 shadow-[0_12px_28px_rgba(10,132,255,0.14)]"
             : ""
         }`}
       >
@@ -747,7 +747,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
         ref={licenseSectionRef}
         className={`card space-y-2 transition-all ${
           activeWalkthroughTarget === "license"
-            ? "border-[#0A84FF] bg-[#F2FAFF] ring-4 ring-[#0A84FF]/20 shadow-[0_14px_34px_rgba(10,132,255,0.18)]"
+            ? "border-[#0A84FF] bg-[#DFF3FF] ring-2 ring-[#0A84FF]/18 shadow-[0_12px_28px_rgba(10,132,255,0.14)]"
             : ""
         }`}
       >
@@ -816,16 +816,6 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
 
       {error ? <p className="text-sm">{error}</p> : null}
 
-      <button
-        type="button"
-        className="fixed bottom-[168px] left-3 z-30 inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#2F7EA1]/20 bg-white/95 text-[#2F7EA1] shadow-[0_12px_28px_rgba(47,126,161,0.24)] backdrop-blur"
-        onClick={onAdvanceWalkthrough}
-        aria-label={t("walkthroughNext")}
-        title={t("walkthroughNext")}
-      >
-        <ChevronDown size={20} />
-      </button>
-
       <div
         className="fixed bottom-[75px] left-0 right-0 z-30 mx-auto flex w-full max-w-md items-center justify-between gap-2 rounded-t-2xl bg-[#2F7EA1] px-4 py-3 text-white shadow-lg"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)" }}
@@ -835,6 +825,15 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
           <p className="text-xl font-bold">{formatCents(totals.subtotalCents)}</p>
         </div>
         <div className="flex gap-2">
+          <button
+            type="button"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/30 bg-white/10 text-white"
+            onClick={onAdvanceWalkthrough}
+            aria-label={t("walkthroughNext")}
+            title={t("walkthroughNext")}
+          >
+            <ChevronDown size={18} />
+          </button>
           <button
             className="rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-sm disabled:opacity-70"
             onClick={onPrintPdf}

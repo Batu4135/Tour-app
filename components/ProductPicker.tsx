@@ -285,7 +285,7 @@ export default function ProductPicker({
               id={getProductElementId?.(item.productId)}
               className={`card space-y-2 transition-all ${
                 highlightedProductId === item.productId
-                  ? "border-[#0A84FF] bg-[#F2FAFF] ring-4 ring-[#0A84FF]/20 shadow-[0_14px_34px_rgba(10,132,255,0.18)]"
+                  ? "border-[#0A84FF] bg-[#DFF3FF] ring-2 ring-[#0A84FF]/18 shadow-[0_12px_28px_rgba(10,132,255,0.14)]"
                   : ""
               }`}
             >
@@ -342,7 +342,6 @@ export default function ProductPicker({
             </div>
           );
         })}
-        {selectedItems.length === 0 ? <p className="card text-sm text-[#4A4A4A]/65">{t("empty")}</p> : null}
       </div>
 
       <div className="card flex items-center justify-between">
