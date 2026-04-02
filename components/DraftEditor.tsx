@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Banknote, CheckCircle2, CreditCard, Landmark, Loader2, Printer, Receipt } from "lucide-react";
+import { Banknote, CheckCircle2, CreditCard, Landmark, Loader2, Printer } from "lucide-react";
 import { useTranslations } from "next-intl";
 import ProductPicker, { ProductOption, SelectedProductItem } from "@/components/ProductPicker";
 import { formatCents } from "@/lib/formatCents";
@@ -702,7 +703,11 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       </div>
 
       <div className="card">
-        <label className="flex items-start gap-3 text-sm">
+        <label
+          className="flex items-center gap-3"
+          aria-label={t("subtractVatTitle")}
+          title={t("subtractVatTitle")}
+        >
           <input
             type="checkbox"
             className="sr-only"
@@ -710,20 +715,14 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
             onChange={(event) => onSubtractVatChange(event.target.checked)}
           />
           <span
-            className={`mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+            className={`inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
               draft.subtractVat ? "border-[#2F7EA1] bg-[#2F7EA1]" : "border-[#BFC8CE] bg-white"
             }`}
             aria-hidden="true"
           >
             {draft.subtractVat ? <CheckCircle2 size={10} className="text-white" /> : null}
           </span>
-          <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#E8F4F8] text-[#2F7EA1]">
-            <Receipt size={15} />
-          </span>
-          <span className="space-y-0.5">
-            <span className="block font-medium text-[#4A4A4A]">{t("subtractVatTitle")}</span>
-            <span className="block text-xs text-[#4A4A4A]/65">{t("subtractVatHint")}</span>
-          </span>
+          <Image src="/icons/no-mwst.png" alt={t("subtractVatTitle")} width={44} height={44} className="h-11 w-11" />
         </label>
       </div>
 
