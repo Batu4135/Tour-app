@@ -824,7 +824,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
           <p className="text-xs text-white/80">{t("total")}</p>
           <p className="text-xl font-bold">{formatCents(totals.subtotalCents)}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
           <button
             type="button"
             className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/30 bg-white/10 text-white"
@@ -834,6 +834,8 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
           >
             <ChevronDown size={18} />
           </button>
+        </div>
+        <div className="flex gap-2">
           <button
             className="rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-sm disabled:opacity-70"
             onClick={onPrintPdf}

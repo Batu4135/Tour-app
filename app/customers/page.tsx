@@ -4,6 +4,7 @@ import { FormEvent, KeyboardEvent, PointerEvent, useEffect, useMemo, useRef, use
 import { ChevronDown, Plus, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import CustomerCard from "@/components/CustomerCard";
+import Toast from "@/components/Toast";
 
 type Customer = {
   id: number;
@@ -53,6 +54,7 @@ export default function CustomersPage() {
   const [nameFieldFocused, setNameFieldFocused] = useState(false);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeFieldFocused, setRouteFieldFocused] = useState(false);
+  const [toast, setToast] = useState<{ message: string; tone: "success" | "error" | "info" } | null>(null);
   const selectingDirectorySuggestionRef = useRef(false);
   const routeInputRef = useRef<HTMLInputElement | null>(null);
   const nameInputRef = useRef<HTMLInputElement | null>(null);
@@ -122,6 +124,12 @@ export default function CustomersPage() {
       setSelectedRouteDay("all");
     }
   }, [routeOptions, selectedRouteDay]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 2400);
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   useEffect(() => {
     if (!createOpen) {
@@ -235,7 +243,12 @@ export default function CustomersPage() {
       setSelectedRouteDay("all");
       await loadCustomers();
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : t("createError"));
+      const message = createError instanceof Error ? createError.message : t("createError");
+      setError(message);
+      setToast({
+        message,
+        tone: message.includes("bereits gespeichert") ? "info" : "error"
+      });
     } finally {
       setSaving(false);
     }
@@ -343,6 +356,10 @@ export default function CustomersPage() {
 
   return (
     <section className="space-y-4">
+      <div className="fixed left-1/2 top-3 z-40 w-[calc(100%-24px)] max-w-md -translate-x-1/2">
+        <Toast visible={Boolean(toast)} message={toast?.message ?? ""} tone={toast?.tone ?? "info"} />
+      </div>
+
       <header className="space-y-1">
         <h1 className="text-2xl font-bold text-[#4A4A4A]">{t("title")}</h1>
         <p className="text-sm text-[#4A4A4A]/70">{t("subtitle")}</p>
