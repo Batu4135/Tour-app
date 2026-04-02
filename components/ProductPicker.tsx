@@ -284,7 +284,9 @@ export default function ProductPicker({
               key={item.productId}
               id={getProductElementId?.(item.productId)}
               className={`card space-y-2 transition-all ${
-                highlightedProductId === item.productId ? "border-[#2F7EA1] ring-2 ring-[#2F7EA1]/25 bg-[#F5FBFD]" : ""
+                highlightedProductId === item.productId
+                  ? "border-[#0A84FF] bg-[#F2FAFF] ring-4 ring-[#0A84FF]/20 shadow-[0_14px_34px_rgba(10,132,255,0.18)]"
+                  : ""
               }`}
             >
               <div className="flex items-start justify-between gap-3">

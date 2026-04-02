@@ -703,7 +703,9 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       <div
         ref={paymentSectionRef}
         className={`card space-y-2 transition-all ${
-          activeWalkthroughTarget === "payment" ? "border-[#2F7EA1] ring-2 ring-[#2F7EA1]/25 bg-[#F5FBFD]" : ""
+          activeWalkthroughTarget === "payment"
+            ? "border-[#0A84FF] bg-[#F2FAFF] ring-4 ring-[#0A84FF]/20 shadow-[0_14px_34px_rgba(10,132,255,0.18)]"
+            : ""
         }`}
       >
         <p className="text-sm font-semibold">{t("paymentTitle")}</p>
@@ -744,7 +746,9 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       <div
         ref={licenseSectionRef}
         className={`card space-y-2 transition-all ${
-          activeWalkthroughTarget === "license" ? "border-[#2F7EA1] ring-2 ring-[#2F7EA1]/25 bg-[#F5FBFD]" : ""
+          activeWalkthroughTarget === "license"
+            ? "border-[#0A84FF] bg-[#F2FAFF] ring-4 ring-[#0A84FF]/20 shadow-[0_14px_34px_rgba(10,132,255,0.18)]"
+            : ""
         }`}
       >
         <p className="text-sm font-semibold">{t("licenseTitle")}</p>
@@ -814,7 +818,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
 
       <button
         type="button"
-        className="fixed bottom-[168px] right-3 z-30 inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#2F7EA1]/25 bg-white text-[#2F7EA1] shadow-lg"
+        className="fixed bottom-[168px] left-3 z-30 inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#2F7EA1]/20 bg-white/95 text-[#2F7EA1] shadow-[0_12px_28px_rgba(47,126,161,0.24)] backdrop-blur"
         onClick={onAdvanceWalkthrough}
         aria-label={t("walkthroughNext")}
         title={t("walkthroughNext")}
