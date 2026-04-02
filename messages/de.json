@@ -154,6 +154,7 @@
     "subtractVatTitle": "Ohne MwSt. berechnen",
     "subtractVatActiveHint": "MwSt. wird nicht berechnet",
     "subtractVatHint": "Nur Netto anzeigen, keine 19% MwSt. ausweisen",
+    "walkthroughNext": "Naechsten Pruefpunkt anzeigen",
     "syncing": "Synchronisierung laeuft...",
     "synced": "Synchronisiert",
     "syncError": "Synchronisierung fehlgeschlagen"

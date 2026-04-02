@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Banknote, CheckCircle2, CreditCard, Landmark, Loader2, Printer } from "lucide-react";
+import { Banknote, CheckCircle2, ChevronDown, CreditCard, Landmark, Loader2, Printer } from "lucide-react";
 import { useTranslations } from "next-intl";
 import ProductPicker, { ProductOption, SelectedProductItem } from "@/components/ProductPicker";
 import { formatCents } from "@/lib/formatCents";
@@ -100,6 +100,9 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
   const saveSeqRef = useRef(0);
   const localVersionRef = useRef(0);
   const snapshotKey = `nord-pack:draft:${draftId}`;
+  const paymentSectionRef = useRef<HTMLDivElement | null>(null);
+  const licenseSectionRef = useRef<HTMLDivElement | null>(null);
+  const [activeWalkthroughTarget, setActiveWalkthroughTarget] = useState<string | null>(null);
 
   const totals = useMemo(() => {
     if (!draft) {
@@ -120,6 +123,28 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       subtractVat: draft.subtractVat
     });
   }, [draft, productLicenseFeeMap, productLicenseTypeMap, productLicenseWeightGramsMap]);
+  const selectedItems: SelectedProductItem[] = useMemo(
+    () =>
+      draft?.lines.map((line) => ({
+        productId: line.productId,
+        sku: line.productSku ?? "",
+        name: line.productName,
+        quantity: line.quantity,
+        unitPriceCents: line.unitPriceCents,
+        licenseType: productLicenseTypeMap[line.productId],
+        licenseWeightGrams: productLicenseWeightGramsMap[line.productId] ?? 0,
+        licenseFeeCents: productLicenseFeeMap[line.productId] ?? 0
+      })) ?? [],
+    [draft, productLicenseFeeMap, productLicenseTypeMap, productLicenseWeightGramsMap]
+  );
+  const navigationTargets = useMemo(
+    () => [...selectedItems.map((item) => `product:${item.productId}`), "payment", "license"],
+    [selectedItems]
+  );
+  const highlightedProductId =
+    activeWalkthroughTarget?.startsWith("product:") === true
+      ? Number.parseInt(activeWalkthroughTarget.split(":")[1] ?? "", 10)
+      : null;
 
   const writeSnapshot = useCallback(
     (value: DraftData | null) => {
@@ -534,6 +559,10 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
     updateDraft((prev) => ({ ...prev, paymentMethod: next }));
   }
 
+  function getProductElementId(productId: number) {
+    return `draft-product-item-${productId}`;
+  }
+
   async function onPrintPdf() {
     if (!draft) return;
     if (isPrinting) return;
@@ -589,6 +618,12 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
     setTimeout(() => setIsPrinting(false), 900);
   }
 
+  useEffect(() => {
+    if (!activeWalkthroughTarget) return;
+    if (navigationTargets.includes(activeWalkthroughTarget)) return;
+    setActiveWalkthroughTarget(navigationTargets[0] ?? null);
+  }, [activeWalkthroughTarget, navigationTargets]);
+
   if (!Number.isFinite(draftId)) {
     return (
       <section className="space-y-4">
@@ -602,16 +637,35 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
 
   if (!draft) return <p className="text-sm text-[#4A4A4A]/70">{t("loading")}</p>;
 
-  const selectedItems: SelectedProductItem[] = draft.lines.map((line) => ({
-    productId: line.productId,
-    sku: line.productSku ?? "",
-    name: line.productName,
-    quantity: line.quantity,
-    unitPriceCents: line.unitPriceCents,
-    licenseType: productLicenseTypeMap[line.productId],
-    licenseWeightGrams: productLicenseWeightGramsMap[line.productId] ?? 0,
-    licenseFeeCents: productLicenseFeeMap[line.productId] ?? 0
-  }));
+  function scrollToWalkthroughTarget(target: string) {
+    setActiveWalkthroughTarget(target);
+    window.requestAnimationFrame(() => {
+      if (target.startsWith("product:")) {
+        const productId = Number.parseInt(target.split(":")[1] ?? "", 10);
+        const element = document.getElementById(getProductElementId(productId));
+        element?.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+
+      if (target === "payment") {
+        paymentSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+
+      if (target === "license") {
+        licenseSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    });
+  }
+
+  function onAdvanceWalkthrough() {
+    if (navigationTargets.length === 0) return;
+    const currentIndex = activeWalkthroughTarget ? navigationTargets.indexOf(activeWalkthroughTarget) : -1;
+    const nextIndex =
+      currentIndex >= 0 && currentIndex < navigationTargets.length - 1 ? currentIndex + 1 : 0;
+    scrollToWalkthroughTarget(navigationTargets[nextIndex]);
+  }
+
   return (
     <section className="space-y-4 pb-[180px]">
       <header className="card">
@@ -642,9 +696,16 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
         includeLicenseFee={Boolean(draft.includeLicenseFee)}
         suggestedProducts={customerSuggestedProducts}
         searchMode="all"
+        highlightedProductId={Number.isFinite(highlightedProductId ?? NaN) ? highlightedProductId : null}
+        getProductElementId={getProductElementId}
       />
 
-      <div className="card space-y-2">
+      <div
+        ref={paymentSectionRef}
+        className={`card space-y-2 transition-all ${
+          activeWalkthroughTarget === "payment" ? "border-[#2F7EA1] ring-2 ring-[#2F7EA1]/25 bg-[#F5FBFD]" : ""
+        }`}
+      >
         <p className="text-sm font-semibold">{t("paymentTitle")}</p>
         <div className="flex flex-wrap gap-2">
           <label className="inline-flex items-center gap-2 rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm">
@@ -680,7 +741,12 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
         </div>
       </div>
 
-      <div className="card space-y-2">
+      <div
+        ref={licenseSectionRef}
+        className={`card space-y-2 transition-all ${
+          activeWalkthroughTarget === "license" ? "border-[#2F7EA1] ring-2 ring-[#2F7EA1]/25 bg-[#F5FBFD]" : ""
+        }`}
+      >
         <p className="text-sm font-semibold">{t("licenseTitle")}</p>
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -745,6 +811,16 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       </div>
 
       {error ? <p className="text-sm">{error}</p> : null}
+
+      <button
+        type="button"
+        className="fixed bottom-[168px] right-3 z-30 inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#2F7EA1]/25 bg-white text-[#2F7EA1] shadow-lg"
+        onClick={onAdvanceWalkthrough}
+        aria-label={t("walkthroughNext")}
+        title={t("walkthroughNext")}
+      >
+        <ChevronDown size={20} />
+      </button>
 
       <div
         className="fixed bottom-[75px] left-0 right-0 z-30 mx-auto flex w-full max-w-md items-center justify-between gap-2 rounded-t-2xl bg-[#2F7EA1] px-4 py-3 text-white shadow-lg"

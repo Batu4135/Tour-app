@@ -39,6 +39,8 @@ type ProductPickerProps = {
   includeLicenseFee?: boolean;
   suggestedProducts?: ProductOption[];
   searchMode?: "all" | "suggestedOnly";
+  highlightedProductId?: number | null;
+  getProductElementId?: (productId: number) => string;
 };
 
 function priceText(cents: number): string {
@@ -54,7 +56,9 @@ export default function ProductPicker({
   licenseWeightGramsMap = {},
   includeLicenseFee = false,
   suggestedProducts = [],
-  searchMode = "all"
+  searchMode = "all",
+  highlightedProductId = null,
+  getProductElementId
 }: ProductPickerProps) {
   const t = useTranslations("productPicker");
   const [query, setQuery] = useState("");
@@ -276,7 +280,13 @@ export default function ProductPicker({
           });
           const lineTotal = item.quantity * item.unitPriceCents + (includeLicenseFee ? lineFeeCents : 0);
           return (
-            <div key={item.productId} className="card space-y-2">
+            <div
+              key={item.productId}
+              id={getProductElementId?.(item.productId)}
+              className={`card space-y-2 transition-all ${
+                highlightedProductId === item.productId ? "border-[#2F7EA1] ring-2 ring-[#2F7EA1]/25 bg-[#F5FBFD]" : ""
+              }`}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold">{item.name}</p>
