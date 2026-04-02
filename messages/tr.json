@@ -151,6 +151,7 @@
                         "withoutLicense":  "Lisanssız",
                         "vatTitle":  "KDV",
                         "subtractVatTitle":  "KDV olmadan hesapla",
+                        "subtractVatActiveHint":  "KDV hesaba eklenmeyecek",
                         "subtractVatHint":  "Sadece net goster, %19 KDV ekleme",
                         "syncing":  "Senkronizasyon yükleniyor...",
                         "synced":  "Senkronize edildi",

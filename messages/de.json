@@ -152,6 +152,7 @@
     "withoutLicense": "Ohne Lizenzierung",
     "vatTitle": "Mehrwertsteuer",
     "subtractVatTitle": "Ohne MwSt. berechnen",
+    "subtractVatActiveHint": "MwSt. wird nicht berechnet",
     "subtractVatHint": "Nur Netto anzeigen, keine 19% MwSt. ausweisen",
     "syncing": "Synchronisierung laeuft...",
     "synced": "Synchronisiert",

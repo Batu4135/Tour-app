@@ -723,6 +723,11 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
             {draft.subtractVat ? <CheckCircle2 size={10} className="text-white" /> : null}
           </span>
           <Image src="/icons/no-mwst.png" alt={t("subtractVatTitle")} width={44} height={44} className="h-11 w-11" />
+          {draft.subtractVat ? (
+            <span className="rounded-full bg-[#E8F4F8] px-2.5 py-1 text-[11px] font-medium text-[#2F7EA1]">
+              {t("subtractVatActiveHint")}
+            </span>
+          ) : null}
         </label>
       </div>
 
