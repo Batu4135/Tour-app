@@ -26,6 +26,16 @@ type ParsedLicenseData = {
   licenseWeightGrams: number;
 };
 
+type ProductSource =
+  | {
+      kind: "csv";
+      path: string;
+    }
+  | {
+      kind: "xlsx";
+      path: string;
+    };
+
 function normalizeSku(value: string): string {
   return value.trim();
 }
@@ -117,16 +127,25 @@ function normalizeHeader(value: string): string {
 function findHeaderIndexes(headers: string[]): HeaderIndexes {
   const normalized = headers.map(normalizeHeader);
 
-  const nameIndex = normalized.findIndex((header) => header === "name" || header === "produktname");
+  const nameIndex = normalized.findIndex(
+    (header) => header === "name" || header === "produktname" || header === "artikel"
+  );
   const skuIndex = normalized.findIndex(
     (header) => header === "artikelnummer" || header === "artikelnr" || header === "artnr" || header === "sku"
   );
   const priceIndex = normalized.findIndex(
-    (header) => header === "preis" || header === "price" || header === "vkpreis" || header === "defaultpreis"
+    (header) =>
+      header === "preis" ||
+      header === "price" ||
+      header === "vkpreis" ||
+      header === "defaultpreis" ||
+      header === "netto"
   );
 
   if (nameIndex < 0 || skuIndex < 0 || priceIndex < 0) {
-    throw new Error("CSV Header ungueltig. Erwartet Spalten: name, artikelnummer, preis (Reihenfolge egal).");
+    throw new Error(
+      "Produkt-Header ungueltig. Erwartet Spalten wie name/artikel, artikelnummer und preis/netto."
+    );
   }
 
   return { name: nameIndex, sku: skuIndex, price: priceIndex };
@@ -175,16 +194,23 @@ function decodeCsv(buffer: Buffer): string {
   return utf8;
 }
 
-async function resolveCsvPath(): Promise<string> {
-  const preferred = path.join(process.cwd(), "data", "products.csv");
-  try {
-    await fs.access(preferred);
-    return preferred;
-  } catch {
-    const fallback = path.join(process.cwd(), "data", "produkte.csv");
-    await fs.access(fallback);
-    return fallback;
+async function resolveProductSource(): Promise<ProductSource> {
+  const candidates: ProductSource[] = [
+    { kind: "xlsx", path: path.join(process.cwd(), "data", "Produktliste2026.xlsx") },
+    { kind: "csv", path: path.join(process.cwd(), "data", "products.csv") },
+    { kind: "csv", path: path.join(process.cwd(), "data", "produkte.csv") }
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      await fs.access(candidate.path);
+      return candidate;
+    } catch {
+      continue;
+    }
   }
+
+  throw new Error("Keine Produktquelle gefunden. Erwartet data/Produktliste2026.xlsx, data/products.csv oder data/produkte.csv.");
 }
 
 const DEFAULT_OFFICIAL_LICENSE_PATHS = [
@@ -356,25 +382,83 @@ function parseRows(lines: string[], delimiter: string, indexes: HeaderIndexes): 
   return { validRows, invalidRows };
 }
 
-async function main() {
-  const csvPath = await resolveCsvPath();
-  const buffer = await fs.readFile(csvPath);
-  const content = decodeCsv(buffer);
-  const lines = content
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
+function parseXlsxRows(filePath: string): {
+  validRows: ParsedRow[];
+  invalidRows: Array<{ lineNumber: number; reason: string; raw: string }>;
+} {
+  const workbook = xlsx.readFile(filePath, { cellDates: false, raw: false });
+  const sheetName = workbook.SheetNames[0];
+  const sheet = workbook.Sheets[sheetName];
+  const rows = xlsx.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: "" }) as Array<Array<string | number>>;
 
-  if (lines.length < 2) {
-    throw new Error("CSV ist leer oder enthaelt keine Datenzeilen.");
+  if (rows.length < 2) {
+    throw new Error("Excel ist leer oder enthaelt keine Datenzeilen.");
   }
 
-  const delimiter = detectDelimiter(lines[0]);
-  const headers = parseCsvLine(lines[0], delimiter);
+  const headers = rows[0].map((cell) => String(cell ?? ""));
   const indexes = findHeaderIndexes(headers);
-  const { validRows, invalidRows } = parseRows(lines, delimiter, indexes);
+  const validRows: ParsedRow[] = [];
+  const invalidRows: Array<{ lineNumber: number; reason: string; raw: string }> = [];
+
+  for (let i = 1; i < rows.length; i += 1) {
+    const row = rows[i];
+    const lineNumber = i + 1;
+    const name = String(row[indexes.name] ?? "").trim();
+    const sku = String(row[indexes.sku] ?? "").trim();
+    const priceRaw = String(row[indexes.price] ?? "").trim();
+    const priceCents = parsePriceToCents(priceRaw);
+
+    if (!name) {
+      invalidRows.push({ lineNumber, reason: "name fehlt", raw: JSON.stringify(row) });
+      continue;
+    }
+    if (!sku) {
+      invalidRows.push({ lineNumber, reason: "artikelnummer fehlt", raw: JSON.stringify(row) });
+      continue;
+    }
+    if (priceCents === null) {
+      invalidRows.push({ lineNumber, reason: "preis ist ungueltig", raw: JSON.stringify(row) });
+      continue;
+    }
+
+    validRows.push({
+      lineNumber,
+      name,
+      sku,
+      defaultPriceCents: priceCents
+    });
+  }
+
+  return { validRows, invalidRows };
+}
+
+async function main() {
+  const source = await resolveProductSource();
+  let validRows: ParsedRow[] = [];
+  let invalidRows: Array<{ lineNumber: number; reason: string; raw: string }> = [];
+
+  if (source.kind === "xlsx") {
+    ({ validRows, invalidRows } = parseXlsxRows(source.path));
+  } else {
+    const buffer = await fs.readFile(source.path);
+    const content = decodeCsv(buffer);
+    const lines = content
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+
+    if (lines.length < 2) {
+      throw new Error("CSV ist leer oder enthaelt keine Datenzeilen.");
+    }
+
+    const delimiter = detectDelimiter(lines[0]);
+    const headers = parseCsvLine(lines[0], delimiter);
+    const indexes = findHeaderIndexes(headers);
+    ({ validRows, invalidRows } = parseRows(lines, delimiter, indexes));
+  }
+
   if (validRows.length === 0) {
-    throw new Error("Keine gueltigen CSV-Zeilen zum Import gefunden.");
+    throw new Error("Keine gueltigen Produktzeilen zum Import gefunden.");
   }
 
   const lastBySku = new Map<string, ParsedRow>();
@@ -443,7 +527,7 @@ async function main() {
   }
 
   console.log(
-    `[import:products] Import abgeschlossen. importiert=${uniqueRows.length}, ersetzt=ja, kundenpreise_wiederhergestellt=${restoredCustomerPrices}, kunden_mit_preisen=${customersWithPrices}, fehlerhaft=${invalidRows.length}`
+    `[import:products] Import abgeschlossen. quelle=${source.kind}:${path.basename(source.path)}, importiert=${uniqueRows.length}, ersetzt=ja, kundenpreise_wiederhergestellt=${restoredCustomerPrices}, kunden_mit_preisen=${customersWithPrices}, fehlerhaft=${invalidRows.length}`
   );
 }
 

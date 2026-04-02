@@ -344,18 +344,7 @@ export function drawDraftVoucherPage(
     color: textColor
   });
 
-  page.drawText("MWSt 19%", { x: s(384), y: summaryTop - s(20) * summaryScale, size: summaryLabelSize, font: regular, color: muted });
-  drawRightText({
-    page,
-    text: totals.vatDeductionCents > 0 ? `- ${money(totals.vatDeductionCents)}` : money(0),
-    x: lineTotalRight,
-    y: summaryTop - s(20) * summaryScale,
-    size: summaryValueSize,
-    font: regular,
-    color: textColor
-  });
-
-  const ruleY = summaryTop - s(30) * summaryScale;
+  const ruleY = summaryTop - s(10) * summaryScale;
   page.drawLine({
     start: { x: s(372), y: ruleY },
     end: { x: lineTotalRight, y: ruleY },
@@ -363,12 +352,12 @@ export function drawDraftVoucherPage(
     color: accent
   });
 
-  page.drawText("Gesamt", { x: s(384), y: summaryTop - s(52) * summaryScale, size: summaryLabelSize, font: regular, color: muted });
+  page.drawText("Gesamt", { x: s(384), y: summaryTop - s(32) * summaryScale, size: summaryLabelSize, font: regular, color: muted });
   drawRightText({
     page,
     text: money(totals.totalCents),
     x: lineTotalRight,
-    y: summaryTop - s(58) * summaryScale,
+    y: summaryTop - s(38) * summaryScale,
     size: summaryTotalSize,
     font: bold,
     color: textColor

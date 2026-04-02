@@ -702,42 +702,16 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       </div>
 
       <div className="card space-y-2">
-        <div className="mb-2 flex items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold">{t("summaryTitle")}</p>
-            <p className="mt-1 text-sm text-[#4A4A4A]/80">{t("subtractVatTitle")}</p>
-            <p className="text-xs text-[#4A4A4A]/65">{t("subtractVatHint")}</p>
-          </div>
-          <label
-            className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition ${
-              draft.subtractVat
-                ? "border-[#2F7EA1] bg-[#2F7EA1]/10 text-[#2F7EA1]"
-                : "border-[#D8E0E5] bg-white text-[#4A4A4A]/75"
-            }`}
-          >
-            <input
-              type="checkbox"
-              className="sr-only"
-              checked={Boolean(draft.subtractVat)}
-              onChange={(event) => onSubtractVatChange(event.target.checked)}
-            />
-            {draft.subtractVat ? <CheckCircle2 size={18} /> : <Percent size={18} />}
-          </label>
-        </div>
-        <div className="flex items-center justify-between text-sm text-[#4A4A4A]/75">
-          <span>{t("subtotalLabel")}</span>
-          <span>{formatCents(totals.subtotalCents)}</span>
-        </div>
-        <div className="flex items-center justify-between text-sm text-[#4A4A4A]/75">
-          <span>{t("vatSummaryLabel")}</span>
-          <span>
-            {totals.vatDeductionCents > 0 ? `- ${formatCents(totals.vatDeductionCents)}` : formatCents(0)}
-          </span>
-        </div>
-        <div className="mt-1 flex items-center justify-between border-t border-[#E5E5E5] pt-3 text-base font-semibold text-[#2F7EA1]">
-          <span>{t("total")}</span>
-          <span>{formatCents(totals.totalCents)}</span>
-        </div>
+        <p className="text-sm font-semibold">{t("vatTitle")}</p>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={Boolean(draft.subtractVat)}
+            onChange={(event) => onSubtractVatChange(event.target.checked)}
+          />
+          <Percent size={14} />
+          <span>{t("subtractVatTitle")}</span>
+        </label>
       </div>
 
       <div className="card space-y-2">

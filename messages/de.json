@@ -150,11 +150,8 @@
     "licenseTitle": "Lizenzgebuehr",
     "withLicense": "Inkl. Lizenzierung (Lizenzsumme: {licenseTotal})",
     "withoutLicense": "Ohne Lizenzierung",
-    "summaryTitle": "Summen",
+    "vatTitle": "Mehrwertsteuer",
     "subtractVatTitle": "MwSt. 19% abziehen",
-    "subtractVatHint": "Zieht 19% von der Gesamtsumme ab, wenn aktiviert.",
-    "subtotalLabel": "Zwischensumme",
-    "vatSummaryLabel": "MwSt. 19%",
     "syncing": "Synchronisierung laeuft...",
     "synced": "Synchronisiert",
     "syncError": "Synchronisierung fehlgeschlagen"

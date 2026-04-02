@@ -149,11 +149,8 @@
                         "licenseTitle":  "Lisans ücreti",
                         "withLicense":  "Lisans dahil (Lisans toplami: {licenseTotal})",
                         "withoutLicense":  "Lisanssız",
-                        "summaryTitle":  "Toplam",
+                        "vatTitle":  "KDV",
                         "subtractVatTitle":  "KDV %19 dus",
-                        "subtractVatHint":  "Aktif oldugunda toplamdan %19 duser.",
-                        "subtotalLabel":  "Ara toplam",
-                        "vatSummaryLabel":  "KDV %19",
                         "syncing":  "Senkronizasyon yükleniyor...",
                         "synced":  "Senkronize edildi",
                         "syncError":  "Senkronizasyon başarısız"
