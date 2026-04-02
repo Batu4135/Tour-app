@@ -102,7 +102,7 @@ export async function GET(request: Request) {
       discountCents: draft.discountCents,
       subtractVat: draft.subtractVat
     });
-    const total = totals.totalCents;
+    const total = totals.invoiceTotalCents;
 
     const estimatedHeight = 96 + draft.lines.length * (draft.includeLicenseFee ? 22 : 16);
     ensureSpace(estimatedHeight);

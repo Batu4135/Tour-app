@@ -36,8 +36,9 @@ export function calculateDraftTotals(input: DraftTotalsInput) {
   const requestedDiscountCents = 0;
   const discountAppliedCents = 0;
   const afterDiscountCents = Math.max(0, subtotalCents - discountAppliedCents);
-  const vatDeductionCents = input.subtractVat ? Math.round(afterDiscountCents * VAT_RATE) : 0;
-  const totalCents = Math.max(0, afterDiscountCents - vatDeductionCents);
+  const vatCents = input.subtractVat ? 0 : Math.round(afterDiscountCents * VAT_RATE);
+  const totalCents = afterDiscountCents;
+  const invoiceTotalCents = afterDiscountCents + vatCents;
 
   return {
     productSubtotalCents,
@@ -46,7 +47,8 @@ export function calculateDraftTotals(input: DraftTotalsInput) {
     requestedDiscountCents,
     discountAppliedCents,
     afterDiscountCents,
-    vatDeductionCents,
-    totalCents
+    vatCents,
+    totalCents,
+    invoiceTotalCents
   };
 }

@@ -52,7 +52,7 @@ export async function GET() {
         includeLicenseFee: draft.includeLicenseFee,
         discountCents: draft.discountCents,
         subtractVat: draft.subtractVat
-      }).totalCents
+      }).invoiceTotalCents
     }))
   });
 }

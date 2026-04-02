@@ -706,10 +706,19 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
+            className="sr-only"
             checked={Boolean(draft.subtractVat)}
             onChange={(event) => onSubtractVatChange(event.target.checked)}
           />
-          <Percent size={14} />
+          <span
+            className={`inline-flex h-4 w-4 items-center justify-center rounded-full border ${
+              draft.subtractVat ? "border-[#2F7EA1] bg-[#2F7EA1]" : "border-[#BFC8CE] bg-white"
+            }`}
+            aria-hidden="true"
+          >
+            {draft.subtractVat ? <CheckCircle2 size={10} className="text-white" /> : null}
+          </span>
+          <Percent size={14} className="text-[#2F7EA1]" />
           <span>{t("subtractVatTitle")}</span>
         </label>
       </div>
@@ -735,7 +744,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       >
         <div>
           <p className="text-xs text-white/80">{t("total")}</p>
-          <p className="text-xl font-bold">{formatCents(totals.totalCents)}</p>
+          <p className="text-xl font-bold">{formatCents(totals.subtotalCents)}</p>
         </div>
         <div className="flex gap-2">
           <button
