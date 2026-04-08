@@ -6,7 +6,13 @@ import { useTranslations } from "next-intl";
 import { formatCents, parseEuroToCents } from "@/lib/formatCents";
 import { LicenseType, getLineLicenseTotals } from "@/lib/license";
 import { rankProductsBySearch } from "@/lib/productSearch";
-import { formatQuantity, multiplyCentsByQuantity, parseQuantityInput, roundQuantity } from "@/lib/quantity";
+import {
+  formatQuantity,
+  isQuantityInputAllowed,
+  multiplyCentsByQuantity,
+  parseQuantityInput,
+  roundQuantity
+} from "@/lib/quantity";
 
 export type ProductOption = {
   id: number;
@@ -179,9 +185,9 @@ export default function ProductPicker({
   }
 
   function updateQuantity(productId: number, value: string) {
+    if (!isQuantityInputAllowed(value)) return;
     setQuantityInputs((prev) => ({ ...prev, [productId]: value }));
     if (value.trim() === "") {
-      onChange(selectedItems.map((item) => (item.productId === productId ? { ...item, quantity: 0 } : item)));
       return;
     }
 
@@ -197,8 +203,14 @@ export default function ProductPicker({
   function normalizeQuantity(productId: number) {
     const raw = quantityInputs[productId] ?? "";
     const parsed = parseQuantityInput(raw);
-    const quantity = parsed !== null && parsed > 0 ? parsed : 1;
-    onChange(selectedItems.map((item) => (item.productId === productId ? { ...item, quantity } : item)));
+    const current = selectedItems.find((item) => item.productId === productId);
+    const fallbackQuantity = current ? roundQuantity(current.quantity) : 1;
+    const quantity = parsed !== null && parsed > 0 ? parsed : fallbackQuantity;
+
+    if (current && quantity !== current.quantity) {
+      onChange(selectedItems.map((item) => (item.productId === productId ? { ...item, quantity } : item)));
+    }
+
     setQuantityInputs((prev) => ({ ...prev, [productId]: formatQuantity(quantity) }));
   }
 

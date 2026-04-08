@@ -1,4 +1,4 @@
-const QUANTITY_DECIMAL_PRECISION = 3;
+const QUANTITY_DECIMAL_PRECISION = 2;
 const QUANTITY_SCALE = 10 ** QUANTITY_DECIMAL_PRECISION;
 
 export function roundQuantity(value: number): number {
@@ -14,6 +14,12 @@ export function parseQuantityInput(value: string): number | null {
   const parsed = Number.parseFloat(normalized);
   if (!Number.isFinite(parsed)) return null;
   return roundQuantity(parsed);
+}
+
+export function isQuantityInputAllowed(value: string): boolean {
+  const normalized = value.trim().replace(/\s+/g, "").replace(",", ".");
+  if (!normalized) return true;
+  return /^\d+(?:\.\d{0,2})?$/.test(normalized);
 }
 
 export function formatQuantity(value: number): string {
