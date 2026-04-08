@@ -103,7 +103,6 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
   const paymentSectionRef = useRef<HTMLDivElement | null>(null);
   const licenseSectionRef = useRef<HTMLDivElement | null>(null);
   const [activeWalkthroughTarget, setActiveWalkthroughTarget] = useState<string | null>(null);
-  const [toolbarBottomPx, setToolbarBottomPx] = useState(75);
 
   const totals = useMemo(() => {
     if (!draft) {
@@ -484,37 +483,6 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
     };
   }, [hydrateDraft, persistDraft, syncNow]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const updateToolbarState = () => {
-      const viewport = window.visualViewport;
-
-      if (!viewport) {
-        setToolbarBottomPx(75);
-        return;
-      }
-
-      const keyboardInset = Math.max(0, Math.round(window.innerHeight - (viewport.height + viewport.offsetTop)));
-      setToolbarBottomPx(keyboardInset > 0 ? keyboardInset : 75);
-    };
-
-    updateToolbarState();
-
-    const viewport = window.visualViewport;
-    viewport?.addEventListener("resize", updateToolbarState);
-    viewport?.addEventListener("scroll", updateToolbarState);
-    window.addEventListener("resize", updateToolbarState);
-    window.addEventListener("orientationchange", updateToolbarState);
-
-    return () => {
-      viewport?.removeEventListener("resize", updateToolbarState);
-      viewport?.removeEventListener("scroll", updateToolbarState);
-      window.removeEventListener("resize", updateToolbarState);
-      window.removeEventListener("orientationchange", updateToolbarState);
-    };
-  }, []);
-
   function updateDraft(mutator: (current: DraftData) => DraftData) {
     setDraft((prev) => {
       if (!prev) return prev;
@@ -813,7 +781,6 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       <div
         className="fixed bottom-[75px] left-0 right-0 z-30 mx-auto flex w-full max-w-md items-center justify-between gap-2 rounded-t-2xl bg-[#2F7EA1] px-4 py-3 text-white shadow-lg"
         style={{
-          bottom: `${toolbarBottomPx}px`,
           paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)"
         }}
       >
