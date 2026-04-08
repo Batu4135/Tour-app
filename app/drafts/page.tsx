@@ -424,10 +424,14 @@ export default function DraftsPage() {
             <Link
               key={customer.id}
               href={`/drafts/new?customerId=${customer.id}`}
-              className="secondary-btn flex w-full items-center justify-between text-left"
+              className="secondary-btn flex w-full flex-col items-start gap-1 text-left"
             >
-              <span className="truncate text-sm font-medium">{customer.name}</span>
-              <span className="ml-3 truncate text-xs text-[#4A4A4A]/60">{customer.address ?? ""}</span>
+              <span className="w-full break-words text-sm font-medium leading-5 whitespace-normal">{customer.name}</span>
+              {customer.address ? (
+                <span className="w-full break-words text-xs leading-4 text-[#4A4A4A]/60 whitespace-normal">
+                  {customer.address}
+                </span>
+              ) : null}
             </Link>
           ))}
           {hasCustomerSearch && selectedResults.length === 0 ? (
