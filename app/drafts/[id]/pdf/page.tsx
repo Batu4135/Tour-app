@@ -30,48 +30,18 @@ export default function DraftPdfPage() {
     }
   }
 
-  async function openPrintMenu() {
+  function openPrintMenu() {
     if (!pdfUrl) return;
     setIsPrinting(true);
 
     try {
-      const response = await fetch(pdfUrl);
-      if (!response.ok) throw new Error("PDF konnte nicht geladen werden.");
-
-      const pdfBlob = await response.blob();
-      const blobUrl = window.URL.createObjectURL(pdfBlob);
-      const popup = window.open(blobUrl, "_blank");
-
-      if (popup) {
-        window.setTimeout(() => {
-          try {
-            popup.focus();
-            popup.print();
-          } catch {
-            // Falls iOS das direkte print() blockiert, bleibt die PDF im neuen Tab offen.
-          } finally {
-            setIsPrinting(false);
-            window.setTimeout(() => window.URL.revokeObjectURL(blobUrl), 30_000);
-          }
-        }, 700);
-        return;
-      }
-
       const frameWindow = iframeRef.current?.contentWindow;
       if (frameWindow) {
         frameWindow.focus();
         frameWindow.print();
         window.setTimeout(() => setIsPrinting(false), 600);
-        window.setTimeout(() => window.URL.revokeObjectURL(blobUrl), 30_000);
         return;
       }
-
-      window.location.assign(blobUrl);
-      window.setTimeout(() => {
-        setIsPrinting(false);
-        window.URL.revokeObjectURL(blobUrl);
-      }, 30_000);
-      return;
     } catch {
       // Fallback below.
     }
