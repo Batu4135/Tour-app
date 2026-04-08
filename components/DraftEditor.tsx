@@ -204,9 +204,14 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
   const hydrateDraft = useCallback(async () => {
     setError("");
     const snapshot = loadSnapshot();
-    if (snapshot) {
+    const pendingWrites = await getPendingWrites().catch(() => []);
+    const hasPendingForDraft = pendingWrites.some((entry) => entry.draftId === draftId);
+    const usedSnapshot = Boolean(snapshot && hasPendingForDraft);
+
+    if (usedSnapshot && snapshot) {
       setDraft(snapshot);
       setStatus("saved");
+      setSyncState("pending");
     }
 
     try {
@@ -220,20 +225,20 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       setProductLicenseWeightGramsMap(payload.productLicenseWeightGramsMap ?? {});
       setCustomerSuggestedProducts(payload.customerSuggestedProducts ?? []);
 
-      const pendingWrites = await getPendingWrites().catch(() => []);
-      const hasPendingForDraft = pendingWrites.some((entry) => entry.draftId === draftId);
-
       if (!snapshot || !hasPendingForDraft) {
         const normalizedDraft = normalizeDraftData(payload.draft);
         setDraft(normalizedDraft);
         writeSnapshot(normalizedDraft);
         setStatus("saved");
-      } else {
-        setSyncState("pending");
       }
     } catch (loadError) {
       if (!snapshot) {
         setError(loadError instanceof Error ? loadError.message : t("initError"));
+      } else if (!usedSnapshot) {
+        setDraft(snapshot);
+        setStatus("saved");
+        writeSnapshot(snapshot);
+        setSyncState("pending");
       } else {
         setSyncState("pending");
       }
