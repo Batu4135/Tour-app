@@ -13,33 +13,29 @@ export default function DraftPdfPage() {
   const draftId = Number.parseInt(params.id, 10);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
-  const previewPdfUrl = useMemo(
-    () => (Number.isFinite(draftId) ? `/api/drafts/${draftId}/pdf?mode=preview` : ""),
-    [draftId]
-  );
-  const printPdfUrl = useMemo(
-    () => (Number.isFinite(draftId) ? `/api/drafts/${draftId}/pdf?mode=print` : ""),
+  const pdfUrl = useMemo(
+    () => (Number.isFinite(draftId) ? `/api/drafts/${draftId}/pdf` : ""),
     [draftId]
   );
 
   useEffect(() => {
     setIsLoaded(false);
-  }, [previewPdfUrl]);
+  }, [pdfUrl]);
 
-  function openPdfDirectly(targetUrl: string) {
-    if (!targetUrl) return;
-    const popup = window.open(targetUrl, "_blank", "noopener,noreferrer");
+  function openPdfDirectly() {
+    if (!pdfUrl) return;
+    const popup = window.open(pdfUrl, "_blank", "noopener,noreferrer");
     if (!popup) {
-      window.location.assign(targetUrl);
+      window.location.assign(pdfUrl);
     }
   }
 
   function openPrintMenu() {
-    if (!printPdfUrl) return;
+    if (!pdfUrl) return;
     setIsPrinting(true);
 
     try {
-      const popup = window.open(printPdfUrl, "_blank");
+      const popup = window.open(pdfUrl, "_blank");
       if (popup) {
         window.setTimeout(() => {
           try {
@@ -69,7 +65,7 @@ export default function DraftPdfPage() {
       // Fallback below.
     }
 
-    openPdfDirectly(printPdfUrl);
+    openPdfDirectly();
     window.setTimeout(() => setIsPrinting(false), 600);
   }
 
@@ -112,7 +108,7 @@ export default function DraftPdfPage() {
         <iframe
           ref={iframeRef}
           title={t("frameTitle", { id: draftId })}
-          src={previewPdfUrl}
+          src={pdfUrl}
           className="h-[72vh] w-full rounded-xl border border-[#E5E5E5] bg-white"
           onLoad={() => setIsLoaded(true)}
         />

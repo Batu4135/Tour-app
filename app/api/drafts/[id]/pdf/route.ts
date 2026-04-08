@@ -13,11 +13,9 @@ type RouteContext = {
   };
 };
 
-export async function GET(request: Request, { params }: RouteContext) {
+export async function GET(_: Request, { params }: RouteContext) {
   const user = await requireAuth();
   if (!user) return unauthorized();
-  const url = new URL(request.url);
-  const mode = url.searchParams.get("mode") === "print" ? "print" : "preview";
 
   const id = Number.parseInt(params.id, 10);
   if (!Number.isFinite(id)) return badRequest("Ungueltige Vordruck-ID.");
@@ -36,7 +34,7 @@ export async function GET(request: Request, { params }: RouteContext) {
 
   const pdf = await PDFDocument.create();
   const fonts = await createDraftVoucherFonts(pdf);
-  drawDraftVoucherPage(pdf, fonts, draft, { showSku: true, paperMode: mode });
+  drawDraftVoucherPage(pdf, fonts, draft, { showSku: true });
   const bytes = await pdf.save();
 
   return new NextResponse(bytes as unknown as BodyInit, {
