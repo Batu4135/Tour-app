@@ -14,6 +14,7 @@ export default function DraftPdfPage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [pdfVersion, setPdfVersion] = useState<number>(() => Date.now());
+  const [isPreparing, setIsPreparing] = useState(true);
   const [prepareError, setPrepareError] = useState("");
   const printStateKey = `nord-pack:print:${draftId}`;
   const pdfUrl = useMemo(() => {
@@ -33,6 +34,7 @@ export default function DraftPdfPage() {
     const applyState = () => {
       const raw = window.sessionStorage.getItem(printStateKey);
       if (!raw) {
+        setIsPreparing(false);
         setPrepareError("");
         return true;
       }
@@ -40,20 +42,24 @@ export default function DraftPdfPage() {
       try {
         const parsed = JSON.parse(raw) as { status?: string; updatedAt?: number; message?: string };
         if (parsed.status === "pending") {
+          setIsPreparing(true);
           setPrepareError("");
           return false;
         }
         if (parsed.status === "error") {
+          setIsPreparing(false);
           setPrepareError(parsed.message ?? t("preparingError"));
           window.sessionStorage.removeItem(printStateKey);
           return true;
         }
 
+        setIsPreparing(false);
         setPrepareError("");
         setPdfVersion(parsed.updatedAt ?? Date.now());
         window.sessionStorage.removeItem(printStateKey);
         return true;
       } catch {
+        setIsPreparing(false);
         setPrepareError("");
         window.sessionStorage.removeItem(printStateKey);
         return true;
@@ -71,7 +77,10 @@ export default function DraftPdfPage() {
 
     const timeout = window.setTimeout(() => {
       if (!isActive) return;
-      window.sessionStorage.removeItem(printStateKey);
+      setIsPreparing(false);
+      if (!prepareError) {
+        setPdfVersion(Date.now());
+      }
       window.clearInterval(interval);
     }, 4000);
 
@@ -80,7 +89,7 @@ export default function DraftPdfPage() {
       window.clearInterval(interval);
       window.clearTimeout(timeout);
     };
-  }, [draftId, printStateKey, t]);
+  }, [draftId, prepareError, printStateKey, t]);
 
   function openPdfDirectly() {
     if (!pdfUrl) return;
@@ -145,12 +154,12 @@ export default function DraftPdfPage() {
       </div>
 
       <div className="card space-y-3">
-        {!isLoaded ? <p className="text-sm text-[#4A4A4A]/65">{t("loadingPdf")}</p> : null}
+        {!isLoaded || isPreparing ? <p className="text-sm text-[#4A4A4A]/65">{t("loadingPdf")}</p> : null}
         {prepareError ? <p className="text-sm text-[#C62828]">{prepareError}</p> : null}
         <iframe
           ref={iframeRef}
           title={t("frameTitle", { id: draftId })}
-          src={pdfUrl}
+          src={isPreparing ? "" : pdfUrl}
           className="h-[72vh] w-full rounded-xl border border-[#E5E5E5] bg-white"
           onLoad={() => setIsLoaded(true)}
         />
