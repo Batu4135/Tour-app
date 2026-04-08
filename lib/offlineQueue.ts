@@ -116,20 +116,6 @@ export async function removePendingWrite(id: string): Promise<void> {
   db.close();
 }
 
-export async function removePendingWritesForDraft(draftId: number): Promise<void> {
-  const db = await openDb();
-  const tx = db.transaction(STORE_NAME, "readwrite");
-  const store = tx.objectStore(STORE_NAME);
-  const entries = (await requestToPromise<PendingWrite[]>(store.getAll())) ?? [];
-  for (const entry of entries) {
-    if (entry.draftId === draftId) {
-      store.delete(entry.id);
-    }
-  }
-  await transactionComplete(tx);
-  db.close();
-}
-
 export async function updatePendingWriteError(id: string, message: string): Promise<void> {
   const db = await openDb();
   const tx = db.transaction(STORE_NAME, "readwrite");

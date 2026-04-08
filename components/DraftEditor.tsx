@@ -15,7 +15,6 @@ import {
   getPendingWriteCount,
   getPendingWrites,
   removePendingWrite,
-  removePendingWritesForDraft,
   updatePendingWriteError
 } from "@/lib/offlineQueue";
 
@@ -104,6 +103,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
   const paymentSectionRef = useRef<HTMLDivElement | null>(null);
   const licenseSectionRef = useRef<HTMLDivElement | null>(null);
   const [activeWalkthroughTarget, setActiveWalkthroughTarget] = useState<string | null>(null);
+  const printStateKey = `nord-pack:print:${draftId}`;
 
   const totals = useMemo(() => {
     if (!draft) {
@@ -430,65 +430,6 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
     return false;
   }, [draft, flushOfflineQueue, persistDraft, t]);
 
-  const saveForPrint = useCallback(async (): Promise<DraftData | null> => {
-    if (!draft) return null;
-    if (!isOnline()) {
-      setIsOffline(true);
-      setStatus("error");
-      setSyncState("pending");
-      setError(t("offlinePending"));
-      return null;
-    }
-
-    const normalizedNote = draft.note?.trim();
-    const payload: DraftWritePayload = {
-      lines: draft.lines.map((line) => ({
-        productId: line.productId,
-        quantity: line.quantity,
-        unitPriceCents: line.unitPriceCents
-      })),
-      includeLicenseFee: Boolean(draft.includeLicenseFee),
-      discountCents: 0,
-      subtractVat: Boolean(draft.subtractVat),
-      paymentMethod: draft.paymentMethod ?? "CASH",
-      note: normalizedNote ? normalizedNote : undefined
-    };
-
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-    setStatus("saving");
-    setError("");
-
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      try {
-        const updated = await sendDraftPatch(draft.id, payload, controller.signal);
-        const normalizedDraft = normalizeDraftData(updated);
-        setDraft(normalizedDraft);
-        writeSnapshot(normalizedDraft);
-        setStatus("saved");
-        setDirty(false);
-        setIsOffline(false);
-        await removePendingWritesForDraft(draft.id).catch(() => undefined);
-        await refreshPendingState();
-        return normalizedDraft;
-      } catch (saveError) {
-        if (controller.signal.aborted) return null;
-        if (attempt === 0) {
-          await wait(120);
-          continue;
-        }
-
-        setStatus("error");
-        setSyncState("error");
-        setError(saveError instanceof Error ? saveError.message : t("saveError"));
-        return null;
-      }
-    }
-
-    return null;
-  }, [draft, refreshPendingState, sendDraftPatch, t, writeSnapshot]);
-
   useEffect(() => {
     setIsOffline(!isOnline());
     void hydrateDraft();
@@ -634,14 +575,44 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
-    const savedDraft = await saveForPrint();
-    if (!savedDraft) {
-      setIsPrinting(false);
-      return;
+
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(
+        printStateKey,
+        JSON.stringify({
+          status: "pending",
+          updatedAt: Date.now()
+        })
+      );
     }
-    const revision = encodeURIComponent(savedDraft.updatedAt ?? new Date().toISOString());
-    router.push(`/drafts/${draft.id}/pdf?rev=${revision}`);
+
+    router.push(`/drafts/${draft.id}/pdf`);
     setTimeout(() => setIsPrinting(false), 150);
+
+    void (async () => {
+      const saved = await forceSave();
+      if (typeof window === "undefined") return;
+
+      if (!saved) {
+        window.sessionStorage.setItem(
+          printStateKey,
+          JSON.stringify({
+            status: "error",
+            updatedAt: Date.now(),
+            message: t("saveError")
+          })
+        );
+        return;
+      }
+
+      window.sessionStorage.setItem(
+        printStateKey,
+        JSON.stringify({
+          status: "ready",
+          updatedAt: Date.now()
+        })
+      );
+    })();
   }
 
   useEffect(() => {

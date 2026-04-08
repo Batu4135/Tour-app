@@ -2,27 +2,85 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { ArrowLeft, Loader2, Printer } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 export default function DraftPdfPage() {
   const t = useTranslations("draftPdfViewer");
   const params = useParams<{ id: string }>();
-  const searchParams = useSearchParams();
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const draftId = Number.parseInt(params.id, 10);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
-  const revision = searchParams.get("rev") ?? "";
+  const [pdfVersion, setPdfVersion] = useState<number>(() => Date.now());
+  const [prepareError, setPrepareError] = useState("");
+  const printStateKey = `nord-pack:print:${draftId}`;
   const pdfUrl = useMemo(() => {
     if (!Number.isFinite(draftId)) return "";
-    return revision ? `/api/drafts/${draftId}/pdf?v=${encodeURIComponent(revision)}` : `/api/drafts/${draftId}/pdf`;
-  }, [draftId, revision]);
+    return `/api/drafts/${draftId}/pdf?v=${pdfVersion}`;
+  }, [draftId, pdfVersion]);
 
   useEffect(() => {
     setIsLoaded(false);
   }, [pdfUrl]);
+
+  useEffect(() => {
+    if (!Number.isFinite(draftId) || typeof window === "undefined") return;
+
+    let isActive = true;
+
+    const applyState = () => {
+      const raw = window.sessionStorage.getItem(printStateKey);
+      if (!raw) {
+        setPrepareError("");
+        return true;
+      }
+
+      try {
+        const parsed = JSON.parse(raw) as { status?: string; updatedAt?: number; message?: string };
+        if (parsed.status === "pending") {
+          setPrepareError("");
+          return false;
+        }
+        if (parsed.status === "error") {
+          setPrepareError(parsed.message ?? t("preparingError"));
+          window.sessionStorage.removeItem(printStateKey);
+          return true;
+        }
+
+        setPrepareError("");
+        setPdfVersion(parsed.updatedAt ?? Date.now());
+        window.sessionStorage.removeItem(printStateKey);
+        return true;
+      } catch {
+        setPrepareError("");
+        window.sessionStorage.removeItem(printStateKey);
+        return true;
+      }
+    };
+
+    if (applyState()) return;
+
+    const interval = window.setInterval(() => {
+      if (!isActive) return;
+      if (applyState()) {
+        window.clearInterval(interval);
+      }
+    }, 120);
+
+    const timeout = window.setTimeout(() => {
+      if (!isActive) return;
+      window.sessionStorage.removeItem(printStateKey);
+      window.clearInterval(interval);
+    }, 4000);
+
+    return () => {
+      isActive = false;
+      window.clearInterval(interval);
+      window.clearTimeout(timeout);
+    };
+  }, [draftId, printStateKey, t]);
 
   function openPdfDirectly() {
     if (!pdfUrl) return;
@@ -88,6 +146,7 @@ export default function DraftPdfPage() {
 
       <div className="card space-y-3">
         {!isLoaded ? <p className="text-sm text-[#4A4A4A]/65">{t("loadingPdf")}</p> : null}
+        {prepareError ? <p className="text-sm text-[#C62828]">{prepareError}</p> : null}
         <iframe
           ref={iframeRef}
           title={t("frameTitle", { id: draftId })}
