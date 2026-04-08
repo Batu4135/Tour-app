@@ -25,6 +25,9 @@ type DraftLine = {
   productSku: string;
   quantity: number;
   unitPriceCents: number;
+  licenseType?: LicenseType;
+  licenseWeightGrams?: number;
+  licenseFeeCents?: number;
 };
 
 type DraftData = {
@@ -114,9 +117,9 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
         quantity: line.quantity,
         unitPriceCents: line.unitPriceCents,
         product: {
-          licenseFeeCents: productLicenseFeeMap[line.productId] ?? 0,
-          licenseType: productLicenseTypeMap[line.productId],
-          licenseWeightGrams: productLicenseWeightGramsMap[line.productId]
+          licenseFeeCents: line.licenseFeeCents ?? productLicenseFeeMap[line.productId] ?? 0,
+          licenseType: line.licenseType ?? productLicenseTypeMap[line.productId],
+          licenseWeightGrams: line.licenseWeightGrams ?? productLicenseWeightGramsMap[line.productId]
         }
       })),
       includeLicenseFee: draft.includeLicenseFee,
@@ -131,9 +134,9 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
         name: line.productName,
         quantity: line.quantity,
         unitPriceCents: line.unitPriceCents,
-        licenseType: productLicenseTypeMap[line.productId],
-        licenseWeightGrams: productLicenseWeightGramsMap[line.productId] ?? 0,
-        licenseFeeCents: productLicenseFeeMap[line.productId] ?? 0
+        licenseType: line.licenseType ?? productLicenseTypeMap[line.productId],
+        licenseWeightGrams: line.licenseWeightGrams ?? productLicenseWeightGramsMap[line.productId] ?? 0,
+        licenseFeeCents: line.licenseFeeCents ?? productLicenseFeeMap[line.productId] ?? 0
       })) ?? [],
     [draft, productLicenseFeeMap, productLicenseTypeMap, productLicenseWeightGramsMap]
   );
@@ -328,6 +331,11 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       setStatus("saving");
       setError("");
 
+      if (!dirty && !options?.force) {
+        setStatus("saved");
+        return true;
+      }
+
       let pendingId: string | null = null;
       try {
         pendingId = await enqueueLatestPendingWrite(draft.id, payload);
@@ -392,7 +400,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
         return false;
       }
     },
-    [draft, refreshPendingState, sendDraftPatch, t, writeSnapshot]
+    [draft, dirty, refreshPendingState, sendDraftPatch, t, writeSnapshot]
   );
 
   const forceSave = useCallback(async (): Promise<boolean> => {
@@ -459,10 +467,12 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       setSyncState("pending");
     };
     const onPageHide = () => {
-      void persistDraft({ backgroundOnly: true });
+      if (dirty) {
+        void persistDraft({ backgroundOnly: true });
+      }
     };
     const onVisibilityChange = () => {
-      if (document.visibilityState === "hidden") {
+      if (document.visibilityState === "hidden" && dirty) {
         void persistDraft({ backgroundOnly: true });
       }
     };
@@ -486,7 +496,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       window.removeEventListener("pageshow", onPageShow);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [hydrateDraft, persistDraft, syncNow]);
+  }, [dirty, hydrateDraft, persistDraft, syncNow]);
 
   function updateDraft(mutator: (current: DraftData) => DraftData) {
     setDraft((prev) => {
@@ -541,7 +551,10 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
             productName: item.name,
             productSku: item.sku,
             quantity: item.quantity,
-            unitPriceCents: item.unitPriceCents
+            unitPriceCents: item.unitPriceCents,
+            licenseType: item.licenseType,
+            licenseWeightGrams: item.licenseWeightGrams,
+            licenseFeeCents: item.licenseFeeCents
           };
         })
       };

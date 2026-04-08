@@ -133,14 +133,20 @@ export async function GET(_: Request, { params }: RouteContext) {
       paymentMethod: draft.paymentMethod,
       tourClosedAt: draft.tourClosedAt ? draft.tourClosedAt.toISOString() : null,
       updatedAt: draft.updatedAt.toISOString(),
-      lines: draft.lines.map((line: any) => ({
-        id: line.id,
-        productId: line.productId,
-        productName: line.product.name,
-        productSku: line.product.sku,
-        quantity: line.quantity,
-        unitPriceCents: line.unitPriceCents
-      }))
+      lines: draft.lines.map((line: any) => {
+        const details = getLicenseDetails(line.product ?? {});
+        return {
+          id: line.id,
+          productId: line.productId,
+          productName: line.product.name,
+          productSku: line.product.sku,
+          quantity: line.quantity,
+          unitPriceCents: line.unitPriceCents,
+          licenseType: details.licenseType,
+          licenseWeightGrams: details.licenseWeightGrams,
+          licenseFeeCents: details.unitFeeCents
+        };
+      })
     },
     customerPriceMap: Object.fromEntries(
       draft.customer.customerPrice.map((price: any) => [price.productId, price.priceCents])
@@ -219,7 +225,12 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     where: { id },
     include: {
       customer: { select: { id: true, name: true } },
-      lines: { include: { product: { select: { name: true, sku: true } } }, orderBy: { id: "asc" } }
+      lines: {
+        include: {
+          product: { select: { name: true, sku: true, licenseFeeCents: true, licenseType: true, licenseWeightGrams: true } }
+        },
+        orderBy: { id: "asc" }
+      }
     }
   });
   if (!draft) return notFound("Vordruck nicht gefunden.");
@@ -237,14 +248,20 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       paymentMethod: draft.paymentMethod,
       tourClosedAt: draft.tourClosedAt ? draft.tourClosedAt.toISOString() : null,
       updatedAt: draft.updatedAt.toISOString(),
-      lines: draft.lines.map((line: any) => ({
-        id: line.id,
-        productId: line.productId,
-        productName: line.product.name,
-        productSku: line.product.sku,
-        quantity: line.quantity,
-        unitPriceCents: line.unitPriceCents
-      }))
+      lines: draft.lines.map((line: any) => {
+        const details = getLicenseDetails(line.product ?? {});
+        return {
+          id: line.id,
+          productId: line.productId,
+          productName: line.product.name,
+          productSku: line.product.sku,
+          quantity: line.quantity,
+          unitPriceCents: line.unitPriceCents,
+          licenseType: details.licenseType,
+          licenseWeightGrams: details.licenseWeightGrams,
+          licenseFeeCents: details.unitFeeCents
+        };
+      })
     }
   });
 }
