@@ -53,10 +53,15 @@ export default function DraftPdfPage() {
         "canShare" in navigator &&
         navigator.canShare({ files: [pdfFile] })
       ) {
-        await navigator.share({
-          files: [pdfFile],
-          title: `Vordruck ${draftId}`
-        });
+        try {
+          await navigator.share({
+            files: [pdfFile],
+            title: `Vordruck ${draftId}`
+          });
+        } catch {
+          // iOS returns here when the share/print sheet is dismissed.
+          // Do not open the full PDF as fallback in that case.
+        }
         setIsPrinting(false);
         return;
       }
