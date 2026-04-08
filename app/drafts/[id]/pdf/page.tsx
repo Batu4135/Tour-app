@@ -13,32 +13,71 @@ export default function DraftPdfPage() {
   const draftId = Number.parseInt(params.id, 10);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
-  const previewPdfUrl = useMemo(
-    () => (Number.isFinite(draftId) ? `/api/drafts/${draftId}/pdf?mode=preview` : ""),
-    [draftId]
-  );
-  const printPdfUrl = useMemo(
-    () => (Number.isFinite(draftId) ? `/api/drafts/${draftId}/pdf?mode=print` : ""),
+  const pdfUrl = useMemo(
+    () => (Number.isFinite(draftId) ? `/api/drafts/${draftId}/pdf` : ""),
     [draftId]
   );
 
   useEffect(() => {
     setIsLoaded(false);
-  }, [previewPdfUrl]);
+  }, [pdfUrl]);
 
-  function openPdfDirectly(targetUrl: string) {
-    if (!targetUrl) return;
-    const popup = window.open(targetUrl, "_blank", "noopener,noreferrer");
+  function openPdfDirectly() {
+    if (!pdfUrl) return;
+    const popup = window.open(pdfUrl, "_blank", "noopener,noreferrer");
     if (!popup) {
-      window.location.assign(targetUrl);
+      window.location.assign(pdfUrl);
     }
   }
 
-  function openPrintMenu() {
-    if (!printPdfUrl) return;
+  async function openPrintMenu() {
+    if (!pdfUrl) return;
     setIsPrinting(true);
-    openPdfDirectly(printPdfUrl);
-    window.setTimeout(() => setIsPrinting(false), 500);
+
+    try {
+      const response = await fetch(pdfUrl);
+      if (!response.ok) throw new Error("PDF konnte nicht geladen werden.");
+
+      const pdfBlob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(pdfBlob);
+      const popup = window.open(blobUrl, "_blank");
+
+      if (popup) {
+        window.setTimeout(() => {
+          try {
+            popup.focus();
+            popup.print();
+          } catch {
+            // Falls iOS das direkte print() blockiert, bleibt die PDF im neuen Tab offen.
+          } finally {
+            setIsPrinting(false);
+            window.setTimeout(() => window.URL.revokeObjectURL(blobUrl), 30_000);
+          }
+        }, 700);
+        return;
+      }
+
+      const frameWindow = iframeRef.current?.contentWindow;
+      if (frameWindow) {
+        frameWindow.focus();
+        frameWindow.print();
+        window.setTimeout(() => setIsPrinting(false), 600);
+        window.setTimeout(() => window.URL.revokeObjectURL(blobUrl), 30_000);
+        return;
+      }
+
+      window.location.assign(blobUrl);
+      window.setTimeout(() => {
+        setIsPrinting(false);
+        window.URL.revokeObjectURL(blobUrl);
+      }, 30_000);
+      return;
+    } catch {
+      // Fallback below.
+    }
+
+    openPdfDirectly();
+    window.setTimeout(() => setIsPrinting(false), 600);
   }
 
   if (!Number.isFinite(draftId)) {
@@ -80,7 +119,7 @@ export default function DraftPdfPage() {
         <iframe
           ref={iframeRef}
           title={t("frameTitle", { id: draftId })}
-          src={previewPdfUrl}
+          src={pdfUrl}
           className="h-[72vh] w-full rounded-xl border border-[#E5E5E5] bg-white"
           onLoad={() => setIsLoaded(true)}
         />
