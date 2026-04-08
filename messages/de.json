@@ -165,8 +165,7 @@
     "backToDraft": "Zum Vordruck",
     "printNow": "Drucken",
     "openingPrint": "Druckmenue...",
-    "loadingPdf": "PDF wird vorbereitet...",
-    "preparingError": "PDF konnte nicht vorbereitet werden.",
+    "loadingPdf": "PDF wird geladen...",
     "printHint": "Wenn das Druckmenue nicht sofort erscheint, tippe kurz auf PDF und danach nochmal auf Drucken.",
     "frameTitle": "Vordruck PDF {id}"
   },

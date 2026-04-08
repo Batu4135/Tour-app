@@ -103,7 +103,6 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
   const paymentSectionRef = useRef<HTMLDivElement | null>(null);
   const licenseSectionRef = useRef<HTMLDivElement | null>(null);
   const [activeWalkthroughTarget, setActiveWalkthroughTarget] = useState<string | null>(null);
-  const printStateKey = `nord-pack:print:${draftId}`;
 
   const totals = useMemo(() => {
     if (!draft) {
@@ -437,10 +436,6 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
   }, [hydrateDraft, refreshPendingState]);
 
   useEffect(() => {
-    router.prefetch(`/drafts/${draftId}/pdf`);
-  }, [draftId, router]);
-
-  useEffect(() => {
     if (!draft || !dirty) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => void persistDraft(), 650);
@@ -575,44 +570,14 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
-
-    if (typeof window !== "undefined") {
-      window.sessionStorage.setItem(
-        printStateKey,
-        JSON.stringify({
-          status: "pending",
-          updatedAt: Date.now()
-        })
-      );
+    const saved = await forceSave();
+    if (!saved) {
+      setError(t("saveError"));
+      setIsPrinting(false);
+      return;
     }
-
     router.push(`/drafts/${draft.id}/pdf`);
-    setTimeout(() => setIsPrinting(false), 150);
-
-    void (async () => {
-      const saved = await forceSave();
-      if (typeof window === "undefined") return;
-
-      if (!saved) {
-        window.sessionStorage.setItem(
-          printStateKey,
-          JSON.stringify({
-            status: "error",
-            updatedAt: Date.now(),
-            message: t("saveError")
-          })
-        );
-        return;
-      }
-
-      window.sessionStorage.setItem(
-        printStateKey,
-        JSON.stringify({
-          status: "ready",
-          updatedAt: Date.now()
-        })
-      );
-    })();
+    setTimeout(() => setIsPrinting(false), 400);
   }
 
   useEffect(() => {

@@ -13,83 +13,14 @@ export default function DraftPdfPage() {
   const draftId = Number.parseInt(params.id, 10);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
-  const [pdfVersion, setPdfVersion] = useState<number>(() => Date.now());
-  const [isPreparing, setIsPreparing] = useState(true);
-  const [prepareError, setPrepareError] = useState("");
-  const printStateKey = `nord-pack:print:${draftId}`;
-  const pdfUrl = useMemo(() => {
-    if (!Number.isFinite(draftId)) return "";
-    return `/api/drafts/${draftId}/pdf?v=${pdfVersion}`;
-  }, [draftId, pdfVersion]);
+  const pdfUrl = useMemo(
+    () => (Number.isFinite(draftId) ? `/api/drafts/${draftId}/pdf` : ""),
+    [draftId]
+  );
 
   useEffect(() => {
     setIsLoaded(false);
   }, [pdfUrl]);
-
-  useEffect(() => {
-    if (!Number.isFinite(draftId) || typeof window === "undefined") return;
-
-    let isActive = true;
-
-    const applyState = () => {
-      const raw = window.sessionStorage.getItem(printStateKey);
-      if (!raw) {
-        setIsPreparing(false);
-        setPrepareError("");
-        return true;
-      }
-
-      try {
-        const parsed = JSON.parse(raw) as { status?: string; updatedAt?: number; message?: string };
-        if (parsed.status === "pending") {
-          setIsPreparing(true);
-          setPrepareError("");
-          return false;
-        }
-        if (parsed.status === "error") {
-          setIsPreparing(false);
-          setPrepareError(parsed.message ?? t("preparingError"));
-          window.sessionStorage.removeItem(printStateKey);
-          return true;
-        }
-
-        setIsPreparing(false);
-        setPrepareError("");
-        setPdfVersion(parsed.updatedAt ?? Date.now());
-        window.sessionStorage.removeItem(printStateKey);
-        return true;
-      } catch {
-        setIsPreparing(false);
-        setPrepareError("");
-        window.sessionStorage.removeItem(printStateKey);
-        return true;
-      }
-    };
-
-    if (applyState()) return;
-
-    const interval = window.setInterval(() => {
-      if (!isActive) return;
-      if (applyState()) {
-        window.clearInterval(interval);
-      }
-    }, 120);
-
-    const timeout = window.setTimeout(() => {
-      if (!isActive) return;
-      setIsPreparing(false);
-      if (!prepareError) {
-        setPdfVersion(Date.now());
-      }
-      window.clearInterval(interval);
-    }, 4000);
-
-    return () => {
-      isActive = false;
-      window.clearInterval(interval);
-      window.clearTimeout(timeout);
-    };
-  }, [draftId, prepareError, printStateKey, t]);
 
   function openPdfDirectly() {
     if (!pdfUrl) return;
@@ -154,12 +85,11 @@ export default function DraftPdfPage() {
       </div>
 
       <div className="card space-y-3">
-        {!isLoaded || isPreparing ? <p className="text-sm text-[#4A4A4A]/65">{t("loadingPdf")}</p> : null}
-        {prepareError ? <p className="text-sm text-[#C62828]">{prepareError}</p> : null}
+        {!isLoaded ? <p className="text-sm text-[#4A4A4A]/65">{t("loadingPdf")}</p> : null}
         <iframe
           ref={iframeRef}
           title={t("frameTitle", { id: draftId })}
-          src={isPreparing ? "" : pdfUrl}
+          src={pdfUrl}
           className="h-[72vh] w-full rounded-xl border border-[#E5E5E5] bg-white"
           onLoad={() => setIsLoaded(true)}
         />
