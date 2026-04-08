@@ -159,6 +159,17 @@
     "synced": "Synchronisiert",
     "syncError": "Synchronisierung fehlgeschlagen"
   },
+  "draftPdfViewer": {
+    "invalidDraft": "Vordruck konnte nicht geladen werden.",
+    "backToDrafts": "Zurueck zu Vordruck",
+    "backToDraft": "Zum Vordruck",
+    "openPdf": "PDF",
+    "printNow": "Drucken",
+    "openingPrint": "Druckmenue...",
+    "loadingPdf": "PDF wird geladen...",
+    "printHint": "Wenn das Druckmenue nicht sofort erscheint, tippe kurz auf PDF und danach nochmal auf Drucken.",
+    "frameTitle": "Vordruck PDF {id}"
+  },
   "settings": {
     "title": "Einstellungen",
     "subtitle": "Sprache, Sicherheit und Produkte",

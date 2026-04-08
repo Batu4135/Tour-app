@@ -103,6 +103,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
   const paymentSectionRef = useRef<HTMLDivElement | null>(null);
   const licenseSectionRef = useRef<HTMLDivElement | null>(null);
   const [activeWalkthroughTarget, setActiveWalkthroughTarget] = useState<string | null>(null);
+  const [toolbarBottomPx, setToolbarBottomPx] = useState(75);
 
   const totals = useMemo(() => {
     if (!draft) {
@@ -483,6 +484,36 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
     };
   }, [hydrateDraft, persistDraft, syncNow]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const updateToolbarPosition = () => {
+      const viewport = window.visualViewport;
+      if (!viewport) {
+        setToolbarBottomPx(75);
+        return;
+      }
+
+      const keyboardInset = Math.max(0, Math.round(window.innerHeight - (viewport.height + viewport.offsetTop)));
+      setToolbarBottomPx(keyboardInset > 0 ? keyboardInset : 75);
+    };
+
+    updateToolbarPosition();
+
+    const viewport = window.visualViewport;
+    viewport?.addEventListener("resize", updateToolbarPosition);
+    viewport?.addEventListener("scroll", updateToolbarPosition);
+    window.addEventListener("resize", updateToolbarPosition);
+    window.addEventListener("orientationchange", updateToolbarPosition);
+
+    return () => {
+      viewport?.removeEventListener("resize", updateToolbarPosition);
+      viewport?.removeEventListener("scroll", updateToolbarPosition);
+      window.removeEventListener("resize", updateToolbarPosition);
+      window.removeEventListener("orientationchange", updateToolbarPosition);
+    };
+  }, []);
+
   function updateDraft(mutator: (current: DraftData) => DraftData) {
     setDraft((prev) => {
       if (!prev) return prev;
@@ -567,55 +598,17 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
     if (!draft) return;
     if (isPrinting) return;
     setIsPrinting(true);
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
     const saved = await forceSave();
     if (!saved) {
       setError(t("saveError"));
       setIsPrinting(false);
       return;
     }
-
-    const pdfUrl = `/api/drafts/${draft.id}/pdf`;
-    try {
-      const response = await fetch(pdfUrl);
-      if (!response.ok) throw new Error(t("saveError"));
-      const blob = await response.blob();
-      const file = new File([blob], `vordruck-${draft.id}.pdf`, { type: "application/pdf" });
-      const nav = navigator as Navigator & {
-        canShare?: (data: { files?: File[] }) => boolean;
-        share?: (data: { title?: string; text?: string; files?: File[]; url?: string }) => Promise<void>;
-      };
-
-      if (typeof nav.share === "function" && typeof nav.canShare === "function" && nav.canShare({ files: [file] })) {
-        await nav.share({
-          title: `Fatura ${draft.id}`,
-          text: draft.customerName,
-          files: [file]
-        });
-        setIsPrinting(false);
-        return;
-      }
-
-      if (typeof nav.share === "function") {
-        await nav.share({
-          title: `Fatura ${draft.id}`,
-          text: draft.customerName,
-          url: `${window.location.origin}${pdfUrl}`
-        });
-        setIsPrinting(false);
-        return;
-      }
-    } catch (shareError) {
-      if (shareError instanceof Error && shareError.name === "AbortError") {
-        setIsPrinting(false);
-        return;
-      }
-    }
-
-    const popup = window.open(pdfUrl, "_blank");
-    if (!popup) {
-      window.location.assign(pdfUrl);
-    }
-    setTimeout(() => setIsPrinting(false), 900);
+    router.push(`/drafts/${draft.id}/pdf`);
+    setTimeout(() => setIsPrinting(false), 400);
   }
 
   useEffect(() => {
@@ -818,7 +811,10 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
 
       <div
         className="fixed bottom-[75px] left-0 right-0 z-30 mx-auto flex w-full max-w-md items-center justify-between gap-2 rounded-t-2xl bg-[#2F7EA1] px-4 py-3 text-white shadow-lg"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)" }}
+        style={{
+          bottom: `${toolbarBottomPx}px`,
+          paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)"
+        }}
       >
         <div>
           <p className="text-xs text-white/80">{t("total")}</p>

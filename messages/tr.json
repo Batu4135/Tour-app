@@ -158,6 +158,17 @@
                         "synced":  "Senkronize edildi",
                         "syncError":  "Senkronizasyon başarısız"
                     },
+    "draftPdfViewer":  {
+                           "invalidDraft":  "Fatura yüklenemedi.",
+                           "backToDrafts":  "Faturalara dön",
+                           "backToDraft":  "Faturaya dön",
+                           "openPdf":  "PDF",
+                           "printNow":  "Yazdır",
+                           "openingPrint":  "Yazdırma menüsü...",
+                           "loadingPdf":  "PDF yükleniyor...",
+                           "printHint":  "Yazdırma menüsü hemen açılmazsa önce PDF'e, sonra tekrar Yazdır'a dokun.",
+                           "frameTitle":  "Fatura PDF {id}"
+                       },
     "settings":  {
                      "title":  "Ayarlar",
                      "subtitle":  "Dil, güvenlik ve ürünler",
