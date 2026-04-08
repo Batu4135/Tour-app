@@ -34,7 +34,7 @@ export async function GET(_: Request, { params }: RouteContext) {
 
   const pdf = await PDFDocument.create();
   const fonts = await createDraftVoucherFonts(pdf);
-  drawDraftVoucherPage(pdf, fonts, draft);
+  drawDraftVoucherPage(pdf, fonts, draft, { showSku: true });
   const bytes = await pdf.save();
 
   return new NextResponse(bytes as unknown as BodyInit, {
