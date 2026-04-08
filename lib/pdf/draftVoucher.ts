@@ -17,14 +17,9 @@ type DrawDraftVoucherOptions = {
 
 const A4_WIDTH = 595;
 const A4_HEIGHT = 842;
-export const A6_WIDTH = 298;
-export const A6_HEIGHT = 420;
-const SCALE_X = A6_WIDTH / A4_WIDTH;
-const SCALE_Y = A6_HEIGHT / A4_HEIGHT;
-const SCALE = Math.min(SCALE_X, SCALE_Y);
 
 function s(value: number): number {
-  return value * SCALE;
+  return value;
 }
 
 function money(cents: number): string {
@@ -88,9 +83,9 @@ export function drawDraftVoucherPage(
   options?: DrawDraftVoucherOptions
 ) {
   const { regular, bold } = fonts;
-  const page = pdf.addPage([A6_WIDTH, A6_HEIGHT]);
+  const page = pdf.addPage([A4_WIDTH, A4_HEIGHT]);
 
-  const pageWidth = A6_WIDTH;
+  const pageWidth = A4_WIDTH;
   const textColor = rgb(74 / 255, 74 / 255, 74 / 255);
   const accent = rgb(47 / 255, 126 / 255, 161 / 255);
   const soft = rgb(229 / 255, 229 / 255, 229 / 255);
@@ -102,36 +97,40 @@ export function drawDraftVoucherPage(
   const productX = s(118);
   const lineTotalRight = s(528);
 
-  const headerTitle = options?.headerTitle ?? "Vordruck";
-  const licenseModeText = draft.includeLicenseFee ? "Inkl. Lizenzierung" : "Ohne Lizenzierung";
-  const headerSubtitle = options?.headerSubtitle ?? licenseModeText;
+  const headerTitle = (options?.headerTitle ?? "").trim();
+  const headerSubtitle = (options?.headerSubtitle ?? "").trim();
+  const hasHeader = headerTitle.length > 0 || headerSubtitle.length > 0;
 
   let headerTitleSize = s(options?.headerTitleSize ?? 10);
-  while (regular.widthOfTextAtSize(headerTitle, headerTitleSize) > pageWidth - s(20) && headerTitleSize > s(7)) {
-    headerTitleSize -= s(0.4);
+  if (headerTitle.length > 0) {
+    while (regular.widthOfTextAtSize(headerTitle, headerTitleSize) > pageWidth - s(20) && headerTitleSize > s(7)) {
+      headerTitleSize -= s(0.4);
+    }
+
+    page.drawText(headerTitle, {
+      x: (pageWidth - regular.widthOfTextAtSize(headerTitle, headerTitleSize)) / 2,
+      y: s(752),
+      size: headerTitleSize,
+      font: regular,
+      color: muted
+    });
   }
 
-  page.drawText(headerTitle, {
-    x: (pageWidth - regular.widthOfTextAtSize(headerTitle, headerTitleSize)) / 2,
-    y: s(752),
-    size: headerTitleSize,
-    font: regular,
-    color: muted
-  });
-
-  page.drawText(headerSubtitle, {
-    x: (pageWidth - regular.widthOfTextAtSize(headerSubtitle, s(8))) / 2,
-    y: s(740),
-    size: s(8),
-    font: regular,
-    color: muted
-  });
+  if (headerSubtitle.length > 0) {
+    page.drawText(headerSubtitle, {
+      x: (pageWidth - regular.widthOfTextAtSize(headerSubtitle, s(8))) / 2,
+      y: s(740),
+      size: s(8),
+      font: regular,
+      color: muted
+    });
+  }
 
   drawRightText({
     page,
     text: formatDate(new Date(draft.date)),
     x: lineTotalRight,
-    y: s(772),
+    y: s(hasHeader ? 772 : 792),
     size: s(11),
     font: regular,
     color: textColor
@@ -141,7 +140,7 @@ export function drawDraftVoucherPage(
     page,
     text: `Zahlart: ${paymentMethodText(draft.paymentMethod)}`,
     x: lineTotalRight,
-    y: s(758),
+    y: s(hasHeader ? 758 : 778),
     size: s(8.5),
     font: regular,
     color: muted
@@ -152,16 +151,16 @@ export function drawDraftVoucherPage(
   const customerWidth = bold.widthOfTextAtSize(customerName, customerSize);
   page.drawText(customerName, {
     x: (pageWidth - customerWidth) / 2,
-    y: s(714),
+    y: s(hasHeader ? 714 : 742),
     size: customerSize,
     font: bold,
     color: textColor
   });
 
-  const headerY = s(676);
+  const headerY = s(hasHeader ? 676 : 704);
   page.drawLine({
-    start: { x: left, y: s(696) },
-    end: { x: right, y: s(696) },
+    start: { x: left, y: s(hasHeader ? 696 : 724) },
+    end: { x: right, y: s(hasHeader ? 696 : 724) },
     color: soft,
     thickness: s(1)
   });
@@ -177,13 +176,13 @@ export function drawDraftVoucherPage(
     color: muted
   });
   page.drawLine({
-    start: { x: left, y: s(664) },
-    end: { x: right, y: s(664) },
+    start: { x: left, y: s(hasHeader ? 664 : 692) },
+    end: { x: right, y: s(hasHeader ? 664 : 692) },
     color: soft,
     thickness: s(1)
   });
 
-  const rowStartY = s(640);
+  const rowStartY = s(hasHeader ? 640 : 668);
   const defaultRowHeight = s(32);
   const summaryGap = s(24);
   const minSummaryTop = s(158);
