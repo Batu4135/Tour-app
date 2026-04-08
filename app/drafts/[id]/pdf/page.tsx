@@ -74,13 +74,6 @@ export default function DraftPdfPage() {
         <div className="flex gap-2">
           <button
             type="button"
-            className="secondary-btn inline-flex items-center gap-2 !py-2 text-sm"
-            onClick={openPdfDirectly}
-          >
-            {t("openPdf")}
-          </button>
-          <button
-            type="button"
             className="primary-btn inline-flex items-center gap-2 !py-2 text-sm disabled:opacity-70"
             onClick={openPrintMenu}
             disabled={isPrinting}

@@ -104,6 +104,7 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
   const licenseSectionRef = useRef<HTMLDivElement | null>(null);
   const [activeWalkthroughTarget, setActiveWalkthroughTarget] = useState<string | null>(null);
   const [toolbarBottomPx, setToolbarBottomPx] = useState(75);
+  const [isToolbarVisible, setIsToolbarVisible] = useState(false);
 
   const totals = useMemo(() => {
     if (!draft) {
@@ -487,8 +488,16 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const updateToolbarPosition = () => {
+    const updateToolbarState = () => {
       const viewport = window.visualViewport;
+      const viewportHeight = viewport?.height ?? window.innerHeight;
+      const viewportOffsetTop = viewport?.offsetTop ?? 0;
+      const visibleBottom = window.scrollY + viewportHeight + viewportOffsetTop;
+      const pageBottom = document.documentElement.scrollHeight;
+      const nearBottom = visibleBottom >= pageBottom - 32;
+
+      setIsToolbarVisible(nearBottom);
+
       if (!viewport) {
         setToolbarBottomPx(75);
         return;
@@ -498,19 +507,21 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       setToolbarBottomPx(keyboardInset > 0 ? keyboardInset : 75);
     };
 
-    updateToolbarPosition();
+    updateToolbarState();
 
     const viewport = window.visualViewport;
-    viewport?.addEventListener("resize", updateToolbarPosition);
-    viewport?.addEventListener("scroll", updateToolbarPosition);
-    window.addEventListener("resize", updateToolbarPosition);
-    window.addEventListener("orientationchange", updateToolbarPosition);
+    viewport?.addEventListener("resize", updateToolbarState);
+    viewport?.addEventListener("scroll", updateToolbarState);
+    window.addEventListener("resize", updateToolbarState);
+    window.addEventListener("orientationchange", updateToolbarState);
+    window.addEventListener("scroll", updateToolbarState, { passive: true });
 
     return () => {
-      viewport?.removeEventListener("resize", updateToolbarPosition);
-      viewport?.removeEventListener("scroll", updateToolbarPosition);
-      window.removeEventListener("resize", updateToolbarPosition);
-      window.removeEventListener("orientationchange", updateToolbarPosition);
+      viewport?.removeEventListener("resize", updateToolbarState);
+      viewport?.removeEventListener("scroll", updateToolbarState);
+      window.removeEventListener("resize", updateToolbarState);
+      window.removeEventListener("orientationchange", updateToolbarState);
+      window.removeEventListener("scroll", updateToolbarState);
     };
   }, []);
 
@@ -810,7 +821,9 @@ export default function DraftEditor({ draftId }: DraftEditorProps) {
       {error ? <p className="text-sm">{error}</p> : null}
 
       <div
-        className="fixed bottom-[75px] left-0 right-0 z-30 mx-auto flex w-full max-w-md items-center justify-between gap-2 rounded-t-2xl bg-[#2F7EA1] px-4 py-3 text-white shadow-lg"
+        className={`fixed bottom-[75px] left-0 right-0 z-30 mx-auto flex w-full max-w-md items-center justify-between gap-2 rounded-t-2xl bg-[#2F7EA1] px-4 py-3 text-white shadow-lg transition-all duration-200 ${
+          isToolbarVisible ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-6 opacity-0"
+        }`}
         style={{
           bottom: `${toolbarBottomPx}px`,
           paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)"
