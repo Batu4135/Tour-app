@@ -35,25 +35,6 @@ export default function DraftPdfPage() {
     setIsPrinting(true);
 
     try {
-      const popup = window.open(pdfUrl, "_blank");
-      if (popup) {
-        window.setTimeout(() => {
-          try {
-            popup.focus();
-            popup.print();
-          } catch {
-            // Fallback below.
-          } finally {
-            setIsPrinting(false);
-          }
-        }, 700);
-        return;
-      }
-    } catch {
-      // Fallback below.
-    }
-
-    try {
       const frameWindow = iframeRef.current?.contentWindow;
       if (frameWindow) {
         frameWindow.focus();
