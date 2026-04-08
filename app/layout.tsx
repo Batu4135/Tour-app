@@ -52,7 +52,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             >
               {children}
             </main>
-            <BottomNav />
+            <div className="absolute inset-x-0 bottom-0 z-40 bg-[#F8F9FA]">
+              <BottomNav />
+            </div>
           </div>
         </NextIntlClientProvider>
       </body>
