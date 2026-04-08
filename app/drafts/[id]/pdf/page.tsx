@@ -9,12 +9,10 @@ import { useTranslations } from "next-intl";
 export default function DraftPdfPage() {
   const t = useTranslations("draftPdfViewer");
   const params = useParams<{ id: string }>();
-  const printFrameRef = useRef<HTMLIFrameElement | null>(null);
-  const pendingPrintRef = useRef(false);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const draftId = Number.parseInt(params.id, 10);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
-  const [isPrintLoaded, setIsPrintLoaded] = useState(false);
   const previewPdfUrl = useMemo(
     () => (Number.isFinite(draftId) ? `/api/drafts/${draftId}/pdf?mode=preview` : ""),
     [draftId]
@@ -26,21 +24,13 @@ export default function DraftPdfPage() {
 
   useEffect(() => {
     setIsLoaded(false);
-    setIsPrintLoaded(false);
-    pendingPrintRef.current = false;
   }, [previewPdfUrl]);
 
-  function triggerPrintFrame() {
-    const frameWindow = printFrameRef.current?.contentWindow;
-    if (!frameWindow) return false;
-
-    try {
-      frameWindow.focus();
-      frameWindow.print();
-      window.setTimeout(() => setIsPrinting(false), 400);
-      return true;
-    } catch {
-      return false;
+  function openPdfDirectly(targetUrl: string) {
+    if (!targetUrl) return;
+    const popup = window.open(targetUrl, "_blank", "noopener,noreferrer");
+    if (!popup) {
+      window.location.assign(targetUrl);
     }
   }
 
@@ -48,11 +38,39 @@ export default function DraftPdfPage() {
     if (!printPdfUrl) return;
     setIsPrinting(true);
 
-    if (isPrintLoaded && triggerPrintFrame()) {
-      return;
+    try {
+      const popup = window.open(printPdfUrl, "_blank");
+      if (popup) {
+        window.setTimeout(() => {
+          try {
+            popup.focus();
+            popup.print();
+          } catch {
+            // Fallback below.
+          } finally {
+            setIsPrinting(false);
+          }
+        }, 700);
+        return;
+      }
+    } catch {
+      // Fallback below.
     }
 
-    pendingPrintRef.current = true;
+    try {
+      const frameWindow = iframeRef.current?.contentWindow;
+      if (frameWindow) {
+        frameWindow.focus();
+        frameWindow.print();
+        window.setTimeout(() => setIsPrinting(false), 600);
+        return;
+      }
+    } catch {
+      // Fallback below.
+    }
+
+    openPdfDirectly(printPdfUrl);
+    window.setTimeout(() => setIsPrinting(false), 600);
   }
 
   if (!Number.isFinite(draftId)) {
@@ -92,6 +110,7 @@ export default function DraftPdfPage() {
       <div className="card space-y-3">
         {!isLoaded ? <p className="text-sm text-[#4A4A4A]/65">{t("loadingPdf")}</p> : null}
         <iframe
+          ref={iframeRef}
           title={t("frameTitle", { id: draftId })}
           src={previewPdfUrl}
           className="h-[72vh] w-full rounded-xl border border-[#E5E5E5] bg-white"
@@ -99,24 +118,6 @@ export default function DraftPdfPage() {
         />
         <p className="text-xs text-[#4A4A4A]/65">{t("printHint")}</p>
       </div>
-
-      <iframe
-        ref={printFrameRef}
-        title={`${t("frameTitle", { id: draftId })}-print`}
-        src={printPdfUrl}
-        className="hidden"
-        onLoad={() => {
-          setIsPrintLoaded(true);
-          if (pendingPrintRef.current) {
-            pendingPrintRef.current = false;
-            window.setTimeout(() => {
-              if (!triggerPrintFrame()) {
-                setIsPrinting(false);
-              }
-            }, 220);
-          }
-        }}
-      />
     </section>
   );
 }
