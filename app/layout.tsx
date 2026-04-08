@@ -44,14 +44,16 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <html lang={locale}>
       <body className={`${manrope.className} bg-[#F8F9FA] text-[#4A4A4A]`}>
         <NextIntlClientProvider messages={messages} locale={locale}>
-          <AppHeader />
-          <main
-            className="mx-auto min-h-screen w-full max-w-md px-4 pt-2"
-            style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 140px)" }}
-          >
-            {children}
-          </main>
-          <BottomNav />
+          <div className="relative mx-auto flex h-[100lvh] w-full max-w-md flex-col overflow-hidden bg-[#F8F9FA]">
+            <AppHeader />
+            <main
+              className="flex-1 overflow-y-auto px-4 pt-2"
+              style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 140px)" }}
+            >
+              {children}
+            </main>
+            <BottomNav />
+          </div>
         </NextIntlClientProvider>
       </body>
     </html>
