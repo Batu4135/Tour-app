@@ -165,7 +165,6 @@
                            "printNow":  "Yazdır",
                            "openingPrint":  "Yazdırma menüsü...",
                            "loadingPdf":  "PDF hazırlanıyor...",
-                           "preparingError":  "PDF hazırlanamadı.",
                            "printHint":  "Yazdırma menüsü hemen açılmazsa önce PDF'e, sonra tekrar Yazdır'a dokun.",
                            "frameTitle":  "Fatura PDF {id}"
                        },

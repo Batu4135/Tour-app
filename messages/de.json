@@ -166,7 +166,6 @@
     "printNow": "Drucken",
     "openingPrint": "Druckmenue...",
     "loadingPdf": "PDF wird vorbereitet...",
-    "preparingError": "PDF konnte nicht vorbereitet werden.",
     "printHint": "Wenn das Druckmenue nicht sofort erscheint, tippe kurz auf PDF und danach nochmal auf Drucken.",
     "frameTitle": "Vordruck PDF {id}"
   },
