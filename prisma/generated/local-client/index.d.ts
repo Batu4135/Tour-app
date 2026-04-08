@@ -10528,7 +10528,7 @@ export namespace Prisma {
     readonly id: FieldRef<"DraftLine", 'Int'>
     readonly draftId: FieldRef<"DraftLine", 'Int'>
     readonly productId: FieldRef<"DraftLine", 'Int'>
-    readonly quantity: FieldRef<"DraftLine", 'Int'>
+    readonly quantity: FieldRef<"DraftLine", 'Float'>
     readonly unitPriceCents: FieldRef<"DraftLine", 'Int'>
     readonly createdAt: FieldRef<"DraftLine", 'DateTime'>
     readonly updatedAt: FieldRef<"DraftLine", 'DateTime'>
@@ -12654,7 +12654,7 @@ export namespace Prisma {
     id?: IntFilter<"DraftLine"> | number
     draftId?: IntFilter<"DraftLine"> | number
     productId?: IntFilter<"DraftLine"> | number
-    quantity?: IntFilter<"DraftLine"> | number
+    quantity?: FloatFilter<"DraftLine"> | number
     unitPriceCents?: IntFilter<"DraftLine"> | number
     createdAt?: DateTimeFilter<"DraftLine"> | Date | string
     updatedAt?: DateTimeFilter<"DraftLine"> | Date | string
@@ -12681,7 +12681,7 @@ export namespace Prisma {
     NOT?: DraftLineWhereInput | DraftLineWhereInput[]
     draftId?: IntFilter<"DraftLine"> | number
     productId?: IntFilter<"DraftLine"> | number
-    quantity?: IntFilter<"DraftLine"> | number
+    quantity?: FloatFilter<"DraftLine"> | number
     unitPriceCents?: IntFilter<"DraftLine"> | number
     createdAt?: DateTimeFilter<"DraftLine"> | Date | string
     updatedAt?: DateTimeFilter<"DraftLine"> | Date | string
@@ -12711,7 +12711,7 @@ export namespace Prisma {
     id?: IntWithAggregatesFilter<"DraftLine"> | number
     draftId?: IntWithAggregatesFilter<"DraftLine"> | number
     productId?: IntWithAggregatesFilter<"DraftLine"> | number
-    quantity?: IntWithAggregatesFilter<"DraftLine"> | number
+    quantity?: FloatWithAggregatesFilter<"DraftLine"> | number
     unitPriceCents?: IntWithAggregatesFilter<"DraftLine"> | number
     createdAt?: DateTimeWithAggregatesFilter<"DraftLine"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"DraftLine"> | Date | string
@@ -13427,7 +13427,7 @@ export namespace Prisma {
 
   export type DraftLineUpdateInput = {
     id?: IntFieldUpdateOperationsInput | number
-    quantity?: IntFieldUpdateOperationsInput | number
+    quantity?: FloatFieldUpdateOperationsInput | number
     unitPriceCents?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -13439,7 +13439,7 @@ export namespace Prisma {
     id?: IntFieldUpdateOperationsInput | number
     draftId?: IntFieldUpdateOperationsInput | number
     productId?: IntFieldUpdateOperationsInput | number
-    quantity?: IntFieldUpdateOperationsInput | number
+    quantity?: FloatFieldUpdateOperationsInput | number
     unitPriceCents?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -13457,7 +13457,7 @@ export namespace Prisma {
 
   export type DraftLineUpdateManyMutationInput = {
     id?: IntFieldUpdateOperationsInput | number
-    quantity?: IntFieldUpdateOperationsInput | number
+    quantity?: FloatFieldUpdateOperationsInput | number
     unitPriceCents?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -13467,7 +13467,7 @@ export namespace Prisma {
     id?: IntFieldUpdateOperationsInput | number
     draftId?: IntFieldUpdateOperationsInput | number
     productId?: IntFieldUpdateOperationsInput | number
-    quantity?: IntFieldUpdateOperationsInput | number
+    quantity?: FloatFieldUpdateOperationsInput | number
     unitPriceCents?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -14127,6 +14127,17 @@ export namespace Prisma {
     _max?: NestedDateTimeNullableFilter<$PrismaModel>
   }
 
+  export type FloatFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel>
+    in?: number[]
+    notIn?: number[]
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatFilter<$PrismaModel> | number
+  }
+
   export type DraftRelationFilter = {
     is?: DraftWhereInput
     isNot?: DraftWhereInput
@@ -14176,6 +14187,22 @@ export namespace Prisma {
     productId?: SortOrder
     quantity?: SortOrder
     unitPriceCents?: SortOrder
+  }
+
+  export type FloatWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel>
+    in?: number[]
+    notIn?: number[]
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatWithAggregatesFilter<$PrismaModel> | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedFloatFilter<$PrismaModel>
+    _min?: NestedFloatFilter<$PrismaModel>
+    _max?: NestedFloatFilter<$PrismaModel>
   }
 
   export type UserNullableRelationFilter = {
@@ -14662,6 +14689,14 @@ export namespace Prisma {
     connect?: ProductWhereUniqueInput
   }
 
+  export type FloatFieldUpdateOperationsInput = {
+    set?: number
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
+  }
+
   export type DraftUpdateOneRequiredWithoutLinesNestedInput = {
     create?: XOR<DraftCreateWithoutLinesInput, DraftUncheckedCreateWithoutLinesInput>
     connectOrCreate?: DraftCreateOrConnectWithoutLinesInput
@@ -14907,6 +14942,22 @@ export namespace Prisma {
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedDateTimeNullableFilter<$PrismaModel>
     _max?: NestedDateTimeNullableFilter<$PrismaModel>
+  }
+
+  export type NestedFloatWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel>
+    in?: number[]
+    notIn?: number[]
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatWithAggregatesFilter<$PrismaModel> | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedFloatFilter<$PrismaModel>
+    _min?: NestedFloatFilter<$PrismaModel>
+    _max?: NestedFloatFilter<$PrismaModel>
   }
 
   export type InvoiceRevisionCreateWithoutAuthorInput = {
@@ -15228,7 +15279,7 @@ export namespace Prisma {
     id?: IntFilter<"DraftLine"> | number
     draftId?: IntFilter<"DraftLine"> | number
     productId?: IntFilter<"DraftLine"> | number
-    quantity?: IntFilter<"DraftLine"> | number
+    quantity?: FloatFilter<"DraftLine"> | number
     unitPriceCents?: IntFilter<"DraftLine"> | number
     createdAt?: DateTimeFilter<"DraftLine"> | Date | string
     updatedAt?: DateTimeFilter<"DraftLine"> | Date | string
@@ -16053,7 +16104,7 @@ export namespace Prisma {
 
   export type DraftLineUpdateWithoutProductInput = {
     id?: IntFieldUpdateOperationsInput | number
-    quantity?: IntFieldUpdateOperationsInput | number
+    quantity?: FloatFieldUpdateOperationsInput | number
     unitPriceCents?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -16063,7 +16114,7 @@ export namespace Prisma {
   export type DraftLineUncheckedUpdateWithoutProductInput = {
     id?: IntFieldUpdateOperationsInput | number
     draftId?: IntFieldUpdateOperationsInput | number
-    quantity?: IntFieldUpdateOperationsInput | number
+    quantity?: FloatFieldUpdateOperationsInput | number
     unitPriceCents?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -16072,7 +16123,7 @@ export namespace Prisma {
   export type DraftLineUncheckedUpdateManyWithoutProductInput = {
     id?: IntFieldUpdateOperationsInput | number
     draftId?: IntFieldUpdateOperationsInput | number
-    quantity?: IntFieldUpdateOperationsInput | number
+    quantity?: FloatFieldUpdateOperationsInput | number
     unitPriceCents?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -16097,7 +16148,7 @@ export namespace Prisma {
 
   export type DraftLineUpdateWithoutDraftInput = {
     id?: IntFieldUpdateOperationsInput | number
-    quantity?: IntFieldUpdateOperationsInput | number
+    quantity?: FloatFieldUpdateOperationsInput | number
     unitPriceCents?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -16107,7 +16158,7 @@ export namespace Prisma {
   export type DraftLineUncheckedUpdateWithoutDraftInput = {
     id?: IntFieldUpdateOperationsInput | number
     productId?: IntFieldUpdateOperationsInput | number
-    quantity?: IntFieldUpdateOperationsInput | number
+    quantity?: FloatFieldUpdateOperationsInput | number
     unitPriceCents?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -16116,7 +16167,7 @@ export namespace Prisma {
   export type DraftLineUncheckedUpdateManyWithoutDraftInput = {
     id?: IntFieldUpdateOperationsInput | number
     productId?: IntFieldUpdateOperationsInput | number
-    quantity?: IntFieldUpdateOperationsInput | number
+    quantity?: FloatFieldUpdateOperationsInput | number
     unitPriceCents?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { LicenseType, getLicenseDetails } from "@/lib/license";
 import { getProductPopularityMap } from "@/lib/productPopularity";
 import { rankProductsBySearch } from "@/lib/productSearch";
+import { roundQuantity } from "@/lib/quantity";
 
 export const runtime = "nodejs";
 
@@ -26,7 +27,7 @@ const updateDraftSchema = z.object({
     .array(
       z.object({
         productId: z.number().int().positive(),
-        quantity: z.number().int().min(0),
+        quantity: z.number().min(0),
         unitPriceCents: z.number().int().min(0)
       })
     )
@@ -164,12 +165,12 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   const lines = body.lines as IncomingLine[];
 
   const sanitized = lines
-    .filter((line) => line.quantity > 0 && line.unitPriceCents >= 0)
     .map((line) => ({
       productId: Math.round(line.productId),
-      quantity: Math.round(line.quantity),
+      quantity: roundQuantity(line.quantity),
       unitPriceCents: Math.round(line.unitPriceCents)
-    }));
+    }))
+    .filter((line) => line.quantity > 0 && line.unitPriceCents >= 0);
 
   if (sanitized.some((line) => !Number.isFinite(line.productId) || line.productId <= 0)) {
     return badRequest("Mindestens eine Produkt-ID ist ungueltig.");

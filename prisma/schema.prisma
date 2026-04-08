@@ -127,7 +127,7 @@ model DraftLine {
   id             Int     @id @default(autoincrement())
   draftId        Int
   productId      Int
-  quantity       Int
+  quantity       Float
   unitPriceCents Int
   createdAt      DateTime @default(now())
   updatedAt      DateTime @default(now()) @updatedAt

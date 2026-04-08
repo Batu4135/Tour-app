@@ -127,7 +127,7 @@ model DraftLine {
   id             Int      @id
   draftId        Int
   productId      Int
-  quantity       Int
+  quantity       Float
   unitPriceCents Int
   createdAt      DateTime
   updatedAt      DateTime

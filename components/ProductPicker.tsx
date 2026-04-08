@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { formatCents, parseEuroToCents } from "@/lib/formatCents";
 import { LicenseType, getLineLicenseTotals } from "@/lib/license";
 import { rankProductsBySearch } from "@/lib/productSearch";
+import { formatQuantity, multiplyCentsByQuantity, parseQuantityInput, roundQuantity } from "@/lib/quantity";
 
 export type ProductOption = {
   id: number;
@@ -66,6 +67,7 @@ export default function ProductPicker({
   const [suggestions, setSuggestions] = useState<ProductOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [priceInputs, setPriceInputs] = useState<Record<number, string>>({});
+  const [quantityInputs, setQuantityInputs] = useState<Record<number, string>>({});
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(query.trim()), 180);
@@ -77,6 +79,16 @@ export default function ProductPicker({
       const next: Record<number, string> = {};
       for (const item of selectedItems) {
         next[item.productId] = prev[item.productId] ?? priceText(item.unitPriceCents);
+      }
+      return next;
+    });
+  }, [selectedItems]);
+
+  useEffect(() => {
+    setQuantityInputs((prev) => {
+      const next: Record<number, string> = {};
+      for (const item of selectedItems) {
+        next[item.productId] = prev[item.productId] ?? formatQuantity(item.quantity);
       }
       return next;
     });
@@ -132,7 +144,7 @@ export default function ProductPicker({
           licenseType: item.licenseType ?? licenseTypeMap[item.productId],
           licenseWeightGrams: item.licenseWeightGrams ?? licenseWeightGramsMap[item.productId]
         });
-        return sum + item.quantity * item.unitPriceCents + (includeLicenseFee ? lineFeeCents : 0);
+        return sum + multiplyCentsByQuantity(item.quantity, item.unitPriceCents) + (includeLicenseFee ? lineFeeCents : 0);
       }, 0),
     [includeLicenseFee, licenseFeeMap, licenseTypeMap, licenseWeightGramsMap, selectedItems]
   );
@@ -140,15 +152,15 @@ export default function ProductPicker({
   function addProduct(product: ProductOption) {
     const existing = selectedItems.find((item) => item.productId === product.id);
     if (existing) {
-      onChange(
-        selectedItems.map((item) =>
-          item.productId === product.id ? { ...item, quantity: Math.max(1, item.quantity + 1) } : item
-        )
+      const updatedItems = selectedItems.map((item) =>
+        item.productId === product.id ? { ...item, quantity: roundQuantity(Math.max(1, item.quantity + 1)) } : item
       );
+      const updatedItem = updatedItems.find((item) => item.productId === product.id);
+      const remainingItems = updatedItems.filter((item) => item.productId !== product.id);
+      onChange(updatedItem ? [updatedItem, ...remainingItems] : updatedItems);
     } else {
       const price = priceOverrides[product.id] ?? product.defaultPriceCents ?? 0;
       onChange([
-        ...selectedItems,
         {
           productId: product.id,
           sku: product.sku,
@@ -158,7 +170,8 @@ export default function ProductPicker({
           licenseType: product.licenseType ?? licenseTypeMap[product.id],
           licenseWeightGrams: product.licenseWeightGrams ?? licenseWeightGramsMap[product.id],
           licenseFeeCents: product.licenseFeeCents ?? licenseFeeMap[product.id] ?? 0
-        }
+        },
+        ...selectedItems
       ]);
     }
     setQuery("");
@@ -166,21 +179,27 @@ export default function ProductPicker({
   }
 
   function updateQuantity(productId: number, value: string) {
+    setQuantityInputs((prev) => ({ ...prev, [productId]: value }));
     if (value.trim() === "") {
       onChange(selectedItems.map((item) => (item.productId === productId ? { ...item, quantity: 0 } : item)));
       return;
     }
 
-    const parsed = Number.parseInt(value, 10);
-    if (!Number.isFinite(parsed)) return;
+    const normalized = value.trim().replace(/\s+/g, "").replace(",", ".");
+    if (normalized.endsWith(".")) return;
+
+    const parsed = parseQuantityInput(value);
+    if (parsed === null) return;
     const quantity = Math.max(0, parsed);
     onChange(selectedItems.map((item) => (item.productId === productId ? { ...item, quantity } : item)));
   }
 
   function normalizeQuantity(productId: number) {
-    const current = selectedItems.find((item) => item.productId === productId);
-    if (!current || current.quantity >= 1) return;
-    onChange(selectedItems.map((item) => (item.productId === productId ? { ...item, quantity: 1 } : item)));
+    const raw = quantityInputs[productId] ?? "";
+    const parsed = parseQuantityInput(raw);
+    const quantity = parsed !== null && parsed > 0 ? parsed : 1;
+    onChange(selectedItems.map((item) => (item.productId === productId ? { ...item, quantity } : item)));
+    setQuantityInputs((prev) => ({ ...prev, [productId]: formatQuantity(quantity) }));
   }
 
   function updateUnitPrice(productId: number, cents: number) {
@@ -278,7 +297,7 @@ export default function ProductPicker({
             licenseType: item.licenseType ?? licenseTypeMap[item.productId],
             licenseWeightGrams: item.licenseWeightGrams ?? licenseWeightGramsMap[item.productId]
           });
-          const lineTotal = item.quantity * item.unitPriceCents + (includeLicenseFee ? lineFeeCents : 0);
+          const lineTotal = multiplyCentsByQuantity(item.quantity, item.unitPriceCents) + (includeLicenseFee ? lineFeeCents : 0);
           return (
             <div
               key={item.productId}
@@ -304,10 +323,10 @@ export default function ProductPicker({
                   <label className="mb-1 block text-xs text-[#4A4A4A]/65">{t("quantity")}</label>
                   <input
                     className="input !px-3 !py-2"
-                    type="number"
-                    min={1}
-                    value={item.quantity}
-                    inputMode="numeric"
+                    type="text"
+                    value={quantityInputs[item.productId] ?? formatQuantity(item.quantity)}
+                    inputMode="decimal"
+                    autoComplete="off"
                     onFocus={(event) => event.currentTarget.select()}
                     onChange={(event) => updateQuantity(item.productId, event.target.value)}
                     onBlur={() => normalizeQuantity(item.productId)}

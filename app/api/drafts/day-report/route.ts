@@ -5,6 +5,7 @@ import { requireAuth } from "@/lib/requireAuth";
 import { badRequest, unauthorized } from "@/lib/http";
 import { getLineLicenseTotals } from "@/lib/license";
 import { calculateDraftTotals } from "@/lib/draftTotals";
+import { formatQuantity, multiplyCentsByQuantity } from "@/lib/quantity";
 
 export const runtime = "nodejs";
 
@@ -150,8 +151,8 @@ export async function GET(request: Request) {
       for (const line of draft.lines) {
         ensureSpace(draft.includeLicenseFee ? 24 : 18);
         const { details, lineFeeCents } = getLineLicenseTotals(line.quantity, line.product ?? {});
-        const lineTotal = line.quantity * line.unitPriceCents + (draft.includeLicenseFee ? lineFeeCents : 0);
-        const lineText = `${line.quantity} x ${line.product.name}`;
+        const lineTotal = multiplyCentsByQuantity(line.quantity, line.unitPriceCents) + (draft.includeLicenseFee ? lineFeeCents : 0);
+        const lineText = `${formatQuantity(line.quantity)} x ${line.product.name}`;
         const clipped = lineText.length > 72 ? `${lineText.slice(0, 69)}...` : lineText;
         page.drawText(clipped, {
           x: left + 10,

@@ -1,4 +1,5 @@
 import { getLineLicenseTotals } from "@/lib/license";
+import { multiplyCentsByQuantity, roundQuantity } from "@/lib/quantity";
 
 const VAT_RATE = 0.19;
 
@@ -22,12 +23,12 @@ function normalizeCents(value: number | null | undefined): number {
 
 export function calculateDraftTotals(input: DraftTotalsInput) {
   const productSubtotalCents = input.lines.reduce(
-    (sum, line) => sum + Math.max(0, line.quantity) * normalizeCents(line.unitPriceCents),
+    (sum, line) => sum + multiplyCentsByQuantity(line.quantity, normalizeCents(line.unitPriceCents)),
     0
   );
 
   const licenseTotalCents = input.lines.reduce((sum, line) => {
-    const { lineFeeCents } = getLineLicenseTotals(Math.max(0, line.quantity), line.product ?? {});
+    const { lineFeeCents } = getLineLicenseTotals(roundQuantity(line.quantity), line.product ?? {});
     return sum + lineFeeCents;
   }, 0);
 

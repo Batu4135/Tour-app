@@ -1,6 +1,7 @@
 import { PDFDocument, PDFFont, StandardFonts, rgb } from "pdf-lib";
 import { getLineLicenseTotals, summarizeLicenseByType } from "@/lib/license";
 import { calculateDraftTotals } from "@/lib/draftTotals";
+import { formatQuantity, multiplyCentsByQuantity } from "@/lib/quantity";
 
 export type DraftVoucherFonts = {
   regular: PDFFont;
@@ -225,12 +226,12 @@ export function drawDraftVoucherPage(
   lines.forEach((line: any, index: number) => {
     const y = rowStartY - index * rowHeight;
     const { details, lineFeeCents } = getLineLicenseTotals(line.quantity, line.product ?? {});
-    const lineTotal = line.quantity * line.unitPriceCents + (draft.includeLicenseFee ? lineFeeCents : 0);
+    const lineTotal = multiplyCentsByQuantity(line.quantity, line.unitPriceCents) + (draft.includeLicenseFee ? lineFeeCents : 0);
     const sku = String(line.product?.sku ?? "").trim();
     const productName = String(line.product?.name ?? "").trim();
     const labelRaw = options?.showSku && sku.length > 0 ? `${sku} ${productName}` : productName;
     const name = labelRaw.slice(0, nameMaxChars);
-    const qtyText = String(line.quantity);
+    const qtyText = formatQuantity(line.quantity);
 
     const badgeWidth = Math.max(s(18), bold.widthOfTextAtSize(qtyText, qtyFontSize) + qtyBadgePaddingX);
     const badgeX = qtyCenter - badgeWidth / 2;

@@ -96,12 +96,12 @@ export function getLineLicenseTotals(quantity: number, input: LicenseProductLike
   lineWeightGrams: number;
   lineFeeCents: number;
 } {
-  const safeQuantity = Math.max(0, Math.round(quantity));
+  const safeQuantity = Math.max(0, quantity);
   const details = getLicenseDetails(input);
   return {
     details,
-    lineWeightGrams: details.licenseWeightGrams * safeQuantity,
-    lineFeeCents: details.unitFeeCents * safeQuantity
+    lineWeightGrams: Math.round(details.licenseWeightGrams * safeQuantity),
+    lineFeeCents: Math.round(details.unitFeeCents * safeQuantity)
   };
 }
 
