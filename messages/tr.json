@@ -163,9 +163,9 @@
                            "backToDrafts":  "Faturalara dön",
                            "backToDraft":  "Faturaya dön",
                            "printNow":  "Yazdır",
-                           "openingPrint":  "Yazdırma menüsü...",
+                           "openingPrint":  "Paylaşılıyor...",
                            "loadingPdf":  "PDF yükleniyor...",
-                           "printHint":  "Yazdırma menüsü hemen açılmazsa önce PDF'e, sonra tekrar Yazdır'a dokun.",
+                           "printHint":  "Yazdır'a dokun ve iPhone menüsünden sonra Yazdır'ı seç.",
                            "frameTitle":  "Fatura PDF {id}"
                        },
     "settings":  {

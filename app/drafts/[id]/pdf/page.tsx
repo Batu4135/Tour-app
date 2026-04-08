@@ -30,16 +30,34 @@ export default function DraftPdfPage() {
     }
   }
 
-  function openPrintMenu() {
+  async function openPrintMenu() {
     if (!pdfUrl) return;
     setIsPrinting(true);
 
     try {
-      const frameWindow = iframeRef.current?.contentWindow;
-      if (frameWindow) {
-        frameWindow.focus();
-        frameWindow.print();
-        window.setTimeout(() => setIsPrinting(false), 600);
+      const response = await fetch(pdfUrl, {
+        cache: "no-store"
+      });
+      if (!response.ok) {
+        throw new Error("PDF could not be loaded");
+      }
+
+      const pdfBlob = await response.blob();
+      const pdfFile = new File([pdfBlob], `vordruck-${draftId}.pdf`, {
+        type: "application/pdf"
+      });
+
+      if (
+        typeof navigator !== "undefined" &&
+        "share" in navigator &&
+        "canShare" in navigator &&
+        navigator.canShare({ files: [pdfFile] })
+      ) {
+        await navigator.share({
+          files: [pdfFile],
+          title: `Vordruck ${draftId}`
+        });
+        setIsPrinting(false);
         return;
       }
     } catch {
@@ -47,7 +65,7 @@ export default function DraftPdfPage() {
     }
 
     openPdfDirectly();
-    window.setTimeout(() => setIsPrinting(false), 600);
+    setIsPrinting(false);
   }
 
   if (!Number.isFinite(draftId)) {
