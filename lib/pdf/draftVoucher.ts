@@ -115,9 +115,10 @@ export function drawDraftVoucherPage(
   const rowDensity = rowHeight / defaultRowHeight;
   const layoutScale = Math.max(0.88, Math.min(1.42, rowDensity + 0.18));
 
-  const headerTitle = options?.headerTitle ?? "Vordruck";
+  const headerTitle = options?.headerTitle ?? "";
   const licenseModeText = draft.includeLicenseFee ? "Inkl. Lizenzierung" : "Ohne Lizenzierung";
   const headerSubtitle = options?.headerSubtitle ?? licenseModeText;
+  const hasHeaderTitle = headerTitle.trim().length > 0;
 
   let headerTitleSize = Math.max(s(7.5), s(options?.headerTitleSize ?? 10) * layoutScale);
   while (regular.widthOfTextAtSize(headerTitle, headerTitleSize) > pageWidth - s(20) && headerTitleSize > s(7)) {
@@ -126,18 +127,24 @@ export function drawDraftVoucherPage(
   const subtitleSize = Math.max(s(7), Math.min(s(10.5), s(8) * layoutScale));
   const customerSize = Math.max(s(16), Math.min(s(26), s(22) * layoutScale));
   const headerLabelSize = Math.max(s(8), Math.min(s(10.5), s(9) * layoutScale));
+  const metaSize = Math.max(s(8.5), Math.min(s(12), s(10) * layoutScale));
+  const metaSubSize = Math.max(s(7), Math.min(s(9.5), s(8.5) * layoutScale));
+  const titleY = hasHeaderTitle ? s(752) : s(0);
+  const subtitleY = hasHeaderTitle ? s(740) : s(752);
 
-  page.drawText(headerTitle, {
-    x: (pageWidth - regular.widthOfTextAtSize(headerTitle, headerTitleSize)) / 2,
-    y: s(752),
-    size: headerTitleSize,
-    font: regular,
-    color: muted
-  });
+  if (hasHeaderTitle) {
+    page.drawText(headerTitle, {
+      x: (pageWidth - regular.widthOfTextAtSize(headerTitle, headerTitleSize)) / 2,
+      y: titleY,
+      size: headerTitleSize,
+      font: regular,
+      color: muted
+    });
+  }
 
   page.drawText(headerSubtitle, {
     x: (pageWidth - regular.widthOfTextAtSize(headerSubtitle, subtitleSize)) / 2,
-    y: s(740),
+    y: subtitleY,
     size: subtitleSize,
     font: regular,
     color: muted
@@ -148,7 +155,7 @@ export function drawDraftVoucherPage(
     text: formatDate(new Date(draft.date)),
     x: lineTotalRight,
     y: s(772),
-    size: s(11),
+    size: metaSize,
     font: regular,
     color: textColor
   });
@@ -158,7 +165,7 @@ export function drawDraftVoucherPage(
     text: `Zahlart: ${paymentMethodText(draft.paymentMethod)}`,
     x: lineTotalRight,
     y: s(758),
-    size: s(8.5),
+    size: metaSubSize,
     font: regular,
     color: muted
   });
@@ -243,9 +250,10 @@ export function drawDraftVoucherPage(
 
     const badgeWidth = Math.max(s(18), bold.widthOfTextAtSize(qtyText, qtyFontSize) + qtyBadgePaddingX);
     const badgeX = qtyCenter - badgeWidth / 2;
+    const badgeY = y - s(2) * rowDensity;
     page.drawRectangle({
       x: badgeX,
-      y: y - s(2) * rowDensity,
+      y: badgeY,
       width: badgeWidth,
       height: qtyBadgeHeight,
       color: rgb(245 / 255, 249 / 255, 252 / 255),
@@ -256,7 +264,7 @@ export function drawDraftVoucherPage(
     const qtyWidth = bold.widthOfTextAtSize(qtyText, qtyFontSize);
     page.drawText(qtyText, {
       x: qtyCenter - qtyWidth / 2,
-      y: y + s(0.5) * rowDensity,
+      y: badgeY + (qtyBadgeHeight - qtyFontSize) / 2 + s(0.2),
       size: qtyFontSize,
       font: bold,
       color: accent
