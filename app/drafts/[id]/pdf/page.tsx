@@ -14,11 +14,11 @@ export default function DraftPdfPage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const pdfUrl = useMemo(
-    () => (Number.isFinite(draftId) ? `/api/drafts/${draftId}/pdf` : ""),
+    () => (Number.isFinite(draftId) ? `/api/drafts/${draftId}/pdf?mode=print` : ""),
     [draftId]
   );
   const previewUrl = useMemo(
-    () => (Number.isFinite(draftId) ? `/api/drafts/${draftId}/pdf?mode=preview` : ""),
+    () => (Number.isFinite(draftId) ? `/api/drafts/${draftId}/pdf` : ""),
     [draftId]
   );
 

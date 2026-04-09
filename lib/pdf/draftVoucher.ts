@@ -87,6 +87,7 @@ export function drawDraftVoucherPage(
   const { regular, bold } = fonts;
   const pageSize = options?.pageSize ?? "A6";
   const scale = pageSize === "A4" ? 1 : A6_SCALE;
+  const isPrintLayout = pageSize === "A4";
   const pageWidth = pageSize === "A4" ? A4_WIDTH : A6_WIDTH;
   const pageHeight = pageSize === "A4" ? A4_HEIGHT : A6_HEIGHT;
   const s = (value: number) => value * scale;
@@ -111,9 +112,11 @@ export function drawDraftVoucherPage(
   const lineCount = Math.max(1, lines.length);
   const availableRowHeight = Math.max(s(80), rowStartY - minSummaryTop - summaryGap);
   const idealRowHeight = availableRowHeight / lineCount;
-  const rowHeight = Math.max(s(21), Math.min(s(60), idealRowHeight));
+  const rowHeight = Math.max(s(21), Math.min(isPrintLayout ? s(60) : s(46), idealRowHeight));
   const rowDensity = rowHeight / defaultRowHeight;
-  const layoutScale = Math.max(0.88, Math.min(1.42, rowDensity + 0.18));
+  const layoutScale = isPrintLayout
+    ? Math.max(0.88, Math.min(1.42, rowDensity + 0.18))
+    : Math.max(0.84, Math.min(1.02, rowDensity + 0.02));
 
   const headerTitle = options?.headerTitle ?? "";
   const licenseModeText = draft.includeLicenseFee ? "Inkl. Lizenzierung" : "Ohne Lizenzierung";
@@ -210,7 +213,7 @@ export function drawDraftVoucherPage(
 
   const rowFontSize = Math.max(s(6.5), Math.min(s(15), rowHeight * 0.56));
   const qtyFontSize = Math.max(s(5.5), Math.min(s(12.5), rowHeight * 0.46));
-  const qtyBadgeHeight = Math.max(s(4.5), Math.min(s(19) * rowDensity, rowHeight * 1.05));
+  const qtyBadgeHeight = Math.max(s(4.5), Math.min((isPrintLayout ? s(19) : s(16)) * rowDensity, rowHeight * 0.95));
   const qtyBadgePaddingX = Math.max(s(4), s(12) * rowDensity);
   const rowDividerOffset = Math.min(rowHeight * 0.72, Math.max(s(1.6), s(9) * rowDensity));
   const nameMaxCharsBase = rowDensity > 1.2 ? 42 : rowDensity > 0.9 ? 36 : rowDensity > 0.7 ? 30 : 24;
@@ -315,7 +318,9 @@ export function drawDraftVoucherPage(
     : [];
   const usedRows = Math.max(1, lines.length);
   const summaryTop = rowStartY - usedRows * rowHeight - summaryGap - noteBlockHeight;
-  const summaryScale = Math.max(0.9, Math.min(1.18, rowDensity + 0.12));
+  const summaryScale = isPrintLayout
+    ? Math.max(0.9, Math.min(1.18, rowDensity + 0.12))
+    : Math.max(0.86, Math.min(1.02, rowDensity + 0.04));
   const summaryLabelSize = s(10) * summaryScale;
   const summaryValueSize = s(12) * summaryScale;
   const summaryTotalSize = s(25) * summaryScale;
