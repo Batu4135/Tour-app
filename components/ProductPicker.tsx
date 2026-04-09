@@ -158,12 +158,8 @@ export default function ProductPicker({
   function addProduct(product: ProductOption) {
     const existing = selectedItems.find((item) => item.productId === product.id);
     if (existing) {
-      const updatedItems = selectedItems.map((item) =>
-        item.productId === product.id ? { ...item, quantity: roundQuantity(Math.max(1, item.quantity + 1)) } : item
-      );
-      const updatedItem = updatedItems.find((item) => item.productId === product.id);
-      const remainingItems = updatedItems.filter((item) => item.productId !== product.id);
-      onChange(updatedItem ? [updatedItem, ...remainingItems] : updatedItems);
+      const remainingItems = selectedItems.filter((item) => item.productId !== product.id);
+      onChange([existing, ...remainingItems]);
     } else {
       const price = priceOverrides[product.id] ?? product.defaultPriceCents ?? 0;
       onChange([

@@ -44,7 +44,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <html lang={locale}>
       <body className={`${manrope.className} bg-[#F8F9FA] text-[#4A4A4A]`}>
         <NextIntlClientProvider messages={messages} locale={locale}>
-          <div className="relative mx-auto flex h-[100lvh] w-full max-w-md flex-col overflow-hidden bg-[#F8F9FA]">
+          <div className="relative mx-auto flex h-[100lvh] w-full max-w-md flex-col overflow-hidden bg-[#F8F9FA] md:max-w-[920px]">
             <AppHeader />
             <main
               className="flex-1 overflow-y-auto px-4 pt-2"

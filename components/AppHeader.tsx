@@ -10,7 +10,7 @@ export default function AppHeader() {
   if (pathname === "/login") return null;
 
   return (
-    <header className="mx-auto w-full max-w-md pt-3">
+    <header className="mx-auto w-full max-w-md pt-3 md:max-w-[920px]">
       <div className="flex justify-center">
         <Link href="/drafts" className="inline-flex items-center justify-center" aria-label="Fatura">
           <Image

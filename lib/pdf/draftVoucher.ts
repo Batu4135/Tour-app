@@ -99,7 +99,8 @@ export function drawDraftVoucherPage(
   const left = s(56);
   const right = s(539);
   const qtyCenter = s(80);
-  const productX = s(118);
+  const skuX = options?.showSku ? s(112) : s(118);
+  const productX = options?.showSku ? s(168) : s(118);
   const lineTotalRight = s(528);
 
   const headerTitle = options?.headerTitle ?? "Vordruck";
@@ -166,6 +167,9 @@ export function drawDraftVoucherPage(
     thickness: s(1)
   });
   page.drawText("Menge", { x: s(62), y: headerY, size: s(9), font: bold, color: muted });
+  if (options?.showSku) {
+    page.drawText("Art.", { x: skuX, y: headerY, size: s(9), font: bold, color: muted });
+  }
   page.drawText("Produkt", { x: productX, y: headerY, size: s(9), font: bold, color: muted });
   drawRightText({
     page,
@@ -198,7 +202,8 @@ export function drawDraftVoucherPage(
   const qtyBadgeHeight = Math.max(s(4.5), Math.min(s(16) * rowDensity, rowHeight * 1.05));
   const qtyBadgePaddingX = Math.max(s(4), s(12) * rowDensity);
   const rowDividerOffset = Math.min(rowHeight * 0.72, Math.max(s(1.6), s(9) * rowDensity));
-  const nameMaxChars = rowDensity > 1.2 ? 42 : rowDensity > 0.9 ? 36 : rowDensity > 0.7 ? 30 : 24;
+  const nameMaxCharsBase = rowDensity > 1.2 ? 42 : rowDensity > 0.9 ? 36 : rowDensity > 0.7 ? 30 : 24;
+  const nameMaxChars = options?.showSku ? Math.max(16, nameMaxCharsBase - 10) : nameMaxCharsBase;
   const noteRaw = (draft.note ?? "").trim();
   const noteLines =
     noteRaw.length > 0
@@ -229,8 +234,7 @@ export function drawDraftVoucherPage(
     const lineTotal = multiplyCentsByQuantity(line.quantity, line.unitPriceCents) + (draft.includeLicenseFee ? lineFeeCents : 0);
     const sku = String(line.product?.sku ?? "").trim();
     const productName = String(line.product?.name ?? "").trim();
-    const labelRaw = options?.showSku && sku.length > 0 ? `${sku} ${productName}` : productName;
-    const name = labelRaw.slice(0, nameMaxChars);
+    const name = productName.slice(0, nameMaxChars);
     const qtyText = formatQuantity(line.quantity);
 
     const badgeWidth = Math.max(s(18), bold.widthOfTextAtSize(qtyText, qtyFontSize) + qtyBadgePaddingX);
@@ -253,6 +257,16 @@ export function drawDraftVoucherPage(
       font: bold,
       color: accent
     });
+
+    if (options?.showSku) {
+      page.drawText(sku.slice(0, 9), {
+        x: skuX,
+        y,
+        size: Math.max(s(6.5), rowFontSize * 0.92),
+        font: regular,
+        color: textColor
+      });
+    }
 
     page.drawText(name, { x: productX, y, size: rowFontSize, font: regular, color: textColor });
     if (draft.includeLicenseFee && details.hasLicense) {

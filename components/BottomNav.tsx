@@ -19,7 +19,7 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="relative mx-auto w-full max-w-md rounded-t-2xl border-t border-[#E5E5E5] bg-white shadow-nav"
+      className="relative mx-auto w-full max-w-md rounded-t-2xl border-t border-[#E5E5E5] bg-white shadow-nav md:max-w-[920px]"
       style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 10px)" }}
       aria-label="Bottom Navigation"
     >

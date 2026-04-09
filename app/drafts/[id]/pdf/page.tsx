@@ -85,7 +85,7 @@ export default function DraftPdfPage() {
   }
 
   return (
-    <section className="space-y-4 pb-[180px]">
+    <section className="mx-auto w-full max-w-[920px] space-y-4 pb-[180px]">
       <div className="card flex items-center justify-between gap-3">
         <Link
           href={`/drafts/${draftId}`}
@@ -113,7 +113,7 @@ export default function DraftPdfPage() {
           ref={iframeRef}
           title={t("frameTitle", { id: draftId })}
           src={pdfUrl}
-          className="h-[72vh] w-full rounded-xl border border-[#E5E5E5] bg-white"
+          className="h-[72vh] min-h-[520px] w-full rounded-xl border border-[#E5E5E5] bg-white md:h-[78vh] md:min-h-[860px]"
           onLoad={() => setIsLoaded(true)}
         />
         <p className="text-xs text-[#4A4A4A]/65">{t("printHint")}</p>
