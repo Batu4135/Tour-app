@@ -13,7 +13,7 @@ type RouteContext = {
   };
 };
 
-export async function GET(_: Request, { params }: RouteContext) {
+export async function GET(request: Request, { params }: RouteContext) {
   const user = await requireAuth();
   if (!user) return unauthorized();
 
@@ -34,7 +34,9 @@ export async function GET(_: Request, { params }: RouteContext) {
 
   const pdf = await PDFDocument.create();
   const fonts = await createDraftVoucherFonts(pdf);
-  drawDraftVoucherPage(pdf, fonts, draft, { showSku: true });
+  const url = new URL(request.url);
+  const pageSize = url.searchParams.get("mode") === "preview" ? "A4" : "A6";
+  drawDraftVoucherPage(pdf, fonts, draft, { showSku: true, pageSize });
   const bytes = await pdf.save();
 
   return new NextResponse(bytes as unknown as BodyInit, {

@@ -17,10 +17,14 @@ export default function DraftPdfPage() {
     () => (Number.isFinite(draftId) ? `/api/drafts/${draftId}/pdf` : ""),
     [draftId]
   );
+  const previewUrl = useMemo(
+    () => (Number.isFinite(draftId) ? `/api/drafts/${draftId}/pdf?mode=preview` : ""),
+    [draftId]
+  );
 
   useEffect(() => {
     setIsLoaded(false);
-  }, [pdfUrl]);
+  }, [previewUrl]);
 
   function openPdfDirectly() {
     if (!pdfUrl) return;
@@ -112,8 +116,8 @@ export default function DraftPdfPage() {
         <iframe
           ref={iframeRef}
           title={t("frameTitle", { id: draftId })}
-          src={pdfUrl}
-          className="h-[72vh] min-h-[520px] w-full rounded-xl border border-[#E5E5E5] bg-white md:h-[78vh] md:min-h-[860px]"
+          src={previewUrl}
+          className="h-[72vh] min-h-[520px] w-full rounded-xl border border-[#E5E5E5] bg-white md:h-[80vh] md:min-h-[980px]"
           onLoad={() => setIsLoaded(true)}
         />
         <p className="text-xs text-[#4A4A4A]/65">{t("printHint")}</p>

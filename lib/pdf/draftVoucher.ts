@@ -13,6 +13,7 @@ type DrawDraftVoucherOptions = {
   headerSubtitle?: string;
   headerTitleSize?: number;
   showSku?: boolean;
+  pageSize?: "A6" | "A4";
 };
 
 const A4_WIDTH = 595;
@@ -21,11 +22,7 @@ export const A6_WIDTH = 298;
 export const A6_HEIGHT = 420;
 const SCALE_X = A6_WIDTH / A4_WIDTH;
 const SCALE_Y = A6_HEIGHT / A4_HEIGHT;
-const SCALE = Math.min(SCALE_X, SCALE_Y);
-
-function s(value: number): number {
-  return value * SCALE;
-}
+const A6_SCALE = Math.min(SCALE_X, SCALE_Y);
 
 function money(cents: number): string {
   return new Intl.NumberFormat("de-DE", {
@@ -88,9 +85,13 @@ export function drawDraftVoucherPage(
   options?: DrawDraftVoucherOptions
 ) {
   const { regular, bold } = fonts;
-  const page = pdf.addPage([A6_WIDTH, A6_HEIGHT]);
+  const pageSize = options?.pageSize ?? "A6";
+  const scale = pageSize === "A4" ? 1 : A6_SCALE;
+  const pageWidth = pageSize === "A4" ? A4_WIDTH : A6_WIDTH;
+  const pageHeight = pageSize === "A4" ? A4_HEIGHT : A6_HEIGHT;
+  const s = (value: number) => value * scale;
+  const page = pdf.addPage([pageWidth, pageHeight]);
 
-  const pageWidth = A6_WIDTH;
   const textColor = rgb(74 / 255, 74 / 255, 74 / 255);
   const accent = rgb(47 / 255, 126 / 255, 161 / 255);
   const soft = rgb(229 / 255, 229 / 255, 229 / 255);
