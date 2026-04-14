@@ -72,6 +72,14 @@ function paymentMethodText(value: string): string {
   return "Bar";
 }
 
+function licenseLabel(type: string): string {
+  if (type === "LA") return "1 Lizenz Alu";
+  if (type === "LK") return "1 Lizenz Kunststoff";
+  if (type === "LV") return "1 Lizenz Verbund";
+  if (type === "LP") return "1 Lizenz Papier";
+  return "1 Lizenz";
+}
+
 export async function createDraftVoucherFonts(pdf: PDFDocument): Promise<DraftVoucherFonts> {
   return {
     regular: await pdf.embedFont(StandardFonts.Helvetica),
@@ -265,7 +273,7 @@ export function drawDraftVoucherPage(
     const name =
       row.type === "product"
         ? String(row.line.product?.name ?? "").trim().slice(0, nameMaxChars)
-        : `${row.entry.licenseType}: ${weightKg(row.entry.totalWeightGrams)} kg`;
+        : `${licenseLabel(row.entry.licenseType)} ${weightKg(row.entry.totalWeightGrams)} kg`;
     const lineTotal =
       row.type === "product"
         ? multiplyCentsByQuantity(row.line.quantity, row.line.unitPriceCents)
