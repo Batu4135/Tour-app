@@ -107,33 +107,36 @@ export function drawDraftVoucherPage(
   const productX = options?.showSku ? s(168) : s(118);
   const lineTotalRight = s(528);
   const lines = Array.isArray(draft.lines) ? draft.lines : [];
-  const rowStartY = s(660);
   const defaultRowHeight = s(32);
   const summaryGap = s(24);
-  const minSummaryTop = s(158);
+  const headerTitle = options?.headerTitle ?? "";
+  const headerSubtitle = options?.headerSubtitle ?? "";
+  const hasHeaderTitle = headerTitle.trim().length > 0;
+  const hasSubtitle = headerSubtitle.trim().length > 0;
+  const headerTopY = hasSubtitle ? s(696) : s(710);
+  const headerLabelY = headerTopY - s(20);
+  const headerBottomY = headerTopY - s(32);
+  const customerY = hasSubtitle ? s(714) : s(730);
+  const rowStartY = headerBottomY - s(6);
+  const minSummaryTop = isPrintLayout ? s(132) : s(158);
   const lineCount = Math.max(1, lines.length);
   const availableRowHeight = Math.max(s(80), rowStartY - minSummaryTop - summaryGap);
   const idealRowHeight = availableRowHeight / lineCount;
-  const rowHeight = Math.max(s(21), Math.min(isPrintLayout ? s(68) : s(46), idealRowHeight));
+  const rowHeight = Math.max(s(21), Math.min(isPrintLayout ? s(74) : s(46), idealRowHeight));
   const rowDensity = rowHeight / defaultRowHeight;
   const layoutScale = isPrintLayout
-    ? Math.max(0.88, Math.min(1.42, rowDensity + 0.18))
-    : Math.max(0.84, Math.min(1.02, rowDensity + 0.02));
-
-  const headerTitle = options?.headerTitle ?? "";
-  const licenseModeText = draft.includeLicenseFee ? "Inkl. Lizenzierung" : "Ohne Lizenzierung";
-  const headerSubtitle = options?.headerSubtitle ?? licenseModeText;
-  const hasHeaderTitle = headerTitle.trim().length > 0;
+    ? Math.max(0.94, Math.min(1.56, rowDensity + 0.28))
+    : Math.max(0.84, Math.min(1.04, rowDensity + 0.04));
 
   let headerTitleSize = Math.max(s(7.5), s(options?.headerTitleSize ?? 10) * layoutScale);
   while (regular.widthOfTextAtSize(headerTitle, headerTitleSize) > pageWidth - s(20) && headerTitleSize > s(7)) {
     headerTitleSize -= s(0.4);
   }
-  const subtitleSize = Math.max(s(7), Math.min(isPrintLayout ? s(12.5) : s(10.5), s(8.4) * layoutScale));
-  const customerSize = Math.max(s(16), Math.min(isPrintLayout ? s(30) : s(26), s(23.5) * layoutScale));
-  const headerLabelSize = Math.max(s(8), Math.min(isPrintLayout ? s(11.5) : s(10.5), s(9.3) * layoutScale));
-  const metaSize = Math.max(s(8.5), Math.min(isPrintLayout ? s(13.5) : s(12), s(10.8) * layoutScale));
-  const metaSubSize = Math.max(s(7), Math.min(isPrintLayout ? s(10.8) : s(9.5), s(8.9) * layoutScale));
+  const subtitleSize = Math.max(s(7), Math.min(isPrintLayout ? s(11.4) : s(10.5), s(8.2) * layoutScale));
+  const customerSize = Math.max(s(16), Math.min(isPrintLayout ? s(34) : s(26), s(25.5) * layoutScale));
+  const headerLabelSize = Math.max(s(8), Math.min(isPrintLayout ? s(12.4) : s(10.5), s(9.8) * layoutScale));
+  const metaSize = Math.max(s(8.5), Math.min(isPrintLayout ? s(15.2) : s(12), s(11.6) * layoutScale));
+  const metaSubSize = Math.max(s(7), Math.min(isPrintLayout ? s(12.2) : s(9.5), s(9.7) * layoutScale));
   const titleY = hasHeaderTitle ? s(752) : s(0);
   const subtitleY = hasHeaderTitle ? s(740) : s(752);
 
@@ -147,13 +150,15 @@ export function drawDraftVoucherPage(
     });
   }
 
-  page.drawText(headerSubtitle, {
-    x: (pageWidth - regular.widthOfTextAtSize(headerSubtitle, subtitleSize)) / 2,
-    y: subtitleY,
-    size: subtitleSize,
-    font: regular,
-    color: muted
-  });
+  if (hasSubtitle) {
+    page.drawText(headerSubtitle, {
+      x: (pageWidth - regular.widthOfTextAtSize(headerSubtitle, subtitleSize)) / 2,
+      y: subtitleY,
+      size: subtitleSize,
+      font: regular,
+      color: muted
+    });
+  }
 
   drawRightText({
     page,
@@ -179,45 +184,45 @@ export function drawDraftVoucherPage(
   const customerWidth = bold.widthOfTextAtSize(customerName, customerSize);
   page.drawText(customerName, {
     x: (pageWidth - customerWidth) / 2,
-    y: s(714),
+    y: customerY,
     size: customerSize,
     font: bold,
     color: textColor
   });
 
-  const headerY = s(676);
   page.drawLine({
-    start: { x: left, y: s(696) },
-    end: { x: right, y: s(696) },
+    start: { x: left, y: headerTopY },
+    end: { x: right, y: headerTopY },
     color: soft,
     thickness: s(1)
   });
-  page.drawText("Menge", { x: s(62), y: headerY, size: headerLabelSize, font: bold, color: muted });
+  page.drawText("Menge", { x: s(62), y: headerLabelY, size: headerLabelSize, font: bold, color: muted });
   if (options?.showSku) {
-    page.drawText("Art.", { x: skuX, y: headerY, size: headerLabelSize, font: bold, color: muted });
+    page.drawText("Art.", { x: skuX, y: headerLabelY, size: headerLabelSize, font: bold, color: muted });
   }
-  page.drawText("Produkt", { x: productX, y: headerY, size: headerLabelSize, font: bold, color: muted });
+  page.drawText("Produkt", { x: productX, y: headerLabelY, size: headerLabelSize, font: bold, color: muted });
   drawRightText({
     page,
     text: "Summe",
     x: lineTotalRight,
-    y: headerY,
+    y: headerLabelY,
     size: headerLabelSize,
     font: bold,
     color: muted
   });
   page.drawLine({
-    start: { x: left, y: s(664) },
-    end: { x: right, y: s(664) },
+    start: { x: left, y: headerBottomY },
+    end: { x: right, y: headerBottomY },
     color: soft,
     thickness: s(1)
   });
 
-  const rowFontSize = Math.max(s(6.5), Math.min(isPrintLayout ? s(16.5) : s(15), rowHeight * 0.52));
-  const qtyFontSize = Math.max(s(5.5), Math.min(isPrintLayout ? s(11.5) : s(12.5), rowHeight * 0.34));
-  const qtyBadgeHeight = Math.max(s(4.5), Math.min(isPrintLayout ? s(14.5) : s(16), rowHeight * 0.42));
-  const qtyBadgePaddingX = Math.max(s(3.5), isPrintLayout ? s(6.5) : s(12) * rowDensity);
-  const nameMaxCharsBase = rowDensity > 1.2 ? 42 : rowDensity > 0.9 ? 36 : rowDensity > 0.7 ? 30 : 24;
+  const rowFontSize = Math.max(s(6.5), Math.min(isPrintLayout ? s(18.5) : s(15), rowHeight * 0.58));
+  const skuFontSize = Math.max(s(6.4), rowFontSize * 0.9);
+  const qtyFontSize = Math.max(s(5.5), Math.min(isPrintLayout ? s(10.5) : s(12.5), rowHeight * 0.28));
+  const qtyBadgeHeight = Math.max(s(4.5), Math.min(isPrintLayout ? s(12.5) : s(16), rowHeight * 0.32));
+  const qtyBadgePaddingX = Math.max(s(3.2), isPrintLayout ? s(5.4) : s(12) * rowDensity);
+  const nameMaxCharsBase = rowDensity > 1.2 ? 48 : rowDensity > 0.9 ? 40 : rowDensity > 0.7 ? 32 : 24;
   const nameMaxChars = options?.showSku ? Math.max(16, nameMaxCharsBase - 10) : nameMaxCharsBase;
   const noteRaw = (draft.note ?? "").trim();
   const noteLines =
@@ -244,8 +249,7 @@ export function drawDraftVoucherPage(
   }
 
   lines.forEach((line: any, index: number) => {
-    const { details, lineFeeCents } = getLineLicenseTotals(line.quantity, line.product ?? {});
-    const lineTotal = multiplyCentsByQuantity(line.quantity, line.unitPriceCents) + (draft.includeLicenseFee ? lineFeeCents : 0);
+    const lineTotal = multiplyCentsByQuantity(line.quantity, line.unitPriceCents);
     const sku = String(line.product?.sku ?? "").trim();
     const productName = String(line.product?.name ?? "").trim();
     const name = productName.slice(0, nameMaxChars);
@@ -253,10 +257,7 @@ export function drawDraftVoucherPage(
     const rowTop = rowStartY - index * rowHeight;
     const rowBottom = rowTop - rowHeight;
     const rowCenterY = (rowTop + rowBottom) / 2;
-    const hasLicenseDetails = draft.includeLicenseFee && details.hasLicense;
-    const small = Math.max(s(5), rowFontSize * 0.62);
-    const primaryY = hasLicenseDetails ? rowCenterY + small * 0.58 : rowCenterY - rowFontSize * 0.28;
-    const secondaryY = rowCenterY - small * 0.95;
+    const primaryY = rowCenterY - rowFontSize * 0.3;
 
     const badgeWidth = Math.max(s(18), bold.widthOfTextAtSize(qtyText, qtyFontSize) + qtyBadgePaddingX);
     const badgeX = qtyCenter - badgeWidth / 2;
@@ -284,22 +285,13 @@ export function drawDraftVoucherPage(
       page.drawText(sku.slice(0, 9), {
         x: skuX,
         y: primaryY,
-        size: Math.max(s(6.5), rowFontSize * 0.92),
+        size: skuFontSize,
         font: regular,
         color: textColor
       });
     }
 
     page.drawText(name, { x: productX, y: primaryY, size: rowFontSize, font: regular, color: textColor });
-    if (hasLicenseDetails) {
-      page.drawText(`${details.licenseType} ${weightKg(details.licenseWeightGrams)} kg - Lizenz ${money(details.unitFeeCents)} / Stk`, {
-        x: productX,
-        y: secondaryY,
-        size: small,
-        font: regular,
-        color: muted
-      });
-    }
 
     drawRightText({
       page,
@@ -325,11 +317,17 @@ export function drawDraftVoucherPage(
   const usedRows = Math.max(1, lines.length);
   const summaryTop = rowStartY - usedRows * rowHeight - summaryGap - noteBlockHeight;
   const summaryScale = isPrintLayout
-    ? Math.max(0.9, Math.min(1.18, rowDensity + 0.12))
+    ? Math.max(0.96, Math.min(1.3, rowDensity + 0.18))
     : Math.max(0.86, Math.min(1.02, rowDensity + 0.04));
-  const summaryLabelSize = s(10) * summaryScale;
-  const summaryValueSize = s(12) * summaryScale;
-  const summaryTotalSize = s(25) * summaryScale;
+  const summaryLabelSize = s(isPrintLayout ? 12 : 10) * summaryScale;
+  const summaryValueSize = s(isPrintLayout ? 14 : 12) * summaryScale;
+  const summaryTotalSize = s(isPrintLayout ? 31 : 25) * summaryScale;
+  const licenseBlockLabelSize = s(isPrintLayout ? 11 : 8.2) * summaryScale;
+  const licenseBlockValueSize = s(isPrintLayout ? 12.5 : 7.8) * summaryScale;
+  const licenseBlockTop = summaryTop;
+  const licenseWeightRight = s(isPrintLayout ? 208 : 160);
+  const licenseFeeRight = s(isPrintLayout ? 288 : 252);
+  const licenseRowGap = s(isPrintLayout ? 15 : 10);
 
   if (noteLines.length > 0) {
     const noteLabelY = summaryTop + noteBlockHeight - s(9);
@@ -352,65 +350,93 @@ export function drawDraftVoucherPage(
   }
 
   if (licenseSummary.length > 0) {
-    page.drawText("Lizenzen (Gewicht):", {
+    page.drawText("Lizenz", {
       x: s(64),
-      y: summaryTop,
-      size: s(8.2),
+      y: licenseBlockTop,
+      size: licenseBlockLabelSize,
+      font: bold,
+      color: muted
+    });
+    drawRightText({
+      page,
+      text: "Gewicht",
+      x: licenseWeightRight,
+      y: licenseBlockTop,
+      size: licenseBlockLabelSize,
+      font: bold,
+      color: muted
+    });
+    drawRightText({
+      page,
+      text: "Summe",
+      x: licenseFeeRight,
+      y: licenseBlockTop,
+      size: licenseBlockLabelSize,
       font: bold,
       color: muted
     });
 
     licenseSummary.slice(0, 4).forEach((entry, index) => {
-      page.drawText(`${entry.licenseType}: ${weightKg(entry.totalWeightGrams)} kg`, {
+      const licenseRowY = licenseBlockTop - licenseRowGap * (index + 1);
+      page.drawText(`${index + 1}x ${entry.licenseType}`, {
         x: s(64),
-        y: summaryTop - s(10 + index * 8),
-        size: s(7.8),
+        y: licenseRowY,
+        size: licenseBlockValueSize,
+        font: regular,
+        color: textColor
+      });
+      drawRightText({
+        page,
+        text: `${weightKg(entry.totalWeightGrams)} kg`,
+        x: licenseWeightRight,
+        y: licenseRowY,
+        size: licenseBlockValueSize,
+        font: regular,
+        color: textColor
+      });
+      drawRightText({
+        page,
+        text: money(entry.totalFeeCents),
+        x: licenseFeeRight,
+        y: licenseRowY,
+        size: licenseBlockValueSize,
         font: regular,
         color: textColor
       });
     });
   }
 
-  let ruleY = summaryTop - s(10) * summaryScale;
-  let totalLabelY = summaryTop - s(32) * summaryScale;
-  let totalValueY = summaryTop - s(38) * summaryScale;
-
-  if (draft.subtractVat) {
-    ruleY = summaryTop;
-    totalLabelY = summaryTop - s(22) * summaryScale;
-    totalValueY = summaryTop - s(28) * summaryScale;
-  } else {
-    page.drawText("Zwischensumme", { x: s(384), y: summaryTop, size: summaryLabelSize, font: regular, color: muted });
-    drawRightText({
-      page,
-      text: money(totals.subtotalCents),
-      x: lineTotalRight,
-      y: summaryTop,
-      size: summaryValueSize,
-      font: regular,
-      color: textColor
-    });
-
-    page.drawText("MWSt 19%", {
-      x: s(384),
-      y: summaryTop - s(20) * summaryScale,
-      size: summaryLabelSize,
-      font: regular,
-      color: muted
-    });
-    drawRightText({
-      page,
-      text: money(totals.vatCents),
-      x: lineTotalRight,
-      y: summaryTop - s(20) * summaryScale,
-      size: summaryValueSize,
-      font: regular,
-      color: textColor
-    });
-    ruleY = summaryTop - s(30) * summaryScale;
-    totalLabelY = summaryTop - s(52) * summaryScale;
-    totalValueY = summaryTop - s(58) * summaryScale;
+  const summaryRows: Array<{ label: string; value: number }> = [
+    { label: "Produkte", value: totals.productSubtotalCents }
+  ];
+  if (draft.includeLicenseFee && totals.licenseTotalCents > 0) {
+    summaryRows.push({ label: "Lizenzen", value: totals.licenseTotalCents });
   }
+  if (!draft.subtractVat) {
+    summaryRows.push({ label: "Zwischensumme", value: totals.subtotalCents });
+    summaryRows.push({ label: "MWSt 19%", value: totals.vatCents });
+  }
+
+  const summaryRowGap = s(isPrintLayout ? 20 : 20) * summaryScale;
+  const summaryRightX = s(370);
+  summaryRows.forEach((row, index) => {
+    const rowY = summaryTop - index * summaryRowGap;
+    page.drawText(row.label, { x: summaryRightX, y: rowY, size: summaryLabelSize, font: regular, color: muted });
+    drawRightText({
+      page,
+      text: money(row.value),
+      x: lineTotalRight,
+      y: rowY,
+      size: summaryValueSize,
+      font: regular,
+      color: textColor
+    });
+  });
+
+  const lastSummaryRowY = summaryTop - Math.max(0, summaryRows.length - 1) * summaryRowGap;
+  const ruleY = lastSummaryRowY - s(12) * summaryScale;
+  const totalLabelY = ruleY - s(22) * summaryScale;
+  const totalValueY = ruleY - s(28) * summaryScale;
 
   page.drawLine({
     start: { x: s(372), y: ruleY },
