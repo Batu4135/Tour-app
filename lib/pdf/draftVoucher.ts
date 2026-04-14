@@ -100,12 +100,12 @@ export function drawDraftVoucherPage(
   const soft = rgb(229 / 255, 229 / 255, 229 / 255);
   const muted = rgb(0.45, 0.45, 0.45);
 
-  const left = s(isPrintLayout ? 38 : 56);
-  const right = s(isPrintLayout ? 556 : 539);
-  const qtyCenter = s(isPrintLayout ? 63 : 80);
-  const skuX = options?.showSku ? s(isPrintLayout ? 92 : 112) : s(isPrintLayout ? 102 : 118);
-  const productX = options?.showSku ? s(isPrintLayout ? 146 : 168) : s(isPrintLayout ? 108 : 118);
-  const lineTotalRight = s(isPrintLayout ? 548 : 528);
+  const left = s(isPrintLayout ? 30 : 56);
+  const right = s(isPrintLayout ? 565 : 539);
+  const qtyCenter = s(isPrintLayout ? 50 : 80);
+  const skuX = options?.showSku ? s(isPrintLayout ? 86 : 112) : s(isPrintLayout ? 100 : 118);
+  const productX = options?.showSku ? s(isPrintLayout ? 140 : 168) : s(isPrintLayout ? 108 : 118);
+  const lineTotalRight = s(isPrintLayout ? 552 : 528);
   const lines = Array.isArray(draft.lines) ? draft.lines : [];
   const licenseSummary = draft.includeLicenseFee
     ? summarizeLicenseByType(lines as Array<{ quantity: number; product?: unknown }>, (line) => line.product ?? {})
@@ -203,7 +203,7 @@ export function drawDraftVoucherPage(
     color: soft,
     thickness: s(1)
   });
-  page.drawText("Menge", { x: s(62), y: headerLabelY, size: headerLabelSize, font: bold, color: muted });
+  page.drawText("Menge", { x: s(isPrintLayout ? 34 : 62), y: headerLabelY, size: headerLabelSize, font: bold, color: muted });
   if (options?.showSku) {
     page.drawText("Art.", { x: skuX, y: headerLabelY, size: headerLabelSize, font: bold, color: muted });
   }
@@ -260,7 +260,7 @@ export function drawDraftVoucherPage(
     const rowBottom = rowTop - rowHeight;
     const rowCenterY = (rowTop + rowBottom) / 2;
     const primaryY = rowCenterY - rowFontSize * 0.3;
-    const qtyText = row.type === "product" ? formatQuantity(row.line.quantity) : "1x";
+    const qtyText = row.type === "product" ? formatQuantity(row.line.quantity) : "1";
     const sku = row.type === "product" ? String(row.line.product?.sku ?? "").trim() : "Liz.";
     const name =
       row.type === "product"
@@ -328,9 +328,9 @@ export function drawDraftVoucherPage(
   const summaryScale = isPrintLayout
     ? Math.max(0.96, Math.min(1.3, rowDensity + 0.18))
     : Math.max(0.86, Math.min(1.02, rowDensity + 0.04));
-  const summaryLabelSize = s(isPrintLayout ? 11.5 : 10) * summaryScale;
-  const summaryValueSize = s(isPrintLayout ? 13.5 : 12) * summaryScale;
-  const summaryTotalSize = s(isPrintLayout ? 28 : 25) * summaryScale;
+  const summaryLabelSize = s(isPrintLayout ? 11 : 10) * summaryScale;
+  const summaryValueSize = s(isPrintLayout ? 13 : 12) * summaryScale;
+  const summaryTotalSize = s(isPrintLayout ? 25 : 25) * summaryScale;
 
   if (noteLines.length > 0) {
     const noteLabelY = summaryTop + noteBlockHeight - s(9);
@@ -359,7 +359,7 @@ export function drawDraftVoucherPage(
   }
 
   const summaryRowGap = s(isPrintLayout ? 20 : 20) * summaryScale;
-  const summaryRightX = s(isPrintLayout ? 382 : 370);
+  const summaryRightX = s(isPrintLayout ? 332 : 370);
   summaryRows.forEach((row, index) => {
     const rowY = summaryTop - index * summaryRowGap;
     page.drawText(row.label, { x: summaryRightX, y: rowY, size: summaryLabelSize, font: regular, color: muted });
@@ -380,13 +380,13 @@ export function drawDraftVoucherPage(
   const totalValueY = ruleY - s(28) * summaryScale;
 
   page.drawLine({
-    start: { x: s(isPrintLayout ? 386 : 372), y: ruleY },
+    start: { x: s(isPrintLayout ? 338 : 372), y: ruleY },
     end: { x: lineTotalRight, y: ruleY },
     thickness: s(2),
     color: accent
   });
 
-  page.drawText("Gesamt", { x: s(isPrintLayout ? 396 : 384), y: totalLabelY, size: summaryLabelSize, font: regular, color: muted });
+  page.drawText("Gesamt", { x: s(isPrintLayout ? 348 : 384), y: totalLabelY, size: summaryLabelSize, font: regular, color: muted });
   drawRightText({
     page,
     text: money(totals.invoiceTotalCents),
