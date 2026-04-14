@@ -14,6 +14,7 @@ type DrawDraftVoucherOptions = {
   headerTitleSize?: number;
   showSku?: boolean;
   pageSize?: "A6" | "A4";
+  layoutVariant?: "preview" | "print";
 };
 
 const A4_WIDTH = 595;
@@ -86,8 +87,9 @@ export function drawDraftVoucherPage(
 ) {
   const { regular, bold } = fonts;
   const pageSize = options?.pageSize ?? "A6";
+  const layoutVariant = options?.layoutVariant ?? (pageSize === "A4" ? "print" : "preview");
   const scale = pageSize === "A4" ? 1 : A6_SCALE;
-  const isPrintLayout = pageSize === "A4";
+  const isPrintLayout = layoutVariant === "print";
   const pageWidth = pageSize === "A4" ? A4_WIDTH : A6_WIDTH;
   const pageHeight = pageSize === "A4" ? A4_HEIGHT : A6_HEIGHT;
   const s = (value: number) => value * scale;
