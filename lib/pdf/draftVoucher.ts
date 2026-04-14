@@ -107,6 +107,13 @@ export function drawDraftVoucherPage(
   const productX = options?.showSku ? s(168) : s(118);
   const lineTotalRight = s(528);
   const lines = Array.isArray(draft.lines) ? draft.lines : [];
+  const licenseSummary = draft.includeLicenseFee
+    ? summarizeLicenseByType(lines as Array<{ quantity: number; product?: unknown }>, (line) => line.product ?? {})
+    : [];
+  const displayRows = [
+    ...lines.map((line: any) => ({ type: "product" as const, line })),
+    ...licenseSummary.map((entry, index) => ({ type: "license" as const, entry, index }))
+  ];
   const defaultRowHeight = s(32);
   const summaryGap = s(24);
   const headerTitle = options?.headerTitle ?? "";
@@ -119,7 +126,7 @@ export function drawDraftVoucherPage(
   const customerY = hasSubtitle ? s(714) : s(730);
   const rowStartY = headerBottomY - s(6);
   const minSummaryTop = isPrintLayout ? s(132) : s(158);
-  const lineCount = Math.max(1, lines.length);
+  const lineCount = Math.max(1, displayRows.length);
   const availableRowHeight = Math.max(s(80), rowStartY - minSummaryTop - summaryGap);
   const idealRowHeight = availableRowHeight / lineCount;
   const rowHeight = Math.max(s(21), Math.min(isPrintLayout ? s(74) : s(46), idealRowHeight));
@@ -238,7 +245,7 @@ export function drawDraftVoucherPage(
     subtractVat: draft.subtractVat
   });
 
-  if (lines.length === 0) {
+  if (displayRows.length === 0) {
     page.drawText("Keine Positionen", {
       x: productX,
       y: rowStartY - s(4),
@@ -248,16 +255,21 @@ export function drawDraftVoucherPage(
     });
   }
 
-  lines.forEach((line: any, index: number) => {
-    const lineTotal = multiplyCentsByQuantity(line.quantity, line.unitPriceCents);
-    const sku = String(line.product?.sku ?? "").trim();
-    const productName = String(line.product?.name ?? "").trim();
-    const name = productName.slice(0, nameMaxChars);
-    const qtyText = formatQuantity(line.quantity);
+  displayRows.forEach((row, index) => {
     const rowTop = rowStartY - index * rowHeight;
     const rowBottom = rowTop - rowHeight;
     const rowCenterY = (rowTop + rowBottom) / 2;
     const primaryY = rowCenterY - rowFontSize * 0.3;
+    const qtyText = row.type === "product" ? formatQuantity(row.line.quantity) : "1x";
+    const sku = row.type === "product" ? String(row.line.product?.sku ?? "").trim() : "Liz.";
+    const name =
+      row.type === "product"
+        ? String(row.line.product?.name ?? "").trim().slice(0, nameMaxChars)
+        : `${row.entry.licenseType}: ${weightKg(row.entry.totalWeightGrams)} kg`;
+    const lineTotal =
+      row.type === "product"
+        ? multiplyCentsByQuantity(row.line.quantity, row.line.unitPriceCents)
+        : row.entry.totalFeeCents;
 
     const badgeWidth = Math.max(s(18), bold.widthOfTextAtSize(qtyText, qtyFontSize) + qtyBadgePaddingX);
     const badgeX = qtyCenter - badgeWidth / 2;
@@ -311,10 +323,7 @@ export function drawDraftVoucherPage(
     });
   });
 
-  const licenseSummary = draft.includeLicenseFee
-    ? summarizeLicenseByType(lines as Array<{ quantity: number; product?: unknown }>, (line) => line.product ?? {})
-    : [];
-  const usedRows = Math.max(1, lines.length);
+  const usedRows = Math.max(1, displayRows.length);
   const summaryTop = rowStartY - usedRows * rowHeight - summaryGap - noteBlockHeight;
   const summaryScale = isPrintLayout
     ? Math.max(0.96, Math.min(1.3, rowDensity + 0.18))
@@ -322,12 +331,6 @@ export function drawDraftVoucherPage(
   const summaryLabelSize = s(isPrintLayout ? 12 : 10) * summaryScale;
   const summaryValueSize = s(isPrintLayout ? 14 : 12) * summaryScale;
   const summaryTotalSize = s(isPrintLayout ? 31 : 25) * summaryScale;
-  const licenseBlockLabelSize = s(isPrintLayout ? 11 : 8.2) * summaryScale;
-  const licenseBlockValueSize = s(isPrintLayout ? 12.5 : 7.8) * summaryScale;
-  const licenseBlockTop = summaryTop;
-  const licenseWeightRight = s(isPrintLayout ? 208 : 160);
-  const licenseFeeRight = s(isPrintLayout ? 288 : 252);
-  const licenseRowGap = s(isPrintLayout ? 15 : 10);
 
   if (noteLines.length > 0) {
     const noteLabelY = summaryTop + noteBlockHeight - s(9);
@@ -349,69 +352,7 @@ export function drawDraftVoucherPage(
     });
   }
 
-  if (licenseSummary.length > 0) {
-    page.drawText("Lizenz", {
-      x: s(64),
-      y: licenseBlockTop,
-      size: licenseBlockLabelSize,
-      font: bold,
-      color: muted
-    });
-    drawRightText({
-      page,
-      text: "Gewicht",
-      x: licenseWeightRight,
-      y: licenseBlockTop,
-      size: licenseBlockLabelSize,
-      font: bold,
-      color: muted
-    });
-    drawRightText({
-      page,
-      text: "Summe",
-      x: licenseFeeRight,
-      y: licenseBlockTop,
-      size: licenseBlockLabelSize,
-      font: bold,
-      color: muted
-    });
-
-    licenseSummary.slice(0, 4).forEach((entry, index) => {
-      const licenseRowY = licenseBlockTop - licenseRowGap * (index + 1);
-      page.drawText(`${index + 1}x ${entry.licenseType}`, {
-        x: s(64),
-        y: licenseRowY,
-        size: licenseBlockValueSize,
-        font: regular,
-        color: textColor
-      });
-      drawRightText({
-        page,
-        text: `${weightKg(entry.totalWeightGrams)} kg`,
-        x: licenseWeightRight,
-        y: licenseRowY,
-        size: licenseBlockValueSize,
-        font: regular,
-        color: textColor
-      });
-      drawRightText({
-        page,
-        text: money(entry.totalFeeCents),
-        x: licenseFeeRight,
-        y: licenseRowY,
-        size: licenseBlockValueSize,
-        font: regular,
-        color: textColor
-      });
-    });
-  }
-
-  const summaryRows: Array<{ label: string; value: number }> = [
-    { label: "Produkte", value: totals.productSubtotalCents }
-  ];
-  if (draft.includeLicenseFee && totals.licenseTotalCents > 0) {
-    summaryRows.push({ label: "Lizenzen", value: totals.licenseTotalCents });
-  }
+  const summaryRows: Array<{ label: string; value: number }> = [];
   if (!draft.subtractVat) {
     summaryRows.push({ label: "Zwischensumme", value: totals.subtotalCents });
     summaryRows.push({ label: "MWSt 19%", value: totals.vatCents });
