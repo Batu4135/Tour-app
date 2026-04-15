@@ -242,10 +242,10 @@ export function drawDraftVoucherPage(
 
   const rowFontSize = Math.max(s(6.5), Math.min(isPrintLayout ? s(22.5) : s(15), rowHeight * 0.66));
   const skuFontSize = Math.max(s(6.4), rowFontSize * 0.9);
-  const qtyFontSize = Math.max(s(5.5), Math.min(isPrintLayout ? s(16.5) : s(12.5), rowHeight * 0.44));
-  const qtyBadgeHeight = Math.max(s(4.5), Math.min(isPrintLayout ? s(26) : s(16), rowHeight * 0.56));
+  const qtyFontSize = Math.max(s(5.5), Math.min(isPrintLayout ? s(17.5) : s(12.5), rowHeight * 0.46));
+  const qtyBadgeHeight = Math.max(s(4.5), Math.min(isPrintLayout ? s(30) : s(16), rowHeight * 0.62));
   const qtyBadgePaddingX = Math.max(s(3.2), isPrintLayout ? s(11.5) : s(12) * rowDensity);
-  const qtyBadgeWidth = isPrintLayout ? s(24) : undefined;
+  const qtyBadgeWidth = isPrintLayout ? s(28) : undefined;
   const nameMaxCharsBase = rowDensity > 1.2 ? 52 : rowDensity > 0.9 ? 44 : rowDensity > 0.7 ? 36 : 24;
   const nameMaxChars = options?.showSku ? Math.max(16, nameMaxCharsBase - 10) : nameMaxCharsBase;
   const noteRaw = (draft.note ?? "").trim();
