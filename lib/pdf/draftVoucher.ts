@@ -140,10 +140,10 @@ export function drawDraftVoucherPage(
   const headerSubtitle = options?.headerSubtitle ?? "";
   const hasHeaderTitle = headerTitle.trim().length > 0;
   const hasSubtitle = headerSubtitle.trim().length > 0;
-  const headerTopY = hasSubtitle ? s(684) : s(684);
+  const headerTopY = hasSubtitle ? s(708) : s(708);
   const headerLabelY = headerTopY - s(22);
   const headerBottomY = headerTopY - s(36);
-  const customerY = hasSubtitle ? s(752) : s(764);
+  const customerY = hasSubtitle ? s(760) : s(770);
   const rowStartY = headerBottomY - s(6);
   const minSummaryTop = isPrintLayout ? s(114) : s(158);
   const lineCount = Math.max(1, displayRows.length);
@@ -160,7 +160,7 @@ export function drawDraftVoucherPage(
     headerTitleSize -= s(0.4);
   }
   const subtitleSize = Math.max(s(7), Math.min(isPrintLayout ? s(13) : s(10.5), s(8.9) * layoutScale));
-  let customerSize = Math.max(s(16), Math.min(isPrintLayout ? s(30) : s(26), s(23.5) * layoutScale));
+  let customerSize = Math.max(s(16), Math.min(isPrintLayout ? s(26) : s(26), s(21.5) * layoutScale));
   const headerLabelSize = Math.max(s(8), Math.min(isPrintLayout ? s(13.8) : s(10.5), s(10.8) * layoutScale));
   const metaSize = Math.max(s(8.5), Math.min(isPrintLayout ? s(18) : s(12), s(12.3) * layoutScale));
   const titleY = hasHeaderTitle ? s(752) : s(0);
@@ -240,11 +240,12 @@ export function drawDraftVoucherPage(
     thickness: s(1)
   });
 
-  const rowFontSize = Math.max(s(6.5), Math.min(isPrintLayout ? s(20.5) : s(15), rowHeight * 0.61));
+  const rowFontSize = Math.max(s(6.5), Math.min(isPrintLayout ? s(22.5) : s(15), rowHeight * 0.66));
   const skuFontSize = Math.max(s(6.4), rowFontSize * 0.9);
-  const qtyFontSize = Math.max(s(5.5), Math.min(isPrintLayout ? s(14.2) : s(12.5), rowHeight * 0.4));
-  const qtyBadgeHeight = Math.max(s(4.5), Math.min(isPrintLayout ? s(22) : s(16), rowHeight * 0.5));
+  const qtyFontSize = Math.max(s(5.5), Math.min(isPrintLayout ? s(16.5) : s(12.5), rowHeight * 0.44));
+  const qtyBadgeHeight = Math.max(s(4.5), Math.min(isPrintLayout ? s(26) : s(16), rowHeight * 0.56));
   const qtyBadgePaddingX = Math.max(s(3.2), isPrintLayout ? s(11.5) : s(12) * rowDensity);
+  const qtyBadgeWidth = isPrintLayout ? s(24) : undefined;
   const nameMaxCharsBase = rowDensity > 1.2 ? 52 : rowDensity > 0.9 ? 44 : rowDensity > 0.7 ? 36 : 24;
   const nameMaxChars = options?.showSku ? Math.max(16, nameMaxCharsBase - 10) : nameMaxCharsBase;
   const noteRaw = (draft.note ?? "").trim();
@@ -287,7 +288,7 @@ export function drawDraftVoucherPage(
         ? multiplyCentsByQuantity(row.line.quantity, row.line.unitPriceCents)
         : row.entry.totalFeeCents;
 
-    const badgeWidth = Math.max(s(18), bold.widthOfTextAtSize(qtyText, qtyFontSize) + qtyBadgePaddingX);
+    const badgeWidth = qtyBadgeWidth ?? Math.max(s(18), bold.widthOfTextAtSize(qtyText, qtyFontSize) + qtyBadgePaddingX);
     const badgeX = qtyCenter - badgeWidth / 2;
     const badgeY = rowCenterY - qtyBadgeHeight / 2;
     page.drawRectangle({
@@ -303,7 +304,7 @@ export function drawDraftVoucherPage(
     const qtyWidth = bold.widthOfTextAtSize(qtyText, qtyFontSize);
     page.drawText(qtyText, {
       x: qtyCenter - qtyWidth / 2,
-      y: rowCenterY - qtyFontSize * 0.36,
+      y: rowCenterY - qtyFontSize * 0.34,
       size: qtyFontSize,
       font: bold,
       color: accent
@@ -344,9 +345,9 @@ export function drawDraftVoucherPage(
   const summaryScale = isPrintLayout
     ? Math.max(0.96, Math.min(1.3, rowDensity + 0.18))
     : Math.max(0.86, Math.min(1.02, rowDensity + 0.04));
-  const summaryLabelSize = s(isPrintLayout ? 13.8 : 10) * summaryScale;
-  const summaryValueSize = s(isPrintLayout ? 16 : 12) * summaryScale;
-  const summaryTotalSize = s(isPrintLayout ? 24 : 25) * summaryScale;
+  const summaryLabelSize = s(isPrintLayout ? 14.5 : 10) * summaryScale;
+  const summaryValueSize = s(isPrintLayout ? 16.5 : 12) * summaryScale;
+  const summaryTotalSize = summaryValueSize;
 
   if (noteLines.length > 0) {
     const noteLabelY = summaryTop + noteBlockHeight - s(9);
