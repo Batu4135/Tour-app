@@ -140,11 +140,11 @@ export function drawDraftVoucherPage(
   const headerSubtitle = options?.headerSubtitle ?? "";
   const hasHeaderTitle = headerTitle.trim().length > 0;
   const hasSubtitle = headerSubtitle.trim().length > 0;
-  const headerTopY = hasSubtitle ? s(708) : s(708);
+  const headerTopY = hasSubtitle ? s(724) : s(724);
   const headerLabelY = headerTopY - s(22);
   const headerBottomY = headerTopY - s(36);
-  const customerY = hasSubtitle ? s(760) : s(770);
-  const rowStartY = headerBottomY - s(6);
+  const customerY = hasSubtitle ? s(772) : s(780);
+  const rowStartY = headerBottomY - s(2);
   const minSummaryTop = isPrintLayout ? s(114) : s(158);
   const lineCount = Math.max(1, displayRows.length);
   const availableRowHeight = Math.max(s(80), rowStartY - minSummaryTop - summaryGap);
@@ -347,7 +347,7 @@ export function drawDraftVoucherPage(
     : Math.max(0.86, Math.min(1.02, rowDensity + 0.04));
   const summaryLabelSize = s(isPrintLayout ? 14.5 : 10) * summaryScale;
   const summaryValueSize = s(isPrintLayout ? 16.5 : 12) * summaryScale;
-  const summaryTotalSize = summaryValueSize;
+  const summaryTotalSize = s(isPrintLayout ? 19.5 : 12) * summaryScale;
 
   if (noteLines.length > 0) {
     const noteLabelY = summaryTop + noteBlockHeight - s(9);
