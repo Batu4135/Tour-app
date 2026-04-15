@@ -140,10 +140,10 @@ export function drawDraftVoucherPage(
   const headerSubtitle = options?.headerSubtitle ?? "";
   const hasHeaderTitle = headerTitle.trim().length > 0;
   const hasSubtitle = headerSubtitle.trim().length > 0;
-  const headerTopY = hasSubtitle ? s(696) : s(694);
+  const headerTopY = hasSubtitle ? s(684) : s(684);
   const headerLabelY = headerTopY - s(22);
   const headerBottomY = headerTopY - s(36);
-  const customerY = hasSubtitle ? s(724) : s(738);
+  const customerY = hasSubtitle ? s(752) : s(764);
   const rowStartY = headerBottomY - s(6);
   const minSummaryTop = isPrintLayout ? s(114) : s(158);
   const lineCount = Math.max(1, displayRows.length);
@@ -160,10 +160,9 @@ export function drawDraftVoucherPage(
     headerTitleSize -= s(0.4);
   }
   const subtitleSize = Math.max(s(7), Math.min(isPrintLayout ? s(13) : s(10.5), s(8.9) * layoutScale));
-  let customerSize = Math.max(s(16), Math.min(isPrintLayout ? s(37) : s(26), s(27.2) * layoutScale));
+  let customerSize = Math.max(s(16), Math.min(isPrintLayout ? s(30) : s(26), s(23.5) * layoutScale));
   const headerLabelSize = Math.max(s(8), Math.min(isPrintLayout ? s(13.8) : s(10.5), s(10.8) * layoutScale));
-  const metaSize = Math.max(s(8.5), Math.min(isPrintLayout ? s(16.5) : s(12), s(12.9) * layoutScale));
-  const metaSubSize = Math.max(s(7), Math.min(isPrintLayout ? s(13.5) : s(9.5), s(10.9) * layoutScale));
+  const metaSize = Math.max(s(8.5), Math.min(isPrintLayout ? s(18) : s(12), s(12.3) * layoutScale));
   const titleY = hasHeaderTitle ? s(752) : s(0);
   const subtitleY = hasHeaderTitle ? s(740) : s(752);
 
@@ -191,25 +190,15 @@ export function drawDraftVoucherPage(
     page,
     text: formatDate(new Date(draft.date)),
     x: lineTotalRight,
-    y: s(isPrintLayout ? 790 : 772),
+    y: customerY + s(2),
     size: metaSize,
     font: regular,
     color: textColor
   });
 
-  drawRightText({
-    page,
-    text: `Zahlart: ${paymentMethodText(draft.paymentMethod)}`,
-    x: lineTotalRight,
-    y: s(isPrintLayout ? 774 : 758),
-    size: metaSubSize,
-    font: regular,
-    color: muted
-  });
-
   const rawCustomerName = String(draft.customer?.name ?? "").slice(0, 42);
   const customerAreaLeft = left + s(isPrintLayout ? 44 : 0);
-  const customerAreaRight = lineTotalRight - s(isPrintLayout ? 122 : 0);
+  const customerAreaRight = lineTotalRight - s(isPrintLayout ? 124 : 0);
   const customerMaxWidth = customerAreaRight - customerAreaLeft;
   while (bold.widthOfTextAtSize(rawCustomerName, customerSize) > customerMaxWidth && customerSize > s(16)) {
     customerSize -= s(0.5);
@@ -253,9 +242,9 @@ export function drawDraftVoucherPage(
 
   const rowFontSize = Math.max(s(6.5), Math.min(isPrintLayout ? s(20.5) : s(15), rowHeight * 0.61));
   const skuFontSize = Math.max(s(6.4), rowFontSize * 0.9);
-  const qtyFontSize = Math.max(s(5.5), Math.min(isPrintLayout ? s(12.4) : s(12.5), rowHeight * 0.34));
-  const qtyBadgeHeight = Math.max(s(4.5), Math.min(isPrintLayout ? s(18) : s(16), rowHeight * 0.42));
-  const qtyBadgePaddingX = Math.max(s(3.2), isPrintLayout ? s(8.5) : s(12) * rowDensity);
+  const qtyFontSize = Math.max(s(5.5), Math.min(isPrintLayout ? s(14.2) : s(12.5), rowHeight * 0.4));
+  const qtyBadgeHeight = Math.max(s(4.5), Math.min(isPrintLayout ? s(22) : s(16), rowHeight * 0.5));
+  const qtyBadgePaddingX = Math.max(s(3.2), isPrintLayout ? s(11.5) : s(12) * rowDensity);
   const nameMaxCharsBase = rowDensity > 1.2 ? 52 : rowDensity > 0.9 ? 44 : rowDensity > 0.7 ? 36 : 24;
   const nameMaxChars = options?.showSku ? Math.max(16, nameMaxCharsBase - 10) : nameMaxCharsBase;
   const noteRaw = (draft.note ?? "").trim();
@@ -288,7 +277,7 @@ export function drawDraftVoucherPage(
     const rowCenterY = (rowTop + rowBottom) / 2;
     const primaryY = rowCenterY - rowFontSize * 0.3;
     const qtyText = row.type === "product" ? formatQuantity(row.line.quantity) : "1";
-    const sku = row.type === "product" ? String(row.line.product?.sku ?? "").trim() : "Liz.";
+    const sku = row.type === "product" ? String(row.line.product?.sku ?? "").trim() : row.entry.licenseType;
     const name =
       row.type === "product"
         ? truncateTextToWidth(String(row.line.product?.name ?? "").trim().slice(0, nameMaxChars), regular, rowFontSize, productMaxWidth)
@@ -355,9 +344,9 @@ export function drawDraftVoucherPage(
   const summaryScale = isPrintLayout
     ? Math.max(0.96, Math.min(1.3, rowDensity + 0.18))
     : Math.max(0.86, Math.min(1.02, rowDensity + 0.04));
-  const summaryLabelSize = s(isPrintLayout ? 11.5 : 10) * summaryScale;
-  const summaryValueSize = s(isPrintLayout ? 14 : 12) * summaryScale;
-  const summaryTotalSize = s(isPrintLayout ? 29 : 25) * summaryScale;
+  const summaryLabelSize = s(isPrintLayout ? 13.8 : 10) * summaryScale;
+  const summaryValueSize = s(isPrintLayout ? 16 : 12) * summaryScale;
+  const summaryTotalSize = s(isPrintLayout ? 24 : 25) * summaryScale;
 
   if (noteLines.length > 0) {
     const noteLabelY = summaryTop + noteBlockHeight - s(9);
@@ -411,6 +400,14 @@ export function drawDraftVoucherPage(
     end: { x: lineTotalRight, y: ruleY },
     thickness: s(2),
     color: accent
+  });
+
+  page.drawText(paymentMethodText(draft.paymentMethod), {
+    x: left,
+    y: totalValueY,
+    size: summaryTotalSize,
+    font: bold,
+    color: textColor
   });
 
   page.drawText("Gesamt", { x: s(isPrintLayout ? 340 : 384), y: totalLabelY, size: summaryLabelSize, font: regular, color: muted });
