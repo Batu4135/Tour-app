@@ -18,7 +18,7 @@ export default function DraftPdfPage() {
     [draftId]
   );
   const previewUrl = useMemo(
-    () => (Number.isFinite(draftId) ? `/api/drafts/${draftId}/pdf?mode=preview#view=FitH` : ""),
+    () => (Number.isFinite(draftId) ? `/api/drafts/${draftId}/pdf?mode=preview` : ""),
     [draftId]
   );
 
@@ -113,13 +113,13 @@ export default function DraftPdfPage() {
 
       <div className="card space-y-3">
         {!isLoaded ? <p className="text-sm text-[#4A4A4A]/65">{t("loadingPdf")}</p> : null}
-        <div className="mx-auto w-full max-w-[980px]">
+        <div className="mx-auto w-full max-w-[360px] sm:max-w-[520px] md:max-w-[680px] lg:max-w-[820px] xl:max-w-[960px]">
           <div className="relative aspect-[210/297] w-full overflow-hidden rounded-2xl border border-[#E5E5E5] bg-white shadow-[0_18px_45px_rgba(31,41,55,0.08)]">
             <iframe
               ref={iframeRef}
               title={t("frameTitle", { id: draftId })}
               src={previewUrl}
-              className="absolute inset-0 h-full w-full bg-white"
+              className="absolute inset-0 h-full w-full bg-white [touch-action:pan-x_pan-y_pinch-zoom]"
               onLoad={() => setIsLoaded(true)}
             />
           </div>
