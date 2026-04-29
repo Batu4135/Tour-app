@@ -11,7 +11,7 @@ type ToastProps = {
 };
 
 export default function Toast({ message, tone = "info", visible }: ToastProps) {
-  if (!visible) return null;
+  if (!message) return null;
 
   const toneClasses =
     tone === "success"
@@ -21,7 +21,13 @@ export default function Toast({ message, tone = "info", visible }: ToastProps) {
         : "border-[#2F7EA1]/30 bg-[#F8F9FA] text-[#2F7EA1]";
 
   return (
-    <div className={`rounded-xl border px-3 py-2 text-sm shadow-sm ${toneClasses}`} role="status" aria-live="polite">
+    <div
+      className={`rounded-xl border px-3 py-2 text-sm shadow-sm transition-all duration-300 ${
+        visible ? "translate-y-0 opacity-100" : "-translate-y-1 opacity-0"
+      } ${toneClasses}`}
+      role="status"
+      aria-live="polite"
+    >
       <div className="flex items-center gap-2">
         {tone === "error" ? <AlertCircle size={16} /> : <CheckCircle2 size={16} />}
         <span>{message}</span>

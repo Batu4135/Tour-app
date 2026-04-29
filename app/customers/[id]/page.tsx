@@ -48,7 +48,8 @@ export default function CustomerDetailPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isProductSearchFocused, setIsProductSearchFocused] = useState(false);
   const [priceInput, setPriceInput] = useState("");
-  const [toast, setToast] = useState<{ message: string; tone: "success" | "error" | "info" } | null>(null);
+  const [toast, setToast] = useState<{ message: string; tone: "success" | "error" | "info"; visible: boolean } | null>(null);
+  const [copiedActive, setCopiedActive] = useState(false);
   const productSearchRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -72,14 +73,18 @@ export default function CustomerDetailPage() {
 
   useEffect(() => {
     if (searchParams.get("created") !== "1") return;
-    setToast({ message: t("createdSuccess"), tone: "success" });
+    setToast({ message: t("createdSuccess"), tone: "success", visible: true });
     router.replace(`/customers/${customerId}`);
   }, [customerId, router, searchParams, t]);
 
   useEffect(() => {
     if (!toast) return;
-    const timer = setTimeout(() => setToast(null), 2400);
-    return () => clearTimeout(timer);
+    const hideTimer = setTimeout(() => setToast((prev) => (prev ? { ...prev, visible: false } : null)), 3000);
+    const removeTimer = setTimeout(() => setToast(null), 3400);
+    return () => {
+      clearTimeout(hideTimer);
+      clearTimeout(removeTimer);
+    };
   }, [toast]);
 
   useEffect(() => {
@@ -164,11 +169,11 @@ export default function CustomerDetailPage() {
       setProductQuery("");
       setIsProductSearchFocused(false);
       setPriceInput("");
-      setToast({ message: t("productAddedSuccess"), tone: "success" });
+      setToast({ message: t("productAddedSuccess"), tone: "success", visible: true });
       await loadDetail();
       requestAnimationFrame(() => productSearchRef.current?.focus());
     } else {
-      setToast({ message: payload.error ?? t("saveError"), tone: "error" });
+      setToast({ message: payload.error ?? t("saveError"), tone: "error", visible: true });
     }
   }
 
@@ -211,10 +216,13 @@ export default function CustomerDetailPage() {
       }))
     });
 
+    setCopiedActive(true);
     setToast({
       message: t("pricesCopied", { count: data.prices.length, customer: data.name }),
-      tone: "success"
+      tone: "success",
+      visible: true
     });
+    window.setTimeout(() => setCopiedActive(false), 3000);
   }
 
   if (loading) return <p className="text-sm text-[#4A4A4A]/70">{t("loading")}</p>;
@@ -222,12 +230,14 @@ export default function CustomerDetailPage() {
 
   return (
     <section className="space-y-4">
+      <div className="fixed left-1/2 top-3 z-40 w-[calc(100%-24px)] max-w-md -translate-x-1/2">
+        <Toast visible={toast?.visible ?? false} message={toast?.message ?? ""} tone={toast?.tone ?? "info"} />
+      </div>
+
       <header className="space-y-1">
         <h1 className="text-2xl font-bold">{data.name}</h1>
         <p className="text-sm text-[#4A4A4A]/70">{t("subtitle")}</p>
       </header>
-
-      <Toast visible={Boolean(toast)} message={toast?.message ?? ""} tone={toast?.tone ?? "info"} />
 
       <form className="card space-y-3" onSubmit={onSaveCustomer}>
         <input
@@ -271,7 +281,11 @@ export default function CustomerDetailPage() {
           <h2 className="text-sm font-semibold">{t("pricesTitle")}</h2>
           <button
             type="button"
-            className="secondary-btn !w-auto !px-3 !py-2 text-sm"
+            className={`!w-auto !px-3 !py-2 text-sm ${
+              copiedActive
+                ? "inline-flex items-center justify-center rounded-xl border border-green-200 bg-green-50 text-green-800 shadow-sm"
+                : "secondary-btn"
+            }`}
             onClick={onCopyPrices}
             disabled={data.prices.length === 0}
           >

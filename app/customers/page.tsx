@@ -55,7 +55,7 @@ export default function CustomersPage() {
   const [nameFieldFocused, setNameFieldFocused] = useState(false);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeFieldFocused, setRouteFieldFocused] = useState(false);
-  const [toast, setToast] = useState<{ message: string; tone: "success" | "error" | "info" } | null>(null);
+  const [toast, setToast] = useState<{ message: string; tone: "success" | "error" | "info"; visible: boolean } | null>(null);
   const [copiedPrices, setCopiedPrices] = useState<CustomerPriceClipboardPayload | null>(null);
   const selectingDirectorySuggestionRef = useRef(false);
   const routeInputRef = useRef<HTMLInputElement | null>(null);
@@ -129,8 +129,12 @@ export default function CustomersPage() {
 
   useEffect(() => {
     if (!toast) return;
-    const timer = setTimeout(() => setToast(null), 2400);
-    return () => clearTimeout(timer);
+    const hideTimer = setTimeout(() => setToast((prev) => (prev ? { ...prev, visible: false } : null)), 3000);
+    const removeTimer = setTimeout(() => setToast(null), 3400);
+    return () => {
+      clearTimeout(hideTimer);
+      clearTimeout(removeTimer);
+    };
   }, [toast]);
 
   useEffect(() => {
@@ -168,13 +172,7 @@ export default function CustomersPage() {
   useEffect(() => {
     if (!createOpen) {
       setCopiedPrices(null);
-      return;
     }
-
-    void (async () => {
-      const payload = await loadCustomerPriceClipboard();
-      setCopiedPrices(payload);
-    })();
   }, [createOpen]);
 
   useEffect(() => {
@@ -268,7 +266,8 @@ export default function CustomersPage() {
       setError(message);
       setToast({
         message,
-        tone: message.includes("bereits gespeichert") ? "info" : "error"
+        tone: message.includes("bereits gespeichert") ? "info" : "error",
+        visible: true
       });
     } finally {
       setSaving(false);
@@ -376,14 +375,15 @@ export default function CustomersPage() {
   async function onPasteCopiedPrices() {
     const payload = await loadCustomerPriceClipboard();
     if (!payload || payload.items.length === 0) {
-      setToast({ message: t("copiedPricesMissing"), tone: "info" });
+      setToast({ message: t("copiedPricesMissing"), tone: "info", visible: true });
       return;
     }
 
     setCopiedPrices(payload);
     setToast({
       message: t("copiedPricesReady", { count: payload.items.length, customer: payload.sourceCustomerName }),
-      tone: "success"
+      tone: "success",
+      visible: true
     });
   }
 
@@ -392,7 +392,7 @@ export default function CustomersPage() {
   return (
     <section className="space-y-4">
       <div className="fixed left-1/2 top-3 z-40 w-[calc(100%-24px)] max-w-md -translate-x-1/2">
-        <Toast visible={Boolean(toast)} message={toast?.message ?? ""} tone={toast?.tone ?? "info"} />
+        <Toast visible={toast?.visible ?? false} message={toast?.message ?? ""} tone={toast?.tone ?? "info"} />
       </div>
 
       <header className="space-y-1">
