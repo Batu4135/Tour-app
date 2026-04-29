@@ -36,8 +36,8 @@ export async function GET(request: Request, { params }: RouteContext) {
   const fonts = await createDraftVoucherFonts(pdf);
   const url = new URL(request.url);
   const mode = url.searchParams.get("mode");
-  const pageSize = mode === "print" || mode === "preview" ? "A4" : "A6";
-  const layoutVariant = mode === "print" ? "print" : "preview";
+  const pageSize = mode === "print" ? "A4" : "A6";
+  const layoutVariant = mode === "print" || mode === "preview" ? "print" : "preview";
   drawDraftVoucherPage(pdf, fonts, draft, { showSku: true, pageSize, layoutVariant });
   const bytes = await pdf.save();
 
