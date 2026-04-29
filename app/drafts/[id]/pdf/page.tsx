@@ -18,7 +18,7 @@ export default function DraftPdfPage() {
     [draftId]
   );
   const previewUrl = useMemo(
-    () => (Number.isFinite(draftId) ? `/api/drafts/${draftId}/pdf?mode=preview#view=FitH` : ""),
+    () => (Number.isFinite(draftId) ? `/api/drafts/${draftId}/pdf?mode=preview#page=1&view=Fit` : ""),
     [draftId]
   );
 
@@ -113,7 +113,7 @@ export default function DraftPdfPage() {
 
       <div className="card space-y-3">
         {!isLoaded ? <p className="text-sm text-[#4A4A4A]/65">{t("loadingPdf")}</p> : null}
-        <div className="mx-auto w-full max-w-[980px]">
+        <div className="mx-auto w-full max-w-none sm:max-w-[980px]">
           <div className="relative aspect-[210/297] w-full overflow-hidden rounded-2xl border border-[#E5E5E5] bg-white shadow-[0_18px_45px_rgba(31,41,55,0.08)]">
             <iframe
               ref={iframeRef}
