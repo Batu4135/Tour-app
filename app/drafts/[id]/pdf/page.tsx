@@ -18,7 +18,7 @@ export default function DraftPdfPage() {
     [draftId]
   );
   const previewUrl = useMemo(
-    () => (Number.isFinite(draftId) ? `/api/drafts/${draftId}/pdf?mode=preview` : ""),
+    () => (Number.isFinite(draftId) ? `/api/drafts/${draftId}/pdf?mode=preview#page=1&view=Fit` : ""),
     [draftId]
   );
 
