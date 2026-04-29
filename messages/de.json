@@ -37,7 +37,11 @@
     "createError": "Kunde konnte nicht angelegt werden.",
     "routeFilterTitle": "Tour-Tag",
     "allRoutes": "Alle",
-    "noRouteDay": "Ohne Tour-Tag"
+    "noRouteDay": "Ohne Tour-Tag",
+    "pasteCopiedPrices": "Preise einfuegen",
+    "copiedPricesLoaded": "{count} Preise von {customer} bereit",
+    "copiedPricesReady": "{count} Preise von {customer} wurden uebernommen.",
+    "copiedPricesMissing": "Keine kopierten Kundenpreise gefunden."
   },
   "customerDetail": {
     "subtitle": "Kundendetails und Preisliste",
@@ -63,7 +67,9 @@
     "routeDayRequired": "Tour-Tag ist ein Pflichtfeld.",
     "confirmDelete": "Diesen Kunden wirklich loeschen?",
     "createdSuccess": "Kunde erfolgreich angelegt.",
-    "productAddedSuccess": "Produkt erfolgreich hinzugefuegt."
+    "productAddedSuccess": "Produkt erfolgreich hinzugefuegt.",
+    "copyPrices": "Kopieren",
+    "pricesCopied": "{count} Preise von {customer} wurden kopiert."
   },
   "products": {
     "title": "Produkte",

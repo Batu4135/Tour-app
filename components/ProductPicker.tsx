@@ -158,11 +158,11 @@ export default function ProductPicker({
   function addProduct(product: ProductOption) {
     const existing = selectedItems.find((item) => item.productId === product.id);
     if (existing) {
-      const remainingItems = selectedItems.filter((item) => item.productId !== product.id);
-      onChange([existing, ...remainingItems]);
+      onChange(selectedItems);
     } else {
       const price = priceOverrides[product.id] ?? product.defaultPriceCents ?? 0;
       onChange([
+        ...selectedItems,
         {
           productId: product.id,
           sku: product.sku,
@@ -172,8 +172,7 @@ export default function ProductPicker({
           licenseType: product.licenseType ?? licenseTypeMap[product.id],
           licenseWeightGrams: product.licenseWeightGrams ?? licenseWeightGramsMap[product.id],
           licenseFeeCents: product.licenseFeeCents ?? licenseFeeMap[product.id] ?? 0
-        },
-        ...selectedItems
+        }
       ]);
     }
     setQuery("");

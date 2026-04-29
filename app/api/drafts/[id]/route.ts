@@ -74,7 +74,8 @@ export async function GET(_: Request, { params }: RouteContext) {
       lines: {
         include: {
           product: { select: { name: true, sku: true, licenseFeeCents: true, licenseType: true, licenseWeightGrams: true } }
-        }
+        },
+        orderBy: { id: "asc" }
       }
     }
   });

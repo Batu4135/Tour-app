@@ -36,7 +36,11 @@
                       "loadError":  "Müşteriler yüklenemedi.",
                       "createError":  "Müşteri eklenemedi.",
                       "routeFilterTitle":  "Rota günü",
-                      "allRoutes":  "Tüm günler"
+                      "allRoutes":  "Tüm günler",
+                      "pasteCopiedPrices":  "Fiyatları yapıştır",
+                      "copiedPricesLoaded":  "{customer} müşterisinden {count} fiyat hazır",
+                      "copiedPricesReady":  "{customer} müşterisinden {count} fiyat alındı.",
+                      "copiedPricesMissing":  "Kopyalanmış müşteri fiyatı bulunamadı."
                   },
     "customerDetail":  {
                            "subtitle":  "Müşteri detayları ve fiyat listesi",
@@ -62,7 +66,9 @@
                            "routeDayRequired":  "Rota günü zorunludur.",
                            "confirmDelete":  "Bu müşteriyi silmek istiyor musunuz?",
                            "createdSuccess":  "Müşteri başarıyla eklendi.",
-                           "productAddedSuccess":  "Ürün başarıyla eklendi."
+                           "productAddedSuccess":  "Ürün başarıyla eklendi.",
+                           "copyPrices":  "Kopyala",
+                           "pricesCopied":  "{customer} müşterisinin {count} fiyatı kopyalandı."
                        },
     "products":  {
                      "title":  "Ürünler",

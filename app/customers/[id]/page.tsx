@@ -2,11 +2,12 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Search, Trash2 } from "lucide-react";
+import { Copy, Search, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { centsToEuro, euroToCents } from "@/lib/money";
 import Toast from "@/components/Toast";
 import { rankProductsBySearch } from "@/lib/productSearch";
+import { saveCustomerPriceClipboard } from "@/lib/customerPriceClipboard";
 
 type Product = {
   id: number;
@@ -195,6 +196,27 @@ export default function CustomerDetailPage() {
     await loadDetail();
   }
 
+  async function onCopyPrices() {
+    if (!data || data.prices.length === 0) return;
+
+    await saveCustomerPriceClipboard({
+      type: "customer-price-clipboard",
+      sourceCustomerId: data.id,
+      sourceCustomerName: data.name,
+      copiedAt: new Date().toISOString(),
+      items: data.prices.map((price) => ({
+        productId: price.productId,
+        productName: price.productName,
+        priceCents: price.priceCents
+      }))
+    });
+
+    setToast({
+      message: t("pricesCopied", { count: data.prices.length, customer: data.name }),
+      tone: "success"
+    });
+  }
+
   if (loading) return <p className="text-sm text-[#4A4A4A]/70">{t("loading")}</p>;
   if (!data) return <p className="text-sm text-[#4A4A4A]/70">{error || t("empty")}</p>;
 
@@ -245,7 +267,20 @@ export default function CustomerDetailPage() {
       </form>
 
       <div className="card space-y-3">
-        <h2 className="text-sm font-semibold">{t("pricesTitle")}</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold">{t("pricesTitle")}</h2>
+          <button
+            type="button"
+            className="secondary-btn !w-auto !px-3 !py-2 text-sm"
+            onClick={onCopyPrices}
+            disabled={data.prices.length === 0}
+          >
+            <span className="flex items-center gap-2">
+              <Copy size={14} />
+              {t("copyPrices")}
+            </span>
+          </button>
+        </div>
         <form className="grid grid-cols-1 gap-2" onSubmit={onAddPrice}>
           <div className="relative">
             <Search className="search-icon" size={16} />

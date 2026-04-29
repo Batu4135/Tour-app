@@ -11,7 +11,15 @@ const createCustomerSchema = z.object({
   name: z.string().min(2),
   address: z.string().optional(),
   phone: z.string().optional(),
-  routeDay: z.string().trim().min(1)
+  routeDay: z.string().trim().min(1),
+  copiedPrices: z
+    .array(
+      z.object({
+        productId: z.number().int().positive(),
+        priceCents: z.number().int().min(0)
+      })
+    )
+    .optional()
 });
 
 function normalizeText(value?: string | null) {
@@ -91,6 +99,7 @@ export async function POST(request: Request) {
   const routeDay = parsed.data.routeDay.trim();
   const address = parsed.data.address?.trim() || null;
   const phone = parsed.data.phone?.trim() || null;
+  const copiedPrices = parsed.data.copiedPrices ?? [];
 
   const potentialDuplicates = await prisma.customer.findMany({
     where: {
@@ -141,7 +150,26 @@ export async function POST(request: Request) {
       routeDay: customer.routeDay
     });
 
-    return { customer, importedPrices };
+    for (const copiedPrice of copiedPrices) {
+      await tx.customerPrice.upsert({
+        where: {
+          customerId_productId: {
+            customerId: customer.id,
+            productId: copiedPrice.productId
+          }
+        },
+        create: {
+          customerId: customer.id,
+          productId: copiedPrice.productId,
+          priceCents: Math.round(copiedPrice.priceCents)
+        },
+        update: {
+          priceCents: Math.round(copiedPrice.priceCents)
+        }
+      });
+    }
+
+    return { customer, importedPrices, copiedPricesCount: copiedPrices.length };
   });
 
   return NextResponse.json(result, { status: 201 });

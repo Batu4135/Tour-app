@@ -1,10 +1,11 @@
 "use client";
 
 import { FormEvent, KeyboardEvent, PointerEvent, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Plus, Search } from "lucide-react";
+import { ChevronDown, ClipboardPaste, Plus, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import CustomerCard from "@/components/CustomerCard";
 import Toast from "@/components/Toast";
+import { CustomerPriceClipboardPayload, loadCustomerPriceClipboard } from "@/lib/customerPriceClipboard";
 
 type Customer = {
   id: number;
@@ -55,6 +56,7 @@ export default function CustomersPage() {
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeFieldFocused, setRouteFieldFocused] = useState(false);
   const [toast, setToast] = useState<{ message: string; tone: "success" | "error" | "info" } | null>(null);
+  const [copiedPrices, setCopiedPrices] = useState<CustomerPriceClipboardPayload | null>(null);
   const selectingDirectorySuggestionRef = useRef(false);
   const routeInputRef = useRef<HTMLInputElement | null>(null);
   const nameInputRef = useRef<HTMLInputElement | null>(null);
@@ -165,6 +167,18 @@ export default function CustomersPage() {
 
   useEffect(() => {
     if (!createOpen) {
+      setCopiedPrices(null);
+      return;
+    }
+
+    void (async () => {
+      const payload = await loadCustomerPriceClipboard();
+      setCopiedPrices(payload);
+    })();
+  }, [createOpen]);
+
+  useEffect(() => {
+    if (!createOpen) {
       setDirectorySuggestions([]);
       setDirectorySelectionLocked(false);
       setNameFieldFocused(false);
@@ -229,13 +243,20 @@ export default function CustomersPage() {
       const response = await fetch("/api/customers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form)
+        body: JSON.stringify({
+          ...form,
+          copiedPrices: copiedPrices?.items.map((item) => ({
+            productId: item.productId,
+            priceCents: item.priceCents
+          }))
+        })
       });
       const data = (await response.json()) as { customer?: { id: number }; error?: string };
       if (!response.ok) throw new Error(data.error ?? t("createError"));
       if (!data.customer?.id) throw new Error(t("createError"));
       setForm(emptyForm);
       setCreateOpen(false);
+      setCopiedPrices(null);
       setDirectorySelectionLocked(false);
       setNameFieldFocused(false);
       setQuery("");
@@ -352,6 +373,20 @@ export default function CustomersPage() {
     setNameFieldFocused(true);
   }
 
+  async function onPasteCopiedPrices() {
+    const payload = await loadCustomerPriceClipboard();
+    if (!payload || payload.items.length === 0) {
+      setToast({ message: t("copiedPricesMissing"), tone: "info" });
+      return;
+    }
+
+    setCopiedPrices(payload);
+    setToast({
+      message: t("copiedPricesReady", { count: payload.items.length, customer: payload.sourceCustomerName }),
+      tone: "success"
+    });
+  }
+
   const showInlineRouteSuggestion = routeFieldFocused && Boolean(inlineRouteSuggestion);
 
   return (
@@ -379,6 +414,23 @@ export default function CustomersPage() {
         </button>
         {createOpen ? (
           <form className="space-y-3" onSubmit={onCreate}>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className="secondary-btn !w-auto !px-3 !py-2 text-sm"
+                onClick={() => void onPasteCopiedPrices()}
+              >
+                <span className="flex items-center gap-2">
+                  <ClipboardPaste size={14} />
+                  {t("pasteCopiedPrices")}
+                </span>
+              </button>
+              {copiedPrices ? (
+                <p className="text-xs text-[#4A4A4A]/65">
+                  {t("copiedPricesLoaded", { count: copiedPrices.items.length, customer: copiedPrices.sourceCustomerName })}
+                </p>
+              ) : null}
+            </div>
             <div className="relative">
               {showInlineRouteSuggestion ? (
                 <div className="pointer-events-none absolute inset-0 z-[2] flex items-center overflow-hidden rounded-xl px-4 py-3">
